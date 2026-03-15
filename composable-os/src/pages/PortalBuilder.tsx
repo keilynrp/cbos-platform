@@ -1,4 +1,11 @@
 import { useState, useCallback, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { portalService, CreateSessionDto } from "@/services/portal";
+import { salesService } from "@/services/sales";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Link2, Send, CheckCircle2, XCircle, Clock, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -776,11 +783,29 @@ const PortalBuilder = () => {
 
   return (
     <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Portal Builder</h1>
+        <p className="text-muted-foreground text-sm mt-1">Diseña portales de cliente y gestiona accesos por cotización.</p>
+      </div>
+
+      <Tabs defaultValue="sessions">
+      <TabsList className="mb-2">
+        <TabsTrigger value="sessions">Sesiones activas</TabsTrigger>
+        <TabsTrigger value="builder">Page Builder</TabsTrigger>
+      </TabsList>
+
+      {/* ── Sessions tab ───────────────────────────────────────── */}
+      <TabsContent value="sessions" className="m-0">
+        <PortalSessions />
+      </TabsContent>
+
+      {/* ── Builder tab ────────────────────────────────────────── */}
+      <TabsContent value="builder" className="m-0">
+      <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Portal Builder</h1>
-          <p className="text-muted-foreground text-sm mt-1">Drag & drop blocks to build client portal pages.</p>
+          <p className="text-sm text-muted-foreground">Arrastra bloques para construir la página del portal cliente.</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Viewport toggle */}
@@ -913,7 +938,158 @@ const PortalBuilder = () => {
         )}
       </div>
     </div>
+      </TabsContent>
+      </Tabs>
+    </div>
   );
 };
+
+// ── Portal Sessions component ─────────────────────────────────────────────────
+
+function PortalSessions() {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<CreateSessionDto>({ quote_id: "", client_name: "", client_email: "", expire_hours: 72 });
+
+  const { data: sessions = [], isLoading } = useQuery({
+    queryKey: ["portal-sessions"],
+    queryFn: () => portalService.getSessions(),
+  });
+
+  const { data: quotes = [] } = useQuery({
+    queryKey: ["sales-quotes"],
+    queryFn: salesService.getQuotes,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: portalService.createSession,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portal-sessions"] });
+      setOpen(false);
+      setForm({ quote_id: "", client_name: "", client_email: "", expire_hours: 72 });
+    },
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: portalService.sendEmail,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["portal-sessions"] }),
+  });
+
+  const statusIcon = (action: string | null, completed_at: string | null) => {
+    if (action === "accepted") return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+    if (action === "rejected") return <XCircle className="h-4 w-4 text-destructive" />;
+    if (completed_at) return <CheckCircle2 className="h-4 w-4 text-blue-500" />;
+    return <Clock className="h-4 w-4 text-muted-foreground" />;
+  };
+
+  const statusLabel = (action: string | null, accessed_at: string | null) => {
+    if (action === "accepted") return <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Aceptado</Badge>;
+    if (action === "rejected") return <Badge className="bg-red-100 text-red-800 text-[10px]">Rechazado</Badge>;
+    if (accessed_at) return <Badge className="bg-blue-100 text-blue-800 text-[10px]">Visto</Badge>;
+    return <Badge variant="outline" className="text-[10px]">Pendiente</Badge>;
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{sessions.length} sesiones de portal</p>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-2"><Link2 className="h-4 w-4" /> Crear enlace de portal</Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Crear sesión de portal</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <Label>Cotización *</Label>
+                <Select value={form.quote_id} onValueChange={(v) => setForm(f => ({ ...f, quote_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Selecciona una cotización" /></SelectTrigger>
+                  <SelectContent>
+                    {quotes.map((q) => (
+                      <SelectItem key={q.id} value={q.id}>
+                        {q.quote_number} — {q.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Nombre del cliente</Label>
+                <Input placeholder="Ej: Juan Pérez" value={form.client_name ?? ""} onChange={e => setForm(f => ({ ...f, client_name: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Email del cliente</Label>
+                <Input type="email" placeholder="cliente@empresa.com" value={form.client_email ?? ""} onChange={e => setForm(f => ({ ...f, client_email: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Expira en (horas)</Label>
+                <Input type="number" min={1} value={form.expire_hours} onChange={e => setForm(f => ({ ...f, expire_hours: Number(e.target.value) }))} />
+              </div>
+              <Button className="w-full" disabled={!form.quote_id || createMutation.isPending}
+                onClick={() => createMutation.mutate(form)}>
+                {createMutation.isPending ? "Creando..." : "Crear enlace"}
+              </Button>
+              {createMutation.isError && (
+                <p className="text-xs text-destructive">{String(createMutation.error)}</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}</div>
+      ) : sessions.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground border rounded-xl">
+          <Link2 className="h-8 w-8 mx-auto mb-3 opacity-30" />
+          <p className="text-sm">Sin sesiones de portal aún.</p>
+          <p className="text-xs mt-1">Crea un enlace para que tu cliente vea y acepte su cotización.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {sessions.map((s) => (
+            <Card key={s.id} className="shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="shrink-0">{statusIcon(s.action, s.completed_at)}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{s.client_name ?? "Cliente sin nombre"}</span>
+                      {statusLabel(s.action, s.accessed_at)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {s.client_email ?? "sin email"} · expira {new Date(s.expires_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1"
+                      onClick={() => navigator.clipboard.writeText(s.portal_url)}>
+                      <Link2 className="h-3 w-3" /> Copiar
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1"
+                      asChild>
+                      <a href={s.portal_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-3 w-3" /> Ver
+                      </a>
+                    </Button>
+                    {s.client_email && !s.action && (
+                      <Button size="sm" className="h-7 text-xs gap-1"
+                        disabled={sendEmailMutation.isPending}
+                        onClick={() => sendEmailMutation.mutate(s.id)}>
+                        <Send className="h-3 w-3" /> Email
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default PortalBuilder;
