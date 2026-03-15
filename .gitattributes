@@ -1,0 +1,12 @@
+# Forzar LF en todos los archivos de texto (evita problemas CRLF en Docker/Linux)
+* text=auto eol=lf
+
+# Shell scripts siempre LF
+*.sh text eol=lf
+
+# Archivos binarios sin conversión
+*.png binary
+*.jpg binary
+*.ico binary
+*.svg binary
+*.lockb binary

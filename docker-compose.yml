@@ -13,7 +13,8 @@ services:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cbos} -d ${POSTGRES_DB:-cbos_dev}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 20s
 
   redis:
     image: redis:7-alpine
@@ -49,18 +50,15 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./composable-os
-      dockerfile: Dockerfile
-      target: builder
-    command: npm run dev -- --host 0.0.0.0 --port 8101
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 8101"
     environment:
       VITE_API_URL: http://localhost:${BACKEND_PORT:-8100}/api/v1
     ports:
       - "${FRONTEND_PORT:-8101}:8101"
     volumes:
       - ./composable-os:/app
-      - /app/node_modules
     depends_on:
       - backend
 
