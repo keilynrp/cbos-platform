@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: cbos_dev
-      POSTGRES_USER: cbos
+      POSTGRES_DB: ${POSTGRES_DB:-cbos_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-cbos}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cbos_dev_pass}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cbos -d cbos_dev"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cbos} -d ${POSTGRES_DB:-cbos_dev}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -18,7 +18,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6380}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -31,14 +31,14 @@ services:
       dockerfile: Dockerfile
     command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
     environment:
-      DATABASE_URL: postgresql+asyncpg://cbos:${POSTGRES_PASSWORD:-cbos_dev_pass}@postgres:5432/cbos_dev
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cbos}:${POSTGRES_PASSWORD:-cbos_dev_pass}@postgres:5432/${POSTGRES_DB:-cbos_dev}
       REDIS_URL: redis://redis:6379
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
       ENVIRONMENT: development
       DEBUG: "true"
-      ALLOWED_ORIGINS: '["http://localhost:8080","http://localhost:5173","http://localhost:3000"]'
+      ALLOWED_ORIGINS: '["http://localhost:${FRONTEND_PORT:-8101}"]'
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8100}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,11 +53,11 @@ services:
       context: ./composable-os
       dockerfile: Dockerfile
       target: builder
-    command: npm run dev -- --host 0.0.0.0 --port 8080
+    command: npm run dev -- --host 0.0.0.0 --port 8101
     environment:
-      VITE_API_URL: http://localhost:8000/api/v1
+      VITE_API_URL: http://localhost:${BACKEND_PORT:-8100}/api/v1
     ports:
-      - "8080:8080"
+      - "${FRONTEND_PORT:-8101}:8101"
     volumes:
       - ./composable-os:/app
       - /app/node_modules
