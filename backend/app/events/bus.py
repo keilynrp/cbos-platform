@@ -23,10 +23,15 @@ async def get_redis() -> aioredis.Redis:
 
 
 async def publish(event: Event) -> None:
-    """Publica un evento en el stream de Redis."""
+    """Publica un evento en el stream de Redis y notifica vía pub/sub a WS clients."""
     try:
         r = await get_redis()
-        await r.xadd(STREAM_KEY, {"data": event.model_dump_json()})
+        data = event.model_dump_json()
+        # Stream para el workflow consumer
+        await r.xadd(STREAM_KEY, {"data": data})
+        # Pub/Sub para notificaciones WebSocket en tiempo real
+        channel = f"cbos:notifications:{event.workspace_id}"
+        await r.publish(channel, data)
         logger.info(f"Event published: {event.event_type} [{event.entity_id}]")
     except Exception as e:
         logger.error(f"Failed to publish event {event.event_type}: {e}")
