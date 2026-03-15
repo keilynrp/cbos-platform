@@ -15,6 +15,7 @@ from app.core.database import Base
 from app.modules.identity.models import Workspace, User, Person, Organization  # noqa: F401
 from app.modules.crm.models import Lead, Opportunity, Activity  # noqa: F401
 from app.modules.sales.models import Quote, QuoteLine, SalesOrder  # noqa: F401
+from app.modules.inventory.models import ProductCategory, Product, InventoryItem, StockMovement  # noqa: F401
 
 config = context.config
 
