@@ -13,6 +13,7 @@ from app.core.database import Base
 
 # Importar todos los modelos para que Alembic los detecte
 from app.modules.identity.models import Workspace, User, Person, Organization  # noqa: F401
+from app.modules.crm.models import Lead, Opportunity, Activity  # noqa: F401
 
 config = context.config
 
