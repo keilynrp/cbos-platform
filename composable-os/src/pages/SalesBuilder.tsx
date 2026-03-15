@@ -1,10 +1,13 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { salesService } from "@/services/sales";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DollarSign, TrendingUp, FileText, ShoppingCart, Users, Bot, Zap,
   BarChart3, CheckCircle2, Clock, AlertTriangle, ArrowRight, Star,
@@ -120,8 +123,29 @@ const SectionCard = ({ title, children, action }: { title: string; children: Rea
   </Card>
 );
 
+function fmtCurrency(n: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
 export default function SalesBuilder() {
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  // ── Real data from backend ──────────────────────────────────────────────
+  const { data: quotes = [], isLoading: loadingQuotes } = useQuery({
+    queryKey: ["sales-quotes"],
+    queryFn: salesService.getQuotes,
+  });
+
+  const { data: orders = [], isLoading: loadingOrders } = useQuery({
+    queryKey: ["sales-orders"],
+    queryFn: salesService.getOrders,
+  });
+
+  // Real KPIs
+  const openQuotes = quotes.filter((q) => ["draft", "sent"].includes(q.status));
+  const totalQuoteValue = openQuotes.reduce((s, q) => s + q.total, 0);
+  const acceptedQuotes = quotes.filter((q) => q.status === "accepted").length;
+  const conversionRate = quotes.length ? Math.round((acceptedQuotes / quotes.length) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,13 +182,13 @@ export default function SalesBuilder() {
           {/* ── Dashboard ── */}
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Metric icon={Target} label="Open Opportunities" value="41" sub="$2.7M pipeline" trend="+12%" />
-              <Metric icon={FileText} label="Quotes In Progress" value="15" sub="$680K total" />
-              <Metric icon={Clock} label="Awaiting Approval" value="4" sub="2 high-value" />
-              <Metric icon={ShoppingCart} label="Sales Orders" value="28" sub="$1.4M this month" trend="+8%" />
-              <Metric icon={DollarSign} label="Forecasted Revenue" value="$3.2M" sub="Q1 target" />
-              <Metric icon={TrendingUp} label="Conversion Rate" value="34%" sub="Quote → Order" trend="+5%" />
-              <Metric icon={Star} label="Avg Deal Size" value="$68K" sub="vs $52K last Q" trend="+31%" />
+              <Metric icon={FileText} label="Quotes In Progress" value={String(openQuotes.length)} sub={fmtCurrency(totalQuoteValue) + " total"} />
+              <Metric icon={ShoppingCart} label="Sales Orders" value={String(orders.length)} sub={fmtCurrency(orders.reduce((s, o) => s + o.total, 0)) + " total"} />
+              <Metric icon={TrendingUp} label="Conversion Rate" value={`${conversionRate}%`} sub="Quote → Accepted" />
+              <Metric icon={Star} label="Accepted Quotes" value={String(acceptedQuotes)} sub="all time" />
+              <Metric icon={DollarSign} label="Total Revenue" value={fmtCurrency(orders.reduce((s, o) => s + o.total, 0))} sub="confirmed orders" />
+              <Metric icon={Clock} label="Draft Quotes" value={String(quotes.filter((q) => q.status === "draft").length)} sub="pending send" />
+              <Metric icon={Target} label="Open Opportunities" value="—" sub="See CRM module" />
               <Metric icon={Bot} label="AI Recommendations" value="7" sub="3 high priority" />
             </div>
 
@@ -259,31 +283,36 @@ export default function SalesBuilder() {
           {/* ── Quotations ── */}
           <TabsContent value="quotations" className="space-y-4">
             <SectionCard title="Quotation Builder" action={<Button size="sm"><Plus className="h-3.5 w-3.5 mr-1" />Create Quote</Button>}>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border/50">
-                      {["Quote ID", "Customer", "Template", "Items", "Discount", "Total", "Expires", "Status"].map((h) => (
-                        <th key={h} className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {quotations.map((q) => (
-                      <tr key={q.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
-                        <td className="py-2.5 px-3 font-medium text-foreground">{q.id}</td>
-                        <td className="py-2.5 px-3 text-foreground">{q.customer}</td>
-                        <td className="py-2.5 px-3"><Badge variant="outline" className="text-[10px]">{q.template}</Badge></td>
-                        <td className="py-2.5 px-3 text-muted-foreground">{q.items}</td>
-                        <td className="py-2.5 px-3 text-muted-foreground">{q.discount}</td>
-                        <td className="py-2.5 px-3 font-semibold">{q.total}</td>
-                        <td className="py-2.5 px-3 text-muted-foreground">{q.expires}</td>
-                        <td className="py-2.5 px-3"><Badge className={`text-[10px] ${statusColor(q.status)}`}>{q.status}</Badge></td>
+              {loadingQuotes ? (
+                <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
+              ) : quotes.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sin cotizaciones. Crea la primera desde el CRM.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border/50">
+                        {["Quote #", "Título", "Items", "Descuento", "Total", "Válido hasta", "Estado"].map((h) => (
+                          <th key={h} className="text-left py-2 px-3 text-xs font-medium text-muted-foreground">{h}</th>
+                        ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {quotes.map((q) => (
+                        <tr key={q.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 px-3 font-medium text-foreground">{q.quote_number}</td>
+                          <td className="py-2.5 px-3 text-foreground">{q.title}</td>
+                          <td className="py-2.5 px-3 text-muted-foreground">{q.items?.length ?? 0}</td>
+                          <td className="py-2.5 px-3 text-muted-foreground">{q.discount_pct}%</td>
+                          <td className="py-2.5 px-3 font-semibold">{fmtCurrency(q.total)}</td>
+                          <td className="py-2.5 px-3 text-muted-foreground">{q.valid_until ? new Date(q.valid_until).toLocaleDateString() : "—"}</td>
+                          <td className="py-2.5 px-3"><Badge className={`text-[10px] ${statusColor(q.status)}`}>{q.status}</Badge></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </SectionCard>
 
             <SectionCard title="Quote Line Builder">
@@ -425,25 +454,30 @@ export default function SalesBuilder() {
           {/* ── Sales Orders ── */}
           <TabsContent value="orders" className="space-y-4">
             <SectionCard title="Sales Order Manager" action={<Badge variant="outline" className="text-xs">Quote → Order Conversion</Badge>}>
-              <div className="space-y-3">
-                {salesOrders.map((o) => (
-                  <div key={o.id} className="border border-border/50 rounded-xl p-4 hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-foreground">{o.id}</span>
-                        <Badge variant="outline" className="text-[10px]">{o.customer}</Badge>
+              {loadingOrders ? (
+                <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
+              ) : orders.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sin órdenes. Se crean al aceptar una cotización.</p>
+              ) : (
+                <div className="space-y-3">
+                  {orders.map((o) => (
+                    <div key={o.id} className="border border-border/50 rounded-xl p-4 hover:shadow-md transition-all">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-foreground">{o.order_number}</span>
+                          <Badge variant="outline" className="text-[10px]">{o.organization_name ?? o.contact_name ?? "—"}</Badge>
+                        </div>
+                        <span className="text-sm font-bold">{fmtCurrency(o.total)}</span>
                       </div>
-                      <span className="text-sm font-bold">{o.total}</span>
+                      <div className="grid grid-cols-3 gap-3 text-xs">
+                        <div><span className="text-muted-foreground">Status</span><p><Badge className={`mt-0.5 text-[10px] ${statusColor(o.status)}`}>{o.status}</Badge></p></div>
+                        <div><span className="text-muted-foreground">Pago</span><p><Badge className={`mt-0.5 text-[10px] ${statusColor(o.payment_status)}`}>{o.payment_status}</Badge></p></div>
+                        <div><span className="text-muted-foreground">Quote origen</span><p className="font-medium text-primary mt-0.5">{o.quote_number ?? "—"}</p></div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-4 gap-3 text-xs">
-                      <div><span className="text-muted-foreground">Status</span><p><Badge className={`mt-0.5 text-[10px] ${statusColor(o.status)}`}>{o.status}</Badge></p></div>
-                      <div><span className="text-muted-foreground">Fulfillment</span><p><Badge className={`mt-0.5 text-[10px] ${statusColor(o.fulfillment)}`}>{o.fulfillment}</Badge></p></div>
-                      <div><span className="text-muted-foreground">Payment</span><p className="font-medium text-foreground mt-0.5">{o.payment}</p></div>
-                      <div><span className="text-muted-foreground">Contract</span><p className="font-medium text-primary mt-0.5">{o.contract}</p></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </SectionCard>
           </TabsContent>
 

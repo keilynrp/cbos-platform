@@ -1,21 +1,49 @@
-import { 
-  BarChart3, 
-  PackageSearch, 
-  Warehouse, 
-  ShoppingCart, 
-  Truck, 
-  Tags, 
-  Users, 
-  TrendingUp, 
-  GitMerge, 
-  BrainCircuit, 
-  PieChart
+import {
+  BarChart3,
+  PackageSearch,
+  Warehouse,
+  ShoppingCart,
+  Truck,
+  Tags,
+  Users,
+  TrendingUp,
+  GitMerge,
+  BrainCircuit,
+  PieChart,
+  AlertTriangle,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { inventoryService } from "@/services/inventory";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+
+function fmtCurrency(n: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
+const statusBadge = (status: string) => {
+  const map: Record<string, string> = {
+    in_stock: "bg-green-100 text-green-800",
+    low_stock: "bg-orange-100 text-orange-800",
+    out_of_stock: "bg-red-100 text-red-800",
+  };
+  return map[status] ?? "bg-muted text-muted-foreground";
+};
 
 const InventoryOrders = () => {
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ["inventory-items"],
+    queryFn: inventoryService.getItems,
+  });
+
+  // KPIs
+  const totalItems = items.length;
+  const totalValue = items.reduce((s, i) => s + i.quantity_on_hand * i.unit_cost, 0);
+  const lowStockCount = items.filter((i) => i.status === "low_stock" || i.status === "out_of_stock").length;
+  const healthPct = totalItems ? Math.round(((totalItems - lowStockCount) / totalItems) * 100) : 100;
+
   return (
     <div className="space-y-6">
       <div>
@@ -29,22 +57,22 @@ const InventoryOrders = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total SKUs</CardTitle>
             <ShoppingCart className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,248</div>
-            <p className="text-xs text-muted-foreground">+12% from last month</p>
+            <div className="text-2xl font-bold">{totalItems}</div>
+            <p className="text-xs text-muted-foreground">productos en inventario</p>
           </CardContent>
         </Card>
         <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Revenue (All Channels)</CardTitle>
+            <CardTitle className="text-sm font-medium">Valor de inventario</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$48,294.00</div>
-            <p className="text-xs text-muted-foreground">+8% from last month</p>
+            <div className="text-2xl font-bold">{fmtCurrency(totalValue)}</div>
+            <p className="text-xs text-muted-foreground">costo en stock</p>
           </CardContent>
         </Card>
         <Card className="shadow-sm">
@@ -53,8 +81,8 @@ const InventoryOrders = () => {
             <Warehouse className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">94%</div>
-            <p className="text-xs text-muted-foreground">Optimal levels across 3 locations</p>
+            <div className="text-2xl font-bold">{healthPct}%</div>
+            <p className="text-xs text-muted-foreground">ítems en nivel óptimo</p>
           </CardContent>
         </Card>
         <Card className="shadow-sm">
@@ -63,8 +91,8 @@ const InventoryOrders = () => {
             <PackageSearch className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">SKUs require immediate restock</p>
+            <div className="text-2xl font-bold">{lowStockCount}</div>
+            <p className="text-xs text-muted-foreground">SKUs requieren reposición</p>
           </CardContent>
         </Card>
       </div>
@@ -121,12 +149,47 @@ const InventoryOrders = () => {
           
           <TabsContent value="inventory" className="m-0">
             <h2 className="text-xl font-semibold mb-4">Inventory Management</h2>
-            <p className="text-muted-foreground mb-4">Track stock across warehouses, store locations, and manage transfers.</p>
-            {/* Placeholder for inventory lists */}
-            <div className="space-y-4 mt-6">
-               <div className="h-12 bg-muted/30 rounded-md border flex items-center px-4"><span className="text-sm">Main Warehouse</span><Badge className="ml-auto bg-green-100 text-green-800 hover:bg-green-100">Healthy</Badge></div>
-               <div className="h-12 bg-muted/30 rounded-md border flex items-center px-4"><span className="text-sm">Downtown Store</span><Badge className="ml-auto bg-orange-100 text-orange-800 hover:bg-orange-100">Low Stock</Badge></div>
-            </div>
+            <p className="text-muted-foreground mb-4">Stock real sincronizado con el backend.</p>
+            {isLoading ? (
+              <div className="space-y-2">{[1,2,3,4].map((i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
+            ) : items.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Warehouse className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p className="text-sm">Sin ítems de inventario. Agrega productos desde el módulo de Sales.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      {["Producto", "SKU", "En stock", "Reservado", "Disponible", "Punto reorden", "Costo unit.", "Valor total", "Estado"].map((h) => (
+                        <th key={h} className="text-left py-2 px-3 text-xs font-medium text-muted-foreground whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => (
+                      <tr key={item.id} className="border-b border-border/30 hover:bg-muted/30 transition-colors">
+                        <td className="py-2.5 px-3 font-medium">{item.product_name ?? "—"}</td>
+                        <td className="py-2.5 px-3 text-muted-foreground font-mono text-xs">{item.sku ?? "—"}</td>
+                        <td className="py-2.5 px-3 font-semibold">{item.quantity_on_hand}</td>
+                        <td className="py-2.5 px-3 text-muted-foreground">{item.quantity_reserved}</td>
+                        <td className="py-2.5 px-3 font-semibold text-emerald-600">{item.quantity_available}</td>
+                        <td className="py-2.5 px-3 text-muted-foreground">{item.reorder_point}</td>
+                        <td className="py-2.5 px-3">{fmtCurrency(item.unit_cost)}</td>
+                        <td className="py-2.5 px-3 font-medium">{fmtCurrency(item.quantity_on_hand * item.unit_cost)}</td>
+                        <td className="py-2.5 px-3">
+                          <Badge className={`text-[10px] ${statusBadge(item.status)}`}>
+                            {item.status === "low_stock" && <AlertTriangle className="h-3 w-3 mr-1" />}
+                            {item.status.replace("_", " ")}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="orders" className="m-0">
