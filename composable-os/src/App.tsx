@@ -43,6 +43,7 @@ import TeamStructure from "./pages/TeamStructure";
 import IntelligenceGraphOS from "./pages/IntelligenceGraphOS";
 import Workflows from "./pages/Workflows";
 import Discovery from "./pages/Discovery";
+import Invoicing from "./pages/Invoicing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -117,6 +118,7 @@ const App = () => (
                 <Route path="/intelligence-graph" element={<IntelligenceGraphOS />} />
                 <Route path="/workflows" element={<Workflows />} />
                 <Route path="/discovery" element={<Discovery />} />
+                <Route path="/invoicing" element={<Invoicing />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
