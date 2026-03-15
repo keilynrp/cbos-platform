@@ -21,6 +21,7 @@ alembic/versions/*.pyc
 .env
 .env.local
 .env.*.local
+.env.prod
 *.local
 
 # Node / Frontend

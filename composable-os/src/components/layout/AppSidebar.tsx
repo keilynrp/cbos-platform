@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, FolderKanban, Users, Share2, FileText,
-  BarChart3, Bot, Store, Settings, Blocks, Sun, Moon, PanelTop, Landmark, ShoppingBag, GitBranch, MessageSquare, UserCircle, Crosshair, Magnet, Calendar, Layers, CalendarClock, Cable, Monitor, PackageSearch, Warehouse, Cpu, Network, FileSignature, Receipt, Map, Brain
+  BarChart3, Bot, Store, Settings, Blocks, Sun, Moon, PanelTop, Landmark, ShoppingBag, GitBranch, MessageSquare, UserCircle, Crosshair, Magnet, Calendar, Layers, CalendarClock, Cable, Monitor, PackageSearch, Warehouse, Cpu, Network, FileSignature, Receipt, Map, Brain, Zap
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -38,6 +38,7 @@ const mainNav = [
   { title: "IoT Builder", url: "/iot-builder", icon: Cpu },
   { title: "System Modeler", url: "/system-modeler", icon: Network },
   { title: "Contract Studio", url: "/contract-studio", icon: FileSignature },
+  { title: "Workflows", url: "/workflows", icon: Zap },
   { title: "Sales Builder", url: "/sales-builder", icon: Receipt },
   { title: "Platform Map", url: "/platform-map", icon: Map },
   { title: "Team Structure", url: "/team-structure", icon: Users },
