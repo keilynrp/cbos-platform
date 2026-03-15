@@ -44,6 +44,10 @@ Thumbs.db
 # Docker
 .docker/
 
+# Certificados SSL locales (generados por mkcert, nunca commitear)
+certs/*
+!certs/.gitkeep
+
 # Logs
 *.log
 logs/
