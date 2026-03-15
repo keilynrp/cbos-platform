@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.events.bus import close as close_redis
+from app.modules.workflows.consumer import start_consumer, stop_consumer
+from app.modules.workflows.router import router as workflows_router
 from app.modules.crm.router import router as crm_router
 from app.modules.identity.router import router as identity_router
 from app.modules.inventory.router import router as inventory_router
@@ -17,8 +19,10 @@ from app.modules.discovery.router import router as discovery_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    start_consumer()
     yield
     # Shutdown
+    await stop_consumer()
     await close_redis()
 
 
@@ -46,6 +50,7 @@ app.include_router(inventory_router, prefix=settings.api_prefix)
 app.include_router(portal_router, prefix=settings.api_prefix)
 app.include_router(portal_public_router, prefix=settings.api_prefix)  # no-auth public routes
 app.include_router(discovery_router, prefix=settings.api_prefix)
+app.include_router(workflows_router, prefix=settings.api_prefix)
 
 
 # ── Health check ───────────────────────────────────────────
