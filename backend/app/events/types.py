@@ -56,6 +56,11 @@ WORKFLOW_TRIGGERED = "WorkflowTriggered"
 WORKFLOW_COMPLETED = "WorkflowCompleted"
 WORKFLOW_FAILED = "WorkflowFailed"
 
+# ── Portal ─────────────────────────────────────────────────
+PORTAL_SESSION_CREATED = "PortalSessionCreated"
+PORTAL_SESSION_ACCESSED = "PortalSessionAccessed"
+CUSTOMER_ACTION_PERFORMED = "CustomerActionPerformed"
+
 # ── Platform ───────────────────────────────────────────────
 USER_AUTHENTICATED = "UserAuthenticated"
 MODULE_ACTIVATED = "ModuleActivated"
