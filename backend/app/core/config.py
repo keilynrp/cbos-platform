@@ -31,9 +31,26 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
 
+    # Portal
+    portal_base_url: str = "http://localhost:8101"
+    portal_token_expire_hours: int = 72
+
+    # Email (optional — if SMTP_HOST not set, emails are logged in dev mode)
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = True
+    from_email: str = "noreply@cbos.local"
+    from_name: str = "CBOS Platform"
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @property
+    def email_enabled(self) -> bool:
+        return self.smtp_host is not None
 
 
 @lru_cache
