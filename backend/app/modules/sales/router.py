@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +8,8 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_workspace_id
 from app.modules.identity.models import User
 from app.modules.sales import service
+
+logger = logging.getLogger(__name__)
 from app.modules.sales.pdf import generate_quote_pdf
 from app.modules.sales.schemas import (
     QuoteCreate,
@@ -106,7 +110,24 @@ async def accept_quote(
     current_user: User = Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
 ):
-    quote, _order = await service.accept_quote(db, workspace_id, current_user.id, quote_id)
+    quote, order = await service.accept_quote(db, workspace_id, current_user.id, quote_id)
+
+    # Auto-reserve inventory for lines that have a product_id linked.
+    # Best-effort: a failure here never blocks the quote acceptance.
+    lines_with_product = [
+        line for line in quote.lines if line.product_id
+    ]
+    if lines_with_product:
+        try:
+            from app.modules.inventory import service as inv_service
+            from app.modules.inventory.schemas import OrderLineReserve
+            await inv_service.auto_reserve_for_order(
+                db, workspace_id, current_user.id, order.id,
+                [OrderLineReserve(product_id=l.product_id, quantity=l.quantity) for l in lines_with_product],
+            )
+        except Exception as exc:
+            logger.warning("Auto-reserve failed for order %s: %s", order.id, exc)
+
     return quote
 
 

@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.events.bus import close as close_redis
 from app.modules.crm.router import router as crm_router
 from app.modules.identity.router import router as identity_router
+from app.modules.inventory.router import router as inventory_router
 from app.modules.sales.router import router as sales_router
 
 
@@ -38,6 +39,7 @@ app.add_middleware(
 app.include_router(identity_router, prefix=settings.api_prefix, tags=["Identity & Auth"])
 app.include_router(crm_router, prefix=settings.api_prefix)
 app.include_router(sales_router, prefix=settings.api_prefix)
+app.include_router(inventory_router, prefix=settings.api_prefix)
 
 
 # ── Health check ───────────────────────────────────────────
