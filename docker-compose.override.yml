@@ -1,0 +1,33 @@
+# ═══════════════════════════════════════════════════════════
+# CBOS Platform — Override LOCAL (solo desarrollo)
+#
+# Docker Compose fusiona este archivo con docker-compose.yml
+# automáticamente. Dokploy usa docker-compose.prod.yml de forma
+# explícita, por lo que este archivo NUNCA llega a producción.
+#
+# Requisito: ejecutar scripts/setup-local-ssl.sh una vez para
+# generar los certificados en certs/
+# ═══════════════════════════════════════════════════════════
+
+services:
+
+  # ── Nginx SSL terminator ────────────────────────────────
+  nginx-ssl:
+    image: nginx:1.27-alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx/local-ssl.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  # ── Frontend: apuntar API a la URL HTTPS local ─────────
+  frontend:
+    environment:
+      VITE_API_URL: https://localhost/api/v1
+
+volumes: {}
