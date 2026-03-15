@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     portal_base_url: str = "http://localhost:8101"
     portal_token_expire_hours: int = 72
 
+    # AI — Claude API (Phase 5)
+    anthropic_api_key: str | None = None
+
     # Email (optional — if SMTP_HOST not set, emails are logged in dev mode)
     smtp_host: str | None = None
     smtp_port: int = 587

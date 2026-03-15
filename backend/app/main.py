@@ -11,6 +11,7 @@ from app.modules.inventory.router import router as inventory_router
 from app.modules.portal.router import public_router as portal_public_router
 from app.modules.portal.router import router as portal_router
 from app.modules.sales.router import router as sales_router
+from app.modules.discovery.router import router as discovery_router
 
 
 @asynccontextmanager
@@ -44,6 +45,7 @@ app.include_router(sales_router, prefix=settings.api_prefix)
 app.include_router(inventory_router, prefix=settings.api_prefix)
 app.include_router(portal_router, prefix=settings.api_prefix)
 app.include_router(portal_public_router, prefix=settings.api_prefix)  # no-auth public routes
+app.include_router(discovery_router, prefix=settings.api_prefix)
 
 
 # ── Health check ───────────────────────────────────────────
