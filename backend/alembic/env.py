@@ -17,6 +17,7 @@ from app.modules.crm.models import Lead, Opportunity, Activity  # noqa: F401
 from app.modules.sales.models import Quote, QuoteLine, SalesOrder  # noqa: F401
 from app.modules.inventory.models import ProductCategory, Product, InventoryItem, StockMovement  # noqa: F401
 from app.modules.portal.models import PortalSession  # noqa: F401
+from app.modules.discovery.models import DiscoverySession, DiscoveryMessage  # noqa: F401
 
 config = context.config
 

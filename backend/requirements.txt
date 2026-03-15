@@ -23,6 +23,9 @@ redis[asyncio]==5.2.1
 # HTTP client (para AI integration en Fase 5)
 httpx==0.28.1
 
+# AI — Claude API
+anthropic==0.40.0
+
 # PDF generation
 fpdf2==2.8.2
 
