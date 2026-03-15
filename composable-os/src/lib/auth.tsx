@@ -14,7 +14,16 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => void;
+}
+
+export interface RegisterData {
+  workspace_name: string;
+  workspace_slug: string;
+  full_name: string;
+  email: string;
+  password: string;
 }
 
 // ── Context ────────────────────────────────────────────────────────────────
@@ -22,6 +31,7 @@ const AuthContext = createContext<AuthState>({
   user: null,
   loading: true,
   login: async () => {},
+  register: async () => {},
   logout: () => {},
 });
 
@@ -50,6 +60,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
+  const register = async (data: RegisterData) => {
+    const resp = await api.post<{ access_token: string }>("/auth/register", data);
+    setToken(resp.access_token);
+    const me = await api.get<User>("/auth/me");
+    setUser(me);
+  };
+
   const logout = () => {
     clearToken();
     setUser(null);
@@ -57,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

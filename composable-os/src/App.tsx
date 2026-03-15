@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 
 // Pages
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Index from "./pages/Index";
 import Projects from "./pages/Projects";
 import CRM from "./pages/CRM";
@@ -72,6 +73,7 @@ const App = () => (
             <Routes>
               {/* Public */}
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
               {/* Protected — all wrapped in AppLayout */}
               <Route

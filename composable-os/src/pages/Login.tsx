@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +86,12 @@ export default function Login() {
             </form>
           </CardContent>
         </Card>
+        <p className="text-center text-sm text-muted-foreground">
+          ¿No tienes cuenta?{" "}
+          <Link to="/register" className="text-primary font-medium hover:underline">
+            Crear workspace
+          </Link>
+        </p>
       </div>
     </div>
   );
