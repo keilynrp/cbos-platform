@@ -43,6 +43,8 @@ QUOTE_ACCEPTED = "QuoteAccepted"
 QUOTE_REJECTED = "QuoteRejected"
 SALES_ORDER_CREATED = "SalesOrderCreated"
 SALES_ORDER_CONFIRMED = "SalesOrderConfirmed"
+SALES_ORDER_FULFILLED = "SalesOrderFulfilled"
+SALES_ORDER_CANCELLED = "SalesOrderCancelled"
 
 # ── Inventory & Fulfillment ────────────────────────────────
 INVENTORY_RESERVED = "InventoryReserved"

@@ -133,9 +133,42 @@ class SalesOrder(Base):
         String, ForeignKey("users.id"), nullable=True
     )
 
+    # Timestamps adicionales
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     quote: Mapped[Optional["Quote"]] = relationship("Quote", back_populates="sales_order")
+    lines: Mapped[list["SalesOrderLine"]] = relationship(
+        "SalesOrderLine", back_populates="order", order_by="SalesOrderLine.line_order",
+        cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "order_number", name="uq_order_number_workspace"),
     )
+
+
+class SalesOrderLine(Base):
+    """Línea de item copiada desde la cotización al generar la orden de venta."""
+
+    __tablename__ = "sales_order_lines"
+
+    workspace_id: Mapped[str] = mapped_column(
+        String, ForeignKey("workspaces.id"), index=True
+    )
+    order_id: Mapped[str] = mapped_column(
+        String, ForeignKey("sales_orders.id", ondelete="CASCADE"), index=True
+    )
+
+    line_order: Mapped[int] = mapped_column(Integer, default=1)
+    description: Mapped[str] = mapped_column(Text)
+    quantity: Mapped[float] = mapped_column(Float, default=1.0)
+    unit_price: Mapped[float] = mapped_column(Float, default=0.0)
+    discount_percent: Mapped[float] = mapped_column(Float, default=0.0)
+    amount: Mapped[float] = mapped_column(Float, default=0.0)
+
+    # Referencia al producto del inventario (nullable para líneas de servicio o texto libre)
+    product_id: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Relationship
+    order: Mapped["SalesOrder"] = relationship("SalesOrder", back_populates="lines")
