@@ -5,9 +5,11 @@ import { api, clearToken, setToken, getToken } from "@/lib/api";
 export interface User {
   id: string;
   email: string;
-  full_name: string;
+  full_name?: string;
   role: string;
   workspace_id: string;
+  is_active?: boolean;
+  is_owner?: boolean;
 }
 
 interface AuthState {
@@ -52,12 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const data = await api.post<{ access_token: string; user: User }>(
+    const data = await api.post<{ access_token: string }>(
       "/auth/login",
       { email, password }
     );
     setToken(data.access_token);
-    setUser(data.user);
+    const me = await api.get<User>("/auth/me");
+    setUser(me);
   };
 
   const register = async (data: RegisterData) => {

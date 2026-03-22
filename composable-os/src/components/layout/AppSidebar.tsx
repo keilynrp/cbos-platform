@@ -1,108 +1,263 @@
 import {
   LayoutDashboard, FolderKanban, Users, Share2, FileText,
-  BarChart3, Bot, Store, Settings, Blocks, Sun, Moon, PanelTop, Landmark, ShoppingBag, GitBranch, MessageSquare, UserCircle, Crosshair, Magnet, Calendar, Layers, CalendarClock, Cable, Monitor, PackageSearch, Warehouse, Cpu, Network, FileSignature, Receipt, Map, Brain, Zap, Search, FileText
+  BarChart3, Bot, Store, Settings, Blocks, Sun, Moon,
+  PanelTop, Landmark, ShoppingBag, GitBranch, MessageSquare,
+  UserCircle, Crosshair, Magnet, Calendar, Layers, CalendarClock,
+  Cable, Monitor, PackageSearch, Warehouse as WarehouseIcon, Cpu,
+  Network, FileSignature, Receipt, Map, Brain, Zap, Search,
+  ChevronLeft, ChevronRight, type LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
-  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader,
-  SidebarFooter, useSidebar,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Sidebar, SidebarContent, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 
-const mainNav = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Projects", url: "/projects", icon: FolderKanban },
-  { title: "CRM", url: "/crm", icon: Users },
-  { title: "Knowledge Graph", url: "/knowledge", icon: Share2 },
-  { title: "Documents", url: "/documents", icon: FileText },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
-  { title: "AI Agents", url: "/ai-agents", icon: Bot },
-  { title: "Chatbot Builder", url: "/chatbot-builder", icon: MessageSquare },
-  { title: "Marketplace", url: "/marketplace", icon: Store },
-  { title: "Portal Builder", url: "/portal-builder", icon: PanelTop },
-  { title: "Shop Builder", url: "/shop-builder", icon: ShoppingBag },
-  { title: "RevPath Intelligence", url: "/revpath", icon: GitBranch },
-  { title: "Persona Builder", url: "/persona-builder", icon: UserCircle },
-  { title: "Prospecting", url: "/prospecting", icon: Crosshair },
-  { title: "Lead Magnets", url: "/lead-magnets", icon: Magnet },
-  { title: "Events", url: "/events", icon: Calendar },
-  { title: "Experience Mapper", url: "/experience-mapper", icon: Layers },
-  { title: "Appointments", url: "/appointments", icon: CalendarClock },
-  { title: "MCP Hub", url: "/mcp-hub", icon: Cable },
-  { title: "POS Builder", url: "/pos-builder", icon: Monitor },
-  { title: "Inventory & Orders", url: "/inventory-orders", icon: PackageSearch },
-  { title: "Warehouse", url: "/warehouse", icon: Warehouse },
-  { title: "IoT Builder", url: "/iot-builder", icon: Cpu },
-  { title: "System Modeler", url: "/system-modeler", icon: Network },
-  { title: "Contract Studio", url: "/contract-studio", icon: FileSignature },
-  { title: "Workflows", url: "/workflows", icon: Zap },
-  { title: "Sales Builder", url: "/sales-builder", icon: Receipt },
-  { title: "Solution Discovery", url: "/discovery", icon: Search },
-  { title: "Platform Map", url: "/platform-map", icon: Map },
-  { title: "Team Structure", url: "/team-structure", icon: Users },
-  { title: "Intelligence Graph", url: "/intelligence-graph", icon: Brain },
-  { title: "Facturación", url: "/invoicing", icon: FileText },
-  { title: "Accounts", url: "/accounts", icon: Landmark },
-  { title: "Settings", url: "/settings", icon: Settings },
+// ── Nav structure ──────────────────────────────────────────────────────────
+interface NavItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+}
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    label: "",
+    items: [
+      { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Plataforma",
+    items: [
+      { title: "Proyectos",       url: "/projects",   icon: FolderKanban },
+      { title: "CRM",             url: "/crm",         icon: Users },
+      { title: "Documentos",      url: "/documents",   icon: FileText },
+      { title: "Analítica",       url: "/analytics",   icon: BarChart3 },
+      { title: "Knowledge Graph", url: "/knowledge",   icon: Share2 },
+    ],
+  },
+  {
+    label: "Crecimiento",
+    items: [
+      { title: "AI Agents",         url: "/ai-agents",        icon: Bot },
+      { title: "Chatbot Builder",   url: "/chatbot-builder",  icon: MessageSquare },
+      { title: "RevPath",           url: "/revpath",          icon: GitBranch },
+      { title: "Persona Builder",   url: "/persona-builder",  icon: UserCircle },
+      { title: "Prospecting",       url: "/prospecting",      icon: Crosshair },
+      { title: "Lead Magnets",      url: "/lead-magnets",     icon: Magnet },
+      { title: "Eventos",           url: "/events",           icon: Calendar },
+      { title: "Experience Mapper", url: "/experience-mapper",icon: Layers },
+      { title: "Citas",             url: "/appointments",     icon: CalendarClock },
+    ],
+  },
+  {
+    label: "Comercio",
+    items: [
+      { title: "Sales Builder",     url: "/sales-builder",    icon: Receipt },
+      { title: "Inventario",        url: "/inventory-orders", icon: PackageSearch },
+      { title: "POS Builder",       url: "/pos-builder",      icon: Monitor },
+      { title: "Almacén",           url: "/warehouse",        icon: WarehouseIcon },
+      { title: "Facturación",       url: "/invoicing",        icon: FileText },
+      { title: "Cuentas",           url: "/accounts",         icon: Landmark },
+      { title: "Contratos",         url: "/contract-studio",  icon: FileSignature },
+    ],
+  },
+  {
+    label: "Builders",
+    items: [
+      { title: "Portal Builder",  url: "/portal-builder",  icon: PanelTop },
+      { title: "Shop Builder",    url: "/shop-builder",    icon: ShoppingBag },
+      { title: "MCP Hub",         url: "/mcp-hub",         icon: Cable },
+      { title: "IoT Builder",     url: "/iot-builder",     icon: Cpu },
+      { title: "System Modeler",  url: "/system-modeler",  icon: Network },
+      { title: "Workflows",       url: "/workflows",       icon: Zap },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [
+      { title: "Marketplace",       url: "/marketplace",       icon: Store },
+      { title: "Discovery",         url: "/discovery",         icon: Search },
+      { title: "Platform Map",      url: "/platform-map",      icon: Map },
+      { title: "Team Structure",    url: "/team-structure",    icon: Users },
+      { title: "Intelligence Graph",url: "/intelligence-graph",icon: Brain },
+      { title: "Ajustes",           url: "/settings",          icon: Settings },
+    ],
+  },
 ];
 
+// ── NavItem component ──────────────────────────────────────────────────────
+function NavItemEl({
+  item,
+  active,
+  collapsed,
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+}) {
+  const Icon = item.icon;
+
+  const inner = (
+    <NavLink
+      to={item.url}
+      end={item.url === "/"}
+      className={cn(
+        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 outline-none",
+        active
+          ? "bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary"
+          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200",
+        collapsed && "justify-center px-2",
+      )}
+    >
+      <Icon
+        className={cn(
+          "h-[18px] w-[18px] shrink-0 transition-colors",
+          active
+            ? "text-primary"
+            : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300",
+        )}
+      />
+      {!collapsed && <span className="truncate">{item.title}</span>}
+    </NavLink>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip delayDuration={0}>
+        <TooltipTrigger asChild>{inner}</TooltipTrigger>
+        <TooltipContent side="right" className="text-xs font-medium">
+          {item.title}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return inner;
+}
+
+// ── AppSidebar ─────────────────────────────────────────────────────────────
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+  const isDark = theme === "dark";
+
+  function isActive(url: string) {
+    return url === "/" ? location.pathname === "/" : location.pathname.startsWith(url);
+  }
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Blocks className="h-4 w-4" />
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col flex-1">
-              <span className="text-sm font-bold tracking-tight">Composable OS</span>
-              <span className="text-[10px] text-muted-foreground">Business Platform</span>
+    <TooltipProvider>
+      <Sidebar collapsible="icon" className="border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+
+        {/* ── Header ──────────────────────────────────────────── */}
+        <SidebarHeader className="px-4 py-5">
+          <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
+            {/* Logo mark */}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-theme-sm">
+              <Blocks className="h-5 w-5" />
             </div>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0"
-            onClick={toggleTheme}
-          >
-            <Sun className="h-3.5 w-3.5 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-3.5 w-3.5 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
-          </Button>
-        </div>
-      </SidebarHeader>
 
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNav.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={
-                    item.url === "/" ? location.pathname === "/" : location.pathname.startsWith(item.url)
-                  }>
-                    <NavLink to={item.url} end={item.url === "/"}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+            {/* Brand text */}
+            {!collapsed && (
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">
+                  Composable OS
+                </span>
+                <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                  Business Platform
+                </span>
+              </div>
+            )}
+          </div>
+        </SidebarHeader>
 
-      <SidebarFooter />
-    </Sidebar>
+        {/* ── Nav ─────────────────────────────────────────────── */}
+        <SidebarContent className="overflow-y-auto overflow-x-hidden px-3 pb-4 [scrollbar-width:thin] [scrollbar-color:theme(colors.gray.200)_transparent] dark:[scrollbar-color:theme(colors.gray.800)_transparent]">
+          {navSections.map((section) => (
+            <div key={section.label || "__main"} className="mb-1">
+              {/* Section label */}
+              {section.label && !collapsed && (
+                <p className="mb-1 mt-4 px-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">
+                  {section.label}
+                </p>
+              )}
+              {/* Spacer when collapsed (no labels) */}
+              {section.label && collapsed && (
+                <div className="my-1 mx-2 border-t border-gray-100 dark:border-gray-800" />
+              )}
+
+              {/* Items */}
+              <ul className="space-y-0.5">
+                {section.items.map((item) => (
+                  <li key={item.url}>
+                    <NavItemEl
+                      item={item}
+                      active={isActive(item.url)}
+                      collapsed={collapsed}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </SidebarContent>
+
+        {/* ── Footer ──────────────────────────────────────────── */}
+        <SidebarFooter className="border-t border-gray-100 dark:border-gray-800 px-3 py-3">
+          <div className={cn("flex items-center gap-2", collapsed ? "flex-col" : "flex-row justify-between")}>
+            {/* Theme toggle */}
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setTheme(isDark ? "light" : "dark")}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300 transition-colors"
+                >
+                  {isDark ? (
+                    <Sun className="h-[18px] w-[18px]" />
+                  ) : (
+                    <Moon className="h-[18px] w-[18px]" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">
+                {isDark ? "Modo claro" : "Modo oscuro"}
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Collapse toggle */}
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggleSidebar}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300 transition-colors"
+                >
+                  {collapsed ? (
+                    <ChevronRight className="h-[18px] w-[18px]" />
+                  ) : (
+                    <ChevronLeft className="h-[18px] w-[18px]" />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">
+                {collapsed ? "Expandir" : "Colapsar"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+    </TooltipProvider>
   );
 }

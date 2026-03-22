@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Outlet } from "react-router-dom";
 import { Search, Bell, LogOut, CheckCheck, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,7 +18,7 @@ export function AppLayout() {
 
   const userInitials = user?.full_name
     ? user.full_name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
-    : "U";
+    : user?.email?.slice(0, 2).toUpperCase() ?? "U";
 
   const handleNotifOpen = (open: boolean) => {
     setNotifOpen(open);
@@ -41,14 +40,13 @@ export function AppLayout() {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center justify-between border-b px-4 bg-card">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger />
+          <header className="h-14 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-5 bg-white dark:bg-gray-900 sticky top-0 z-10">
+            <div className="flex items-center gap-3">
               <div className="relative hidden sm:block">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search everything..."
-                  className="pl-9 w-64 h-9 bg-muted/50 border-none"
+                  placeholder="Buscar en la plataforma..."
+                  className="pl-9 w-64 h-9 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-sm rounded-lg focus-visible:ring-primary/30"
                 />
               </div>
             </div>
@@ -57,10 +55,10 @@ export function AppLayout() {
               {/* Notification bell */}
               <Popover open={notifOpen} onOpenChange={handleNotifOpen}>
                 <PopoverTrigger asChild>
-                  <button className="relative p-2 rounded-lg hover:bg-muted transition-colors">
-                    <Bell className="h-4 w-4 text-muted-foreground" />
+                  <button className="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5 transition-colors">
+                    <Bell className="h-[18px] w-[18px]" />
                     {unreadCount > 0 && (
-                      <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-primary text-[9px] text-primary-foreground flex items-center justify-center font-bold">
+                      <span className="absolute top-1.5 right-1.5 h-3.5 w-3.5 rounded-full bg-primary text-[8px] text-primary-foreground flex items-center justify-center font-bold leading-none">
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
@@ -70,9 +68,9 @@ export function AppLayout() {
                   <div className="flex items-center justify-between px-4 py-3 border-b">
                     <span className="text-sm font-semibold">Notificaciones</span>
                     {notifications.length > 0 && (
-                      <Button variant="ghost" size="sm" className="h-6 text-xs gap-1" onClick={markAllRead}>
+                      <button className="flex items-center gap-1 h-6 px-2 text-xs text-primary hover:underline" onClick={markAllRead}>
                         <CheckCheck className="h-3 w-3" /> Marcar todas
-                      </Button>
+                      </button>
                     )}
                   </div>
                   <ScrollArea className="max-h-80">
@@ -102,14 +100,19 @@ export function AppLayout() {
                 </PopoverContent>
               </Popover>
 
-              {/* User avatar */}
+              {/* User avatar + name */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Avatar className="h-8 w-8 cursor-pointer">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <button className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                    <Avatar className="h-7 w-7">
+                      <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-semibold">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                      {user?.full_name ?? "Usuario"}
+                    </span>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p className="font-medium">{user?.full_name ?? "Usuario"}</p>
@@ -120,14 +123,12 @@ export function AppLayout() {
               {/* Logout */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  <button
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors"
                     onClick={logout}
                   >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
+                    <LogOut className="h-[18px] w-[18px]" />
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent>Cerrar sesión</TooltipContent>
               </Tooltip>
