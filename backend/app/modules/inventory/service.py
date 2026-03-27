@@ -252,7 +252,7 @@ async def record_movement(
     elif data.movement_type == "out":
         if item.available_stock < data.quantity:
             raise HTTPException(
-                status_code=409,
+                status_code=422,
                 detail=f"Insufficient available stock: {item.available_stock} {product.unit} available"
             )
         item.current_stock -= data.quantity
@@ -317,7 +317,7 @@ async def reserve_stock(
 
     if item.available_stock < data.quantity:
         raise HTTPException(
-            status_code=409,
+            status_code=422,
             detail=f"Insufficient available stock: {item.available_stock} {product.unit} available"
         )
 

@@ -343,8 +343,7 @@ async def accept_quote(
         owner_id=quote.owner_id,
         total=quote.total,
         currency=quote.currency,
-        status="confirmed",
-        confirmed_at=now,
+        status="draft",
     )
     db.add(order)
     await db.flush()

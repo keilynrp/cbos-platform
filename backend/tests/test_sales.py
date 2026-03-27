@@ -81,7 +81,7 @@ async def test_sales_order_confirm(client: AsyncClient, auth_headers: dict):
     order = await _accept_quote(client, auth_headers, quote["id"])
     order_id = order["id"]
 
-    resp = await client.patch(f"{BASE}/orders/{order_id}/confirm", headers=auth_headers)
+    resp = await client.patch(f"{BASE}/orders/{order_id}/confirm", headers=auth_headers, json={})
     assert resp.status_code == 200
     assert resp.json()["status"] == "confirmed"
 
@@ -92,7 +92,7 @@ async def test_sales_order_fulfill(client: AsyncClient, auth_headers: dict):
     order_id = order["id"]
 
     # confirm → in_fulfillment → fulfilled
-    await client.patch(f"{BASE}/orders/{order_id}/confirm", headers=auth_headers)
+    await client.patch(f"{BASE}/orders/{order_id}/confirm", headers=auth_headers, json={})
     # Directly transition to in_fulfillment is not yet a separate endpoint,
     # so we test confirm → fulfill (which should fail since transition is confirm→in_fulfillment)
     resp = await client.patch(f"{BASE}/orders/{order_id}/fulfill", headers=auth_headers)
@@ -119,7 +119,7 @@ async def test_invalid_state_transition_returns_422(client: AsyncClient, auth_he
     await client.patch(f"{BASE}/orders/{order_id}/cancel", headers=auth_headers)
 
     # Try to confirm a cancelled order
-    resp = await client.patch(f"{BASE}/orders/{order_id}/confirm", headers=auth_headers)
+    resp = await client.patch(f"{BASE}/orders/{order_id}/confirm", headers=auth_headers, json={})
     assert resp.status_code == 422
 
 

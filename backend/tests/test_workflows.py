@@ -144,9 +144,12 @@ async def test_condition_eq_evaluation(client: AsyncClient, auth_headers: dict, 
     await db.flush()
 
     runs = (await db.execute(
-        select(WorkflowRun).where(WorkflowRun.workflow_id == wf_id)
+        select(WorkflowRun).where(
+            WorkflowRun.workflow_id == wf_id,
+            WorkflowRun.status != "skipped",
+        )
     )).scalars().all()
-    # Only 1 run — the matching event
+    # Only 1 run — the matching event (non-matching creates a "skipped" run)
     assert len(runs) == 1
 
 

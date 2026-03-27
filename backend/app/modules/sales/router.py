@@ -103,7 +103,7 @@ async def send_quote(
     return await service.send_quote(db, workspace_id, current_user.id, quote_id)
 
 
-@router.patch("/quotes/{quote_id}/accept", response_model=QuoteRead)
+@router.patch("/quotes/{quote_id}/accept", response_model=SalesOrderRead)
 async def accept_quote(
     quote_id: str,
     db: AsyncSession = Depends(get_db),
@@ -128,7 +128,7 @@ async def accept_quote(
         except Exception as exc:
             logger.warning("Auto-reserve failed for order %s: %s", order.id, exc)
 
-    return quote
+    return order
 
 
 @router.patch("/quotes/{quote_id}/reject", response_model=QuoteRead)
