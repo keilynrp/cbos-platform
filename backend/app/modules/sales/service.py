@@ -18,7 +18,8 @@ from app.events.types import (
     SALES_ORDER_FULFILLED,
     Event,
 )
-from app.modules.identity.models import Organization, Person
+from app.core.validators import validate_workspace_ownership
+from app.modules.identity.models import Organization, Person, User
 from app.modules.sales.models import Quote, QuoteLine, SalesOrder, SalesOrderLine
 from app.modules.sales.schemas import (
     QuoteCreate,
@@ -127,6 +128,13 @@ async def create_quote(
     actor_id: str,
     data: QuoteCreate,
 ) -> Quote:
+    if data.contact_id:
+        await validate_workspace_ownership(db, Person, data.contact_id, workspace_id, "contact_id")
+    if data.organization_id:
+        await validate_workspace_ownership(db, Organization, data.organization_id, workspace_id, "organization_id")
+    if data.owner_id:
+        await validate_workspace_ownership(db, User, data.owner_id, workspace_id, "owner_id")
+
     quote_number = await _next_quote_number(db, workspace_id)
 
     quote = Quote(

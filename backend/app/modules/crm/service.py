@@ -16,6 +16,7 @@ from app.events.types import (
     OPPORTUNITY_WON,
     Event,
 )
+from app.core.validators import validate_workspace_ownership
 from app.modules.crm.models import Activity, Lead, Opportunity
 from app.modules.crm.schemas import (
     ActivityCreate,
@@ -29,6 +30,29 @@ from app.modules.crm.schemas import (
     PipelineSummary,
     VALID_STAGES,
 )
+from app.modules.identity.models import Organization, User
+
+
+# ── Opportunity state machine ─────────────────────────────────────────────────
+
+_OPP_TRANSITIONS: dict[str, set[str]] = {
+    "new":          {"qualified", "lost"},
+    "qualified":    {"proposal", "lost"},
+    "proposal":     {"negotiation", "lost"},
+    "negotiation":  {"won", "lost"},
+    "won":          set(),
+    "lost":         set(),
+}
+
+
+def _assert_opp_transition(current: str, target: str) -> None:
+    allowed = _OPP_TRANSITIONS.get(current, set())
+    if target not in allowed:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Cannot transition opportunity from '{current}' to '{target}'. "
+                   f"Allowed: {sorted(allowed) or 'none (terminal state)'}",
+        )
 
 
 # ── Leads ────────────────────────────────────────────────────────────────────
@@ -39,6 +63,11 @@ async def create_lead(
     actor_id: str,
     data: LeadCreate,
 ) -> Lead:
+    if data.organization_id:
+        await validate_workspace_ownership(db, Organization, data.organization_id, workspace_id, "organization_id")
+    if data.owner_id:
+        await validate_workspace_ownership(db, User, data.owner_id, workspace_id, "owner_id")
+
     lead = Lead(workspace_id=workspace_id, **data.model_dump())
     db.add(lead)
     await db.flush()
@@ -161,6 +190,11 @@ async def create_opportunity(
     if data.stage not in VALID_STAGES:
         raise HTTPException(status_code=422, detail=f"Invalid stage: {data.stage}")
 
+    if data.organization_id:
+        await validate_workspace_ownership(db, Organization, data.organization_id, workspace_id, "organization_id")
+    if data.owner_id:
+        await validate_workspace_ownership(db, User, data.owner_id, workspace_id, "owner_id")
+
     opp = Opportunity(workspace_id=workspace_id, **data.model_dump())
     db.add(opp)
     await db.flush()
@@ -248,6 +282,7 @@ async def change_stage(
 
     opp = await get_opportunity(db, workspace_id, opp_id)
     previous_stage = opp.stage
+    _assert_opp_transition(previous_stage, data.stage)
     opp.stage = data.stage
 
     now = datetime.now(timezone.utc)

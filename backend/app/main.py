@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.exceptions import CBOSException, cbos_exception_handler
+from app.core.middleware import CorrelationIDMiddleware
 from app.events.bus import close as close_redis
 from app.modules.workflows.consumer import start_consumer, stop_consumer
 from app.modules.workflows.router import router as workflows_router
@@ -43,6 +45,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(CorrelationIDMiddleware)
+app.add_exception_handler(CBOSException, cbos_exception_handler)
 
 # ── Routers ────────────────────────────────────────────────
 app.include_router(identity_router, prefix=settings.api_prefix, tags=["Identity & Auth"])
