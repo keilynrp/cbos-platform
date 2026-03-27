@@ -37,7 +37,7 @@ services:
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
       ENVIRONMENT: development
       DEBUG: "true"
-      ALLOWED_ORIGINS: '["https://localhost"]'
+      ALLOWED_ORIGINS: '["http://localhost", "https://localhost", "http://localhost:5173"]'
     expose:
       - "8000"
     depends_on:
@@ -54,7 +54,7 @@ services:
     working_dir: /app
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 8101"
     environment:
-      VITE_API_URL: https://localhost/api/v1
+      VITE_API_URL: http://localhost/api/v1
     expose:
       - "8101"
     volumes:
@@ -66,10 +66,8 @@ services:
     image: nginx:alpine
     ports:
       - "${NGINX_HTTP_PORT:-8080}:80"
-      - "${NGINX_HTTPS_PORT:-8443}:443"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./certs:/etc/nginx/certs:ro
+      - ./nginx/local-http.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - frontend
       - backend
