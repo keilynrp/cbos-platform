@@ -1,18 +1,26 @@
 """
 Test fixtures for CBOS integration tests.
 
-Strategy: real PostgreSQL (cbos_test DB), each test wrapped in a transaction
-that is rolled back — no mocks, no data leakage between tests.
+Strategy: real PostgreSQL (cbos_test DB), TRUNCATE before each test.
+
+Why not per-test transaction rollback:
+  asyncpg doesn't support concurrent operations on the same connection.
+  HTTP requests via AsyncClient go through a different async context than the
+  fixture db session, causing "another operation is in progress" with shared
+  connections. Using independent sessions + TRUNCATE is simpler and reliable.
 
 Run inside Docker:
     docker compose exec backend pytest tests/ -v --tb=short
 """
 
+import asyncio
 import os
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.core.database import Base
 from app.core.deps import get_current_user, get_current_workspace_id
@@ -26,7 +34,7 @@ TEST_DATABASE_URL = os.getenv(
     "postgresql+asyncpg://cbos:cbos_dev_pass@postgres:5432/cbos_test",
 )
 
-# Import all models so Base.metadata is populated
+# Import all models so Base.metadata is fully populated
 from app.modules.crm.models import Activity, Lead, Opportunity  # noqa: F401
 from app.modules.sales.models import Quote, QuoteLine, SalesOrder, SalesOrderLine  # noqa: F401
 from app.modules.inventory.models import InventoryItem, Product, ProductCategory, StockMovement  # noqa: F401
@@ -34,6 +42,21 @@ from app.modules.portal.models import PortalSession  # noqa: F401
 from app.modules.discovery.models import DiscoveryMessage, DiscoverySession  # noqa: F401
 from app.modules.workflows.models import Workflow, WorkflowRun  # noqa: F401
 from app.modules.accounting.models import Invoice, InvoiceLine, Payment  # noqa: F401
+
+
+# ── Session-scoped event loop — shared by all async fixtures and tests ────────
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Single event loop for the entire test session.
+
+    Required so that session-scoped async fixtures (ensure_test_db,
+    test_engine) and every test function share the same loop.
+    NullPool ensures asyncpg never caches connections across loop lifetimes.
+    """
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 
 # ── Ensure test database exists ───────────────────────────────────────────────
@@ -45,32 +68,32 @@ async def ensure_test_db():
     from urllib.parse import urlparse
 
     parsed = urlparse(TEST_DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://"))
-    host = parsed.hostname
-    port = parsed.port or 5432
-    user = parsed.username
-    password = parsed.password
-    dbname = parsed.path.lstrip("/")
-
     try:
         conn = await asyncpg.connect(
-            host=host, port=port, user=user, password=password, database="postgres"
+            host=parsed.hostname,
+            port=parsed.port or 5432,
+            user=parsed.username,
+            password=parsed.password,
+            database="postgres",
         )
         exists = await conn.fetchval(
-            "SELECT 1 FROM pg_database WHERE datname = $1", dbname
+            "SELECT 1 FROM pg_database WHERE datname = $1", parsed.path.lstrip("/")
         )
         if not exists:
-            await conn.execute(f'CREATE DATABASE "{dbname}"')
+            await conn.execute(f'CREATE DATABASE "{parsed.path.lstrip("/")}"')
         await conn.close()
     except Exception as e:
-        # If we can't connect to postgres admin DB, skip — test DB may already exist
         print(f"Warning: could not ensure test DB: {e}")
 
 
-# ── Session-scoped engine & schema ────────────────────────────────────────────
+# ── Session-scoped engine — create schema once per session ────────────────────
 
 @pytest_asyncio.fixture(scope="session")
 async def test_engine(ensure_test_db):
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+    # NullPool: no connection pooling — each connection is created fresh in the
+    # current event loop, eliminating asyncpg "Future attached to different loop"
+    # errors that occur when pytest-asyncio creates a new loop per test function.
+    engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
@@ -80,61 +103,85 @@ async def test_engine(ensure_test_db):
     await engine.dispose()
 
 
-# ── Per-test transaction rollback ─────────────────────────────────────────────
+@pytest.fixture(scope="session")
+def session_factory(test_engine):
+    return async_sessionmaker(test_engine, expire_on_commit=False, class_=AsyncSession)
+
+
+# ── Truncate all tables before each test ─────────────────────────────────────
+
+@pytest_asyncio.fixture(autouse=True)
+async def truncate_tables(test_engine):
+    """Wipes all rows before each test so tests are fully isolated."""
+    async with test_engine.begin() as conn:
+        table_names = ", ".join(
+            f'"{t.name}"' for t in Base.metadata.sorted_tables
+        )
+        await conn.execute(text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE"))
+
+
+# ── Per-test db session (for direct service/model access in tests) ────────────
 
 @pytest_asyncio.fixture
-async def db(test_engine):
-    """AsyncSession wrapped in a transaction that is rolled back after each test."""
-    async with test_engine.connect() as conn:
-        await conn.begin()
-        session = AsyncSession(bind=conn, expire_on_commit=False)
+async def db(session_factory) -> AsyncSession:
+    session = session_factory()
+    try:
         yield session
-        await session.close()
-        await conn.rollback()
+    finally:
+        # dispatch_event commits internally; suppress errors closing an
+        # already-committed/returned connection (NullPool closes on commit).
+        try:
+            await session.close()
+        except Exception:
+            pass
 
 
-# ── Workspace + User fixtures ─────────────────────────────────────────────────
-
-@pytest_asyncio.fixture
-async def workspace(db: AsyncSession) -> Workspace:
-    ws = Workspace(
-        name="Test Corp",
-        slug="test-corp",
-        active_modules=["crm", "sales", "inventory"],
-    )
-    db.add(ws)
-    await db.flush()
-    return ws
-
+# ── Workspace + User fixtures (commit so HTTP requests can see the data) ──────
 
 @pytest_asyncio.fixture
-async def test_user(db: AsyncSession, workspace: Workspace) -> User:
+async def workspace(session_factory) -> Workspace:
+    async with session_factory() as session:
+        ws = Workspace(
+            name="Test Corp",
+            slug="test-corp",
+            active_modules=["crm", "sales", "inventory"],
+        )
+        session.add(ws)
+        await session.commit()
+        await session.refresh(ws)
+        return ws
+
+
+@pytest_asyncio.fixture
+async def test_user(session_factory, workspace: Workspace) -> User:
     from app.core.security import hash_password
 
-    person = Person(
-        workspace_id=workspace.id,
-        full_name="Test Owner",
-        email="owner@test.corp",
-        role_labels=["owner"],
-    )
-    db.add(person)
-    await db.flush()
+    async with session_factory() as session:
+        person = Person(
+            workspace_id=workspace.id,
+            full_name="Test Owner",
+            email="owner@test.corp",
+            role_labels=["owner"],
+        )
+        session.add(person)
+        await session.flush()
 
-    user = User(
-        workspace_id=workspace.id,
-        person_id=person.id,
-        email="owner@test.corp",
-        hashed_password=hash_password("testpassword123"),
-        role="admin",
-        is_owner=True,
-    )
-    db.add(user)
-    await db.flush()
-    return user
+        user = User(
+            workspace_id=workspace.id,
+            person_id=person.id,
+            email="owner@test.corp",
+            hashed_password=hash_password("testpassword123"),
+            role="admin",
+            is_owner=True,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        return user
 
 
 @pytest_asyncio.fixture
-async def auth_headers(test_user: User) -> dict:
+def auth_headers(test_user: User) -> dict:
     token = create_access_token({
         "sub": test_user.id,
         "workspace_id": test_user.workspace_id,
@@ -143,25 +190,16 @@ async def auth_headers(test_user: User) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
-# ── HTTP client with DI overrides ─────────────────────────────────────────────
+# ── HTTP client — each request gets its own session from the test DB ──────────
 
 @pytest_asyncio.fixture
-async def client(db: AsyncSession, test_user: User) -> AsyncClient:
-    """AsyncClient with DB and auth dependencies overridden to use test session."""
+async def client(session_factory, test_user: User) -> AsyncClient:
+    """AsyncClient pointing to the test DB; auth is pre-set to test_user."""
 
     async def _override_db():
-        yield db
+        async with session_factory() as session:
+            yield session
 
-    async def _override_user():
-        return test_user
-
-    async def _override_workspace():
-        return test_user.workspace_id
-
-    app.dependency_overrides[get_current_user] = _override_user
-    app.dependency_overrides[get_current_workspace_id] = _override_workspace
-
-    # Override get_db only for modules that use it directly
     from app.core.database import get_db
     app.dependency_overrides[get_db] = _override_db
 

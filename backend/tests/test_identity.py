@@ -13,7 +13,7 @@ pytestmark = pytest.mark.asyncio
 
 REGISTER_PAYLOAD = {
     "full_name": "John Doe",
-    "email": "john@acme.test",
+    "email": "john@acme.example.com",
     "password": "securepass123",
     "workspace_name": "Acme Inc",
     "workspace_slug": "acme-inc",
@@ -23,7 +23,7 @@ REGISTER_PAYLOAD = {
 async def _register_fresh(client: AsyncClient, slug_suffix: str = "") -> dict:
     payload = {**REGISTER_PAYLOAD, "workspace_slug": f"acme{slug_suffix}"}
     if slug_suffix:
-        payload["email"] = f"john{slug_suffix}@acme.test"
+        payload["email"] = f"john{slug_suffix}@acme.example.com"
     resp = await client.post("/api/v1/auth/register", json=payload)
     assert resp.status_code == 201, resp.text
     return resp.json()
@@ -42,7 +42,7 @@ async def test_register_duplicate_slug_returns_409(client: AsyncClient):
     resp = await client.post("/api/v1/auth/register", json={
         **REGISTER_PAYLOAD,
         "workspace_slug": "acme-dup",
-        "email": "other@acme.test",
+        "email": "other@acme.example.com",
     })
     assert resp.status_code == 409
 
@@ -52,7 +52,7 @@ async def test_register_duplicate_email_returns_409(client: AsyncClient):
     resp = await client.post("/api/v1/auth/register", json={
         **REGISTER_PAYLOAD,
         "workspace_slug": "acme-email2",
-        "email": "johnemail1@acme.test",
+        "email": "john-email1@acme.example.com",
     })
     assert resp.status_code == 409
 
@@ -60,7 +60,7 @@ async def test_register_duplicate_email_returns_409(client: AsyncClient):
 async def test_login_correct_credentials(client: AsyncClient):
     await _register_fresh(client, "-login1")
     resp = await client.post("/api/v1/auth/login", json={
-        "email": "johnlogin1@acme.test",
+        "email": "john-login1@acme.example.com",
         "password": "securepass123",
     })
     assert resp.status_code == 200
@@ -71,7 +71,7 @@ async def test_login_correct_credentials(client: AsyncClient):
 async def test_login_wrong_password_returns_401(client: AsyncClient):
     await _register_fresh(client, "-wrongpw")
     resp = await client.post("/api/v1/auth/login", json={
-        "email": "johnwrongpw@acme.test",
+        "email": "johnwrongpw@acme.example.com",
         "password": "wrongpassword",
     })
     assert resp.status_code == 401

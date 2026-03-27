@@ -55,7 +55,7 @@ async def test_stock_movement_in_increments_stock(client: AsyncClient, auth_head
     assert resp.status_code == 200
     stock = {s["product_id"]: s for s in resp.json()}
     assert product_id in stock
-    assert stock[product_id]["current_stock"] >= 100.0
+    assert stock[product_id]["total_current"] >= 100.0
 
 
 async def test_reserve_stock_increases_reserved(client: AsyncClient, auth_headers: dict):
@@ -73,8 +73,8 @@ async def test_reserve_stock_increases_reserved(client: AsyncClient, auth_header
     stock_resp = await client.get(f"{BASE}/stock", headers=auth_headers)
     stock = {s["product_id"]: s for s in stock_resp.json()}
     item = stock[product_id]
-    assert item["reserved_stock"] >= 10.0
-    assert item["available_stock"] == item["current_stock"] - item["reserved_stock"]
+    assert item["total_reserved"] >= 10.0
+    assert item["total_available"] == item["total_current"] - item["total_reserved"]
 
 
 async def test_release_stock_decreases_reserved(client: AsyncClient, auth_headers: dict):
@@ -97,7 +97,7 @@ async def test_release_stock_decreases_reserved(client: AsyncClient, auth_header
 
     stock_resp = await client.get(f"{BASE}/stock", headers=auth_headers)
     stock = {s["product_id"]: s for s in stock_resp.json()}
-    assert stock[product_id]["reserved_stock"] == 0.0
+    assert stock[product_id]["total_reserved"] == 0.0
 
 
 async def test_reserve_more_than_available_returns_422(client: AsyncClient, auth_headers: dict):
