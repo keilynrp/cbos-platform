@@ -205,3 +205,23 @@ async def confirm_order(
     workspace_id: str = Depends(get_current_workspace_id),
 ):
     return await service.confirm_order(db, workspace_id, current_user.id, order_id, data)
+
+
+@router.patch("/orders/{order_id}/fulfill", response_model=SalesOrderRead)
+async def fulfill_order(
+    order_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+):
+    return await service.fulfill_order(db, workspace_id, current_user.id, order_id)
+
+
+@router.patch("/orders/{order_id}/cancel", response_model=SalesOrderRead)
+async def cancel_order(
+    order_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+):
+    return await service.cancel_order(db, workspace_id, current_user.id, order_id)
