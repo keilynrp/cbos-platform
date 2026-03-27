@@ -32,8 +32,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
-    throw new Error(body.detail ?? `HTTP ${res.status}`);
+    const body = await res.json().catch(() => ({}));
+    // CBOSException: { error: { code, message, detail } }
+    // HTTPException: { detail: "string" | [...] }
+    const message =
+      body?.error?.message ??
+      (typeof body?.detail === "string" ? body.detail : null) ??
+      `HTTP ${res.status}`;
+    throw new Error(message);
   }
 
   if (res.status === 204) return null as T;

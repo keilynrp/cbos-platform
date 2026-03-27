@@ -49,7 +49,13 @@ export interface Opportunity {
   contact_name?: string;
   organization_id: string | null;
   organization_name?: string;
+  lost_reason: string | null;
   created_at: string;
+}
+
+export interface ChangeStageDto {
+  stage: string;
+  lost_reason?: string;
 }
 
 export interface Activity {
@@ -120,6 +126,8 @@ export const crmService = {
   createOpportunity: (dto: CreateOpportunityDto) => api.post<Opportunity>("/crm/opportunities", dto),
   updateOpportunity: (id: string, dto: Partial<CreateOpportunityDto>) =>
     api.patch<Opportunity>(`/crm/opportunities/${id}`, dto),
+  changeStage: (id: string, dto: ChangeStageDto) =>
+    api.patch<Opportunity>(`/crm/opportunities/${id}/stage`, dto),
 
   // Activities
   getActivities: () => api.get<Activity[]>("/crm/activities"),

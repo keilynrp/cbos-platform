@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { crmService, type Lead, type Contact, type Organization, type Opportunity, type Activity } from "@/services/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,6 +36,7 @@ const STAGES = [
   { id: "proposal",     title: "Proposal",     color: "bg-purple-500" },
   { id: "negotiation",  title: "Negotiation",  color: "bg-amber-500" },
   { id: "closed_won",   title: "Closed Won",   color: "bg-emerald-500" },
+  { id: "lost",         title: "Lost",         color: "bg-red-400" },
 ];
 
 const activityIcons: Record<string, React.ElementType> = {
@@ -44,14 +46,22 @@ const activityIcons: Record<string, React.ElementType> = {
 
 // ── Sub-Components ─────────────────────────────────────────────────────────
 
-function DealCard({ opp }: { opp: Opportunity }) {
+function DealCard({ opp, onStageClick }: { opp: Opportunity; onStageClick: (opp: Opportunity) => void }) {
   const name = opp.contact_name ?? opp.organization_name ?? "—";
   return (
-    <Card className="group cursor-pointer border border-border/60 shadow-sm hover:shadow-md transition-all hover:border-primary/30 bg-card">
+    <Card
+      className="group cursor-pointer border border-border/60 shadow-sm hover:shadow-md transition-all hover:border-primary/30 bg-card"
+      onClick={() => onStageClick(opp)}
+    >
       <CardContent className="p-3.5 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium leading-snug">{opp.name}</p>
-          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0"
+            onClick={(e) => { e.stopPropagation(); onStageClick(opp); }}
+          >
             <MoreHorizontal className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -79,7 +89,7 @@ function DealCard({ opp }: { opp: Opportunity }) {
   );
 }
 
-function Pipeline({ opportunities }: { opportunities: Opportunity[] }) {
+function Pipeline({ opportunities, onStageClick }: { opportunities: Opportunity[]; onStageClick: (opp: Opportunity) => void }) {
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
       {STAGES.map((stage) => {
@@ -96,7 +106,7 @@ function Pipeline({ opportunities }: { opportunities: Opportunity[] }) {
               <span className="text-xs font-medium text-muted-foreground">{fmtCurrency(total)}</span>
             </div>
             <div className="space-y-2.5">
-              {deals.map((deal) => <DealCard key={deal.id} opp={deal} />)}
+              {deals.map((deal) => <DealCard key={deal.id} opp={deal} onStageClick={onStageClick} />)}
             </div>
           </div>
         );
@@ -195,6 +205,69 @@ function ActivityList({ activities }: { activities: Activity[] }) {
         );
       })}
     </div>
+  );
+}
+
+// ── Change Stage Dialog ─────────────────────────────────────────────────────
+function ChangeStageDialog({ opp, onClose }: { opp: Opportunity | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [stage, setStage] = useState(opp?.stage ?? "lead");
+  const [lostReason, setLostReason] = useState("");
+
+  useEffect(() => {
+    setStage(opp?.stage ?? "lead");
+    setLostReason("");
+  }, [opp]);
+
+  const change = useMutation({
+    mutationFn: () => crmService.changeStage(opp!.id, {
+      stage,
+      ...(stage === "lost" ? { lost_reason: lostReason } : {}),
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-opportunities"] });
+      toast.success("Etapa actualizada");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={!!opp} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>Cambiar etapa — {opp?.name}</DialogTitle></DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); change.mutate(); }} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Nueva etapa</Label>
+            <Select value={stage} onValueChange={setStage}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {STAGES.map((s) => <SelectItem key={s.id} value={s.id}>{s.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {stage === "lost" && (
+            <div className="space-y-1.5">
+              <Label>Motivo de pérdida *</Label>
+              <Textarea
+                value={lostReason}
+                onChange={(e) => setLostReason(e.target.value)}
+                placeholder="¿Por qué se perdió esta oportunidad?"
+                required
+                rows={3}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={change.isPending} className="gap-2">
+              {change.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Guardar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -332,6 +405,7 @@ const CRM = () => {
   const [activeTab, setActiveTab] = useState("pipeline");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [newOppOpen, setNewOppOpen] = useState(false);
+  const [stageOpp, setStageOpp] = useState<Opportunity | null>(null);
 
   const { data: opportunities = [], isLoading: loadingOpps } = useQuery({
     queryKey: ["crm-opportunities"],
@@ -422,7 +496,7 @@ const CRM = () => {
               {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="min-w-[264px] h-48 rounded-xl" />)}
             </div>
           ) : (
-            <Pipeline opportunities={opportunities} />
+            <Pipeline opportunities={opportunities} onStageClick={setStageOpp} />
           )}
         </TabsContent>
 
@@ -457,6 +531,7 @@ const CRM = () => {
 
       <NewLeadDialog open={newLeadOpen} onClose={() => setNewLeadOpen(false)} />
       <NewOpportunityDialog open={newOppOpen} onClose={() => setNewOppOpen(false)} />
+      <ChangeStageDialog opp={stageOpp} onClose={() => setStageOpp(null)} />
     </div>
   );
 };
