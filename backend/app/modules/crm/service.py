@@ -390,18 +390,18 @@ async def create_activity(
 async def list_activities(
     db: AsyncSession,
     workspace_id: str,
-    entity_type: str,
-    entity_id: str,
+    entity_type: str | None = None,
+    entity_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
 ) -> Sequence[Activity]:
-    result = await db.execute(
-        select(Activity)
-        .where(
-            Activity.workspace_id == workspace_id,
-            Activity.entity_type == entity_type,
-            Activity.entity_id == entity_id,
-        )
-        .order_by(Activity.created_at.desc())
-    )
+    q = select(Activity).where(Activity.workspace_id == workspace_id)
+    if entity_type:
+        q = q.where(Activity.entity_type == entity_type)
+    if entity_id:
+        q = q.where(Activity.entity_id == entity_id)
+    q = q.order_by(Activity.created_at.desc()).limit(limit).offset(offset)
+    result = await db.execute(q)
     return result.scalars().all()
 
 

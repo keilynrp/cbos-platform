@@ -159,13 +159,15 @@ async def create_activity(
 
 @router.get("/activities", response_model=list[ActivityRead])
 async def list_activities(
-    entity_type: str = Query(...),
-    entity_id: str = Query(...),
+    entity_type: str | None = Query(default=None),
+    entity_id: str | None = Query(default=None),
+    limit: int = Query(default=50, le=200),
+    offset: int = Query(default=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
 ):
-    return await service.list_activities(db, workspace_id, entity_type, entity_id)
+    return await service.list_activities(db, workspace_id, entity_type, entity_id, limit, offset)
 
 
 @router.patch("/activities/{activity_id}/complete", response_model=ActivityRead)

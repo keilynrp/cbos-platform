@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { crmService, type Lead, type Contact, type Organization, type Opportunity, type Activity } from "@/services/crm";
+import { crmService, type Lead, type Contact, type Organization, type Opportunity, type Activity, type CreateActivityDto } from "@/services/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -29,25 +29,34 @@ function fmtCurrency(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
-// Pipeline stages config
+// Pipeline stages config — IDs match backend VALID_STAGES
 const STAGES = [
-  { id: "lead",         title: "Lead",         color: "bg-gray-400" },
-  { id: "qualified",    title: "Qualified",    color: "bg-blue-500" },
-  { id: "proposal",     title: "Proposal",     color: "bg-purple-500" },
-  { id: "negotiation",  title: "Negotiation",  color: "bg-amber-500" },
-  { id: "closed_won",   title: "Closed Won",   color: "bg-emerald-500" },
-  { id: "lost",         title: "Lost",         color: "bg-red-400" },
+  { id: "new",         title: "New",         color: "bg-gray-400" },
+  { id: "qualified",   title: "Qualified",   color: "bg-blue-500" },
+  { id: "proposal",    title: "Proposal",    color: "bg-purple-500" },
+  { id: "negotiation", title: "Negotiation", color: "bg-amber-500" },
+  { id: "won",         title: "Won",         color: "bg-emerald-500" },
+  { id: "lost",        title: "Lost",        color: "bg-red-400" },
 ];
+
+const LEAD_STATUS_COLORS: Record<string, string> = {
+  new:          "bg-gray-100 text-gray-700",
+  contacted:    "bg-blue-100 text-blue-700",
+  qualified:    "bg-green-100 text-green-700",
+  disqualified: "bg-red-100 text-red-700",
+  converted:    "bg-purple-100 text-purple-700",
+};
 
 const activityIcons: Record<string, React.ElementType> = {
   call: Phone, email: Mail, meeting: Calendar, note: MessageSquare,
-  deal: CheckCircle2, document: FileText, default: Clock,
+  task: CheckCircle2, deal: CheckCircle2, document: FileText, default: Clock,
 };
+
+type ActivityCtx = { entity_type: "lead" | "opportunity"; entity_id: string; name: string };
 
 // ── Sub-Components ─────────────────────────────────────────────────────────
 
 function DealCard({ opp, onStageClick }: { opp: Opportunity; onStageClick: (opp: Opportunity) => void }) {
-  const name = opp.contact_name ?? opp.organization_name ?? "—";
   return (
     <Card
       className="group cursor-pointer border border-border/60 shadow-sm hover:shadow-md transition-all hover:border-primary/30 bg-card"
@@ -55,7 +64,7 @@ function DealCard({ opp, onStageClick }: { opp: Opportunity; onStageClick: (opp:
     >
       <CardContent className="p-3.5 space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium leading-snug">{opp.name}</p>
+          <p className="text-sm font-medium leading-snug">{opp.title}</p>
           <Button
             variant="ghost"
             size="icon"
@@ -65,23 +74,19 @@ function DealCard({ opp, onStageClick }: { opp: Opportunity; onStageClick: (opp:
             <MoreHorizontal className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <Avatar className="h-5 w-5">
-            <AvatarFallback className="bg-primary/10 text-primary text-[9px]">{initials(name)}</AvatarFallback>
-          </Avatar>
-          <span className="text-xs text-muted-foreground truncate">{name}</span>
-        </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-primary">{fmtCurrency(opp.value)}</span>
+          <span className="text-sm font-semibold text-primary">{fmtCurrency(opp.value ?? 0)}</span>
           <div className="flex items-center gap-2">
             {opp.close_date && (
               <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
                 <Clock className="h-3 w-3" /> {new Date(opp.close_date).toLocaleDateString()}
               </span>
             )}
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/5 text-primary border-primary/20">
-              {opp.probability}%
-            </Badge>
+            {opp.probability != null && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/5 text-primary border-primary/20">
+                {opp.probability}%
+              </Badge>
+            )}
           </div>
         </div>
       </CardContent>
@@ -94,7 +99,7 @@ function Pipeline({ opportunities, onStageClick }: { opportunities: Opportunity[
     <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
       {STAGES.map((stage) => {
         const deals = opportunities.filter((o) => o.stage === stage.id);
-        const total = deals.reduce((s, d) => s + d.value, 0);
+        const total = deals.reduce((s, d) => s + (d.value ?? 0), 0);
         return (
           <div key={stage.id} className="min-w-[264px] w-[264px] shrink-0 space-y-3">
             <div className="flex items-center justify-between">
@@ -109,6 +114,73 @@ function Pipeline({ opportunities, onStageClick }: { opportunities: Opportunity[
               {deals.map((deal) => <DealCard key={deal.id} opp={deal} onStageClick={onStageClick} />)}
             </div>
           </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function LeadsList({
+  leads,
+  onConvert,
+  onLogActivity,
+}: {
+  leads: Lead[];
+  onConvert: (lead: Lead) => void;
+  onLogActivity: (ctx: ActivityCtx) => void;
+}) {
+  if (leads.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-8">Sin leads registrados</p>;
+  }
+  return (
+    <div className="grid gap-3">
+      {leads.map((lead) => {
+        const name = `${lead.first_name} ${lead.last_name ?? ""}`.trim();
+        return (
+          <Card key={lead.id} className="border border-border/60 hover:border-primary/20 transition-colors">
+            <CardContent className="p-4 flex items-center gap-4">
+              <Avatar className="h-10 w-10 shrink-0">
+                <AvatarFallback className="bg-primary/10 text-primary text-sm">{initials(name)}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-semibold truncate">{name}</p>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${LEAD_STATUS_COLORS[lead.status] ?? "bg-gray-100 text-gray-700"}`}>
+                    {lead.status}
+                  </span>
+                  {lead.source && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{lead.source}</Badge>
+                  )}
+                </div>
+                {lead.company_name && (
+                  <p className="text-xs text-muted-foreground truncate">{lead.company_name}</p>
+                )}
+              </div>
+              <div className="hidden sm:flex items-center gap-4 text-xs text-muted-foreground shrink-0">
+                {lead.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{lead.email}</span>}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 gap-1.5 text-xs"
+                  onClick={() => onLogActivity({ entity_type: "lead", entity_id: lead.id, name })}
+                >
+                  <MessageSquare className="h-3.5 w-3.5" /> Log
+                </Button>
+                {lead.status !== "converted" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5 text-xs"
+                    onClick={() => onConvert(lead)}
+                  >
+                    <ArrowRight className="h-3.5 w-3.5" /> Convertir
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         );
       })}
     </div>
@@ -161,12 +233,8 @@ function OrganizationsList({ organizations }: { organizations: Organization[] })
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {org.website && (
-                <Badge variant="outline" className="text-[10px]">{org.website}</Badge>
-              )}
-              {org.phone && (
-                <Badge variant="outline" className="text-[10px]">{org.phone}</Badge>
-              )}
+              {org.website && <Badge variant="outline" className="text-[10px]">{org.website}</Badge>}
+              {org.phone && <Badge variant="outline" className="text-[10px]">{org.phone}</Badge>}
             </div>
           </CardContent>
         </Card>
@@ -179,7 +247,7 @@ function ActivityList({ activities }: { activities: Activity[] }) {
   return (
     <div className="space-y-1">
       {activities.map((a, i) => {
-        const Icon = activityIcons[a.type] ?? activityIcons.default;
+        const Icon = activityIcons[a.activity_type] ?? activityIcons.default;
         return (
           <div key={a.id} className="flex gap-3 p-3 rounded-lg hover:bg-muted/40 transition-colors">
             <div className="relative">
@@ -195,6 +263,7 @@ function ActivityList({ activities }: { activities: Activity[] }) {
                 <div>
                   <p className="text-sm font-medium">{a.title}</p>
                   {a.description && <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>}
+                  <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">{a.activity_type} · {a.entity_type}</p>
                 </div>
                 <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
                   {new Date(a.created_at).toLocaleDateString()}
@@ -211,11 +280,11 @@ function ActivityList({ activities }: { activities: Activity[] }) {
 // ── Change Stage Dialog ─────────────────────────────────────────────────────
 function ChangeStageDialog({ opp, onClose }: { opp: Opportunity | null; onClose: () => void }) {
   const qc = useQueryClient();
-  const [stage, setStage] = useState(opp?.stage ?? "lead");
+  const [stage, setStage] = useState(opp?.stage ?? "new");
   const [lostReason, setLostReason] = useState("");
 
   useEffect(() => {
-    setStage(opp?.stage ?? "lead");
+    setStage(opp?.stage ?? "new");
     setLostReason("");
   }, [opp]);
 
@@ -235,7 +304,7 @@ function ChangeStageDialog({ opp, onClose }: { opp: Opportunity | null; onClose:
   return (
     <Dialog open={!!opp} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle>Cambiar etapa — {opp?.name}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Cambiar etapa — {opp?.title}</DialogTitle></DialogHeader>
         <form onSubmit={(e) => { e.preventDefault(); change.mutate(); }} className="space-y-3">
           <div className="space-y-1.5">
             <Label>Nueva etapa</Label>
@@ -271,18 +340,170 @@ function ChangeStageDialog({ opp, onClose }: { opp: Opportunity | null; onClose:
   );
 }
 
-// ── New Lead Dialog ────────────────────────────────────────────────────────
-function NewLeadDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+// ── Convert Lead Dialog ─────────────────────────────────────────────────────
+function ConvertLeadDialog({ lead, onClose }: { lead: Lead | null; onClose: () => void }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", company: "", source: "web" });
+  const [form, setForm] = useState({ title: "", value: "", close_date: "" });
+
+  useEffect(() => {
+    if (lead) {
+      setForm({
+        title: `${lead.first_name} ${lead.last_name ?? ""}`.trim(),
+        value: "",
+        close_date: "",
+      });
+    }
+  }, [lead]);
+
+  const convert = useMutation({
+    mutationFn: () => crmService.convertLead(lead!.id, {
+      title: form.title,
+      value: form.value ? Number(form.value) : undefined,
+      close_date: form.close_date || undefined,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-leads"] });
+      qc.invalidateQueries({ queryKey: ["crm-opportunities"] });
+      toast.success("Lead convertido a oportunidad");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={!!lead} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>Convertir lead — {lead?.first_name}</DialogTitle></DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); convert.mutate(); }} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Título de la oportunidad *</Label>
+            <Input
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Valor ($)</Label>
+              <Input
+                type="number"
+                value={form.value}
+                onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Fecha de cierre</Label>
+              <Input
+                type="date"
+                value={form.close_date}
+                onChange={(e) => setForm((f) => ({ ...f, close_date: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={convert.isPending} className="gap-2">
+              {convert.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Convertir
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Log Activity Dialog ─────────────────────────────────────────────────────
+function LogActivityDialog({ context, onClose }: { context: ActivityCtx | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<{ activity_type: CreateActivityDto["activity_type"]; title: string; description: string }>({
+    activity_type: "call",
+    title: "",
+    description: "",
+  });
+
+  useEffect(() => {
+    setForm({ activity_type: "call", title: "", description: "" });
+  }, [context]);
+
+  const log = useMutation({
+    mutationFn: () => crmService.logActivity({
+      activity_type: form.activity_type,
+      title: form.title,
+      description: form.description || undefined,
+      entity_type: context!.entity_type,
+      entity_id: context!.entity_id,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm-activities"] });
+      toast.success("Actividad registrada");
+      onClose();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={!!context} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>Registrar actividad — {context?.name}</DialogTitle></DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); log.mutate(); }} className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Tipo</Label>
+            <Select
+              value={form.activity_type}
+              onValueChange={(v) => setForm((f) => ({ ...f, activity_type: v as typeof f.activity_type }))}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {(["call", "email", "meeting", "note", "task"] as const).map((t) => (
+                  <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Título *</Label>
+            <Input
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Descripción</Label>
+            <Textarea
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              rows={2}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={log.isPending} className="gap-2">
+              {log.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Guardar
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── New Lead Dialog ────────────────────────────────────────────────────────
+function NewLeadDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated?: () => void }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", company_name: "", source: "web" });
 
   const create = useMutation({
-    mutationFn: crmService.createLead,
+    mutationFn: () => crmService.createLead(form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-leads"] });
       toast.success("Lead creado");
       onClose();
-      setForm({ first_name: "", last_name: "", email: "", phone: "", company: "", source: "web" });
+      onCreated?.();
+      setForm({ first_name: "", last_name: "", email: "", phone: "", company_name: "", source: "web" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -291,7 +512,7 @@ function NewLeadDialog({ open, onClose }: { open: boolean; onClose: () => void }
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>Nuevo Lead</DialogTitle></DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); create.mutate(form); }} className="space-y-3">
+        <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Nombre *</Label>
@@ -308,7 +529,7 @@ function NewLeadDialog({ open, onClose }: { open: boolean; onClose: () => void }
           </div>
           <div className="space-y-1.5">
             <Label>Empresa</Label>
-            <Input value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))} />
+            <Input value={form.company_name} onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))} />
           </div>
           <div className="space-y-1.5">
             <Label>Fuente</Label>
@@ -337,20 +558,21 @@ function NewLeadDialog({ open, onClose }: { open: boolean; onClose: () => void }
 // ── New Opportunity Dialog ─────────────────────────────────────────────────
 function NewOpportunityDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState({ name: "", stage: "lead", value: "", probability: "50", close_date: "" });
+  const [form, setForm] = useState({ title: "", stage: "new", value: "", probability: "50", close_date: "" });
 
   const create = useMutation({
-    mutationFn: (data: typeof form) => crmService.createOpportunity({
-      name: data.name,
-      stage: data.stage,
-      value: Number(data.value),
-      probability: Number(data.probability),
-      close_date: data.close_date || undefined,
+    mutationFn: () => crmService.createOpportunity({
+      title: form.title,
+      stage: form.stage,
+      value: form.value ? Number(form.value) : undefined,
+      probability: form.probability ? Number(form.probability) : undefined,
+      close_date: form.close_date || undefined,
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["crm-opportunities"] });
       toast.success("Oportunidad creada");
       onClose();
+      setForm({ title: "", stage: "new", value: "", probability: "50", close_date: "" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -359,10 +581,10 @@ function NewOpportunityDialog({ open, onClose }: { open: boolean; onClose: () =>
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>Nueva Oportunidad</DialogTitle></DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); create.mutate(form); }} className="space-y-3">
+        <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Nombre *</Label>
-            <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
+            <Label>Título *</Label>
+            <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} required />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -406,32 +628,52 @@ const CRM = () => {
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [newOppOpen, setNewOppOpen] = useState(false);
   const [stageOpp, setStageOpp] = useState<Opportunity | null>(null);
+  const [convertLead, setConvertLead] = useState<Lead | null>(null);
+  const [activityCtx, setActivityCtx] = useState<ActivityCtx | null>(null);
 
-  const { data: opportunities = [], isLoading: loadingOpps } = useQuery({
+  const { data: opportunities = [], isLoading: loadingOpps, error: oppsError } = useQuery({
     queryKey: ["crm-opportunities"],
     queryFn: crmService.getOpportunities,
+    retry: 1,
+  });
+
+  const { data: leads = [], isLoading: loadingLeads, error: leadsError } = useQuery({
+    queryKey: ["crm-leads"],
+    queryFn: crmService.getLeads,
+    retry: 1,
   });
 
   const { data: contacts = [], isLoading: loadingContacts } = useQuery({
     queryKey: ["crm-contacts"],
     queryFn: crmService.getContacts,
+    retry: 1,
   });
 
   const { data: organizations = [], isLoading: loadingOrgs } = useQuery({
     queryKey: ["crm-organizations"],
     queryFn: crmService.getOrganizations,
+    retry: 1,
   });
 
   const { data: activities = [], isLoading: loadingActivities } = useQuery({
     queryKey: ["crm-activities"],
-    queryFn: crmService.getActivities,
+    queryFn: () => crmService.getActivities(),
+    retry: 1,
   });
 
+  // Surface silent API failures as visible toasts
+  useEffect(() => {
+    if (oppsError) toast.error("Error cargando oportunidades: " + (oppsError as Error)?.message);
+  }, [oppsError]);
+  useEffect(() => {
+    if (leadsError) toast.error("Error cargando leads: " + (leadsError as Error)?.message);
+  }, [leadsError]);
+
   // KPI calculations
-  const totalPipeline = opportunities.reduce((s, o) => s + o.value, 0);
-  const openDeals = opportunities.filter((o) => o.stage !== "closed_won").length;
-  const closedWon = opportunities.filter((o) => o.stage === "closed_won");
-  const winRate = opportunities.length ? Math.round((closedWon.length / opportunities.length) * 100) : 0;
+  const totalPipeline = opportunities.reduce((s, o) => s + (o.value ?? 0), 0);
+  const openDeals = opportunities.filter((o) => o.stage !== "won" && o.stage !== "lost").length;
+  const won = opportunities.filter((o) => o.stage === "won");
+  const winRate = opportunities.length ? Math.round((won.length / opportunities.length) * 100) : 0;
   const avgDealSize = opportunities.length ? totalPipeline / opportunities.length : 0;
 
   const kpiStats = [
@@ -485,6 +727,7 @@ const CRM = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="pipeline" className="gap-1.5"><FolderKanban className="h-3.5 w-3.5" /> Pipeline</TabsTrigger>
+          <TabsTrigger value="leads" className="gap-1.5"><Send className="h-3.5 w-3.5" /> Leads</TabsTrigger>
           <TabsTrigger value="contacts" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Contacts</TabsTrigger>
           <TabsTrigger value="organizations" className="gap-1.5"><Building2 className="h-3.5 w-3.5" /> Organizations</TabsTrigger>
           <TabsTrigger value="activity" className="gap-1.5"><Clock className="h-3.5 w-3.5" /> Activity</TabsTrigger>
@@ -497,6 +740,14 @@ const CRM = () => {
             </div>
           ) : (
             <Pipeline opportunities={opportunities} onStageClick={setStageOpp} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="leads" className="mt-4">
+          {loadingLeads ? (
+            <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-20 rounded-xl" />)}</div>
+          ) : (
+            <LeadsList leads={leads} onConvert={setConvertLead} onLogActivity={setActivityCtx} />
           )}
         </TabsContent>
 
@@ -529,9 +780,11 @@ const CRM = () => {
         </TabsContent>
       </Tabs>
 
-      <NewLeadDialog open={newLeadOpen} onClose={() => setNewLeadOpen(false)} />
+      <NewLeadDialog open={newLeadOpen} onClose={() => setNewLeadOpen(false)} onCreated={() => setActiveTab("leads")} />
       <NewOpportunityDialog open={newOppOpen} onClose={() => setNewOppOpen(false)} />
       <ChangeStageDialog opp={stageOpp} onClose={() => setStageOpp(null)} />
+      <ConvertLeadDialog lead={convertLead} onClose={() => setConvertLead(null)} />
+      <LogActivityDialog context={activityCtx} onClose={() => setActivityCtx(null)} />
     </div>
   );
 };
