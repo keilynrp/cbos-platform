@@ -6,11 +6,11 @@ from sqlalchemy import select
 from app.core.database import get_db
 from app.core.security import verify_token
 
-bearer_scheme = HTTPBearer()
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ):
     from app.modules.identity.models import User
@@ -20,6 +20,9 @@ async def get_current_user(
         detail="Invalid or expired token",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if credentials is None:
+        raise credentials_exception
 
     payload = verify_token(credentials.credentials, token_type="access")
     if not payload:

@@ -62,6 +62,8 @@ async def register(data: RegisterRequest, db: AsyncSession) -> TokenResponse:
     db.add(user)
     await db.flush()
 
+    await db.commit()
+
     token_payload = {
         "sub": user.id,
         "workspace_id": workspace.id,
