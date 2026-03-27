@@ -9,6 +9,15 @@ The documents in this section are the active source of truth for architecture an
 - `IMPLEMENTATION_ALIGNMENT.md`
 - `TECHNICAL_BACKLOG_30_60_90.md`
 - `SPRINT_BACKLOG_8_WEEKS.md`
+- `GITHUB_PROJECT_BACKLOG.md`
+- `GITHUB_ISSUES_READY.md`
+- `PROJECT_BOARD_RECOMMENDED.md`
+- `SPRINT_1_KICKOFF_PACK.md`
+- `API_CONVENTIONS.md`
+- `EVENT_REGISTRY_V1.md`
+- `SPRINT_1_API_EVENTS_AUDIT.md`
+- `EVENT_REGISTRY_V1_TEMPLATE.md`
+- `API_CONVENTIONS_TEMPLATE.md`
 - `capabilities/`
 - `adr/`
 
