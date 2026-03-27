@@ -3,6 +3,8 @@ from sqlalchemy import select
 from fastapi import HTTPException, status
 
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, verify_token
+from app.events.bus import publish as publish_event
+from app.events.types import USER_AUTHENTICATED, Event
 from app.modules.identity.models import Workspace, User, Person, Organization
 from app.modules.identity.schemas import RegisterRequest, LoginRequest, TokenResponse
 
@@ -93,6 +95,15 @@ async def login(data: LoginRequest, db: AsyncSession) -> TokenResponse:
         "workspace_id": user.workspace_id,
         "role": user.role,
     }
+
+    await publish_event(Event(
+        event_type=USER_AUTHENTICATED,
+        source_module="identity",
+        workspace_id=user.workspace_id,
+        actor_id=user.id,
+        entity_id=user.id,
+        payload={"email": user.email, "role": user.role},
+    ))
 
     return TokenResponse(
         access_token=create_access_token(token_payload),

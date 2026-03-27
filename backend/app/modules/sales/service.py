@@ -1,22 +1,26 @@
 from datetime import datetime, timezone
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.events.bus import publish as publish_event
 from app.events.types import (
+    FULFILLMENT_COMPLETED,
     QUOTE_ACCEPTED,
     QUOTE_CREATED,
     QUOTE_REJECTED,
     QUOTE_SENT,
-    SALES_ORDER_CREATED,
+    SALES_ORDER_CANCELLED,
     SALES_ORDER_CONFIRMED,
+    SALES_ORDER_CREATED,
+    SALES_ORDER_FULFILLED,
     Event,
 )
-from app.modules.identity.models import Organization, Person
-from app.modules.sales.models import Quote, QuoteLine, SalesOrder
+from app.core.validators import validate_workspace_ownership
+from app.modules.identity.models import Organization, Person, User
+from app.modules.sales.models import Quote, QuoteLine, SalesOrder, SalesOrderLine
 from app.modules.sales.schemas import (
     QuoteCreate,
     QuoteLineCreate,
@@ -27,6 +31,32 @@ from app.modules.sales.schemas import (
 )
 
 
+# ── State machine ─────────────────────────────────────────────────────────────
+
+_ORDER_TRANSITIONS: dict[str, set[str]] = {
+    "draft":          {"confirmed", "cancelled"},
+    "confirmed":      {"in_fulfillment", "cancelled"},
+    "in_fulfillment": {"fulfilled", "cancelled"},
+    "fulfilled":      set(),
+    "cancelled":      set(),
+}
+
+
+def _assert_order_transition(current: str, target: str) -> None:
+    allowed = _ORDER_TRANSITIONS.get(current, set())
+    if target not in allowed:
+        terminal = not allowed
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Cannot transition order from '{current}' to '{target}'. "
+                + ("Terminal state — no further transitions allowed."
+                   if terminal
+                   else f"Allowed transitions: {sorted(allowed)}")
+            ),
+        )
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _calc_line_amount(quantity: float, unit_price: float, discount_percent: float) -> float:
@@ -34,7 +64,6 @@ def _calc_line_amount(quantity: float, unit_price: float, discount_percent: floa
 
 
 async def _recalculate_totals(db: AsyncSession, quote: Quote) -> None:
-    """Recompute subtotal / tax_amount / total from current lines."""
     subtotal = sum(line.amount for line in quote.lines)
     tax_amount = round(subtotal * quote.tax_rate / 100, 4)
     total = round(subtotal - quote.discount_amount + tax_amount, 4)
@@ -74,8 +103,21 @@ async def _load_quote(db: AsyncSession, workspace_id: str, quote_id: str) -> Quo
 
 
 async def _reload_quote(db: AsyncSession, workspace_id: str, quote_id: str) -> Quote:
-    """Fresh SELECT after commit — prevents MissingGreenlet on async sessions."""
     return await _load_quote(db, workspace_id, quote_id)
+
+
+async def _load_order_with_lines(
+    db: AsyncSession, workspace_id: str, order_id: str
+) -> SalesOrder:
+    result = await db.execute(
+        select(SalesOrder)
+        .options(selectinload(SalesOrder.lines))
+        .where(SalesOrder.id == order_id, SalesOrder.workspace_id == workspace_id)
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Sales order not found")
+    return order
 
 
 # ── Quotes ────────────────────────────────────────────────────────────────────
@@ -86,6 +128,13 @@ async def create_quote(
     actor_id: str,
     data: QuoteCreate,
 ) -> Quote:
+    if data.contact_id:
+        await validate_workspace_ownership(db, Person, data.contact_id, workspace_id, "contact_id")
+    if data.organization_id:
+        await validate_workspace_ownership(db, Organization, data.organization_id, workspace_id, "organization_id")
+    if data.owner_id:
+        await validate_workspace_ownership(db, User, data.owner_id, workspace_id, "owner_id")
+
     quote_number = await _next_quote_number(db, workspace_id)
 
     quote = Quote(
@@ -106,7 +155,6 @@ async def create_quote(
     db.add(quote)
     await db.flush()
 
-    # Add lines
     for i, line_data in enumerate(data.lines, start=1):
         amount = _calc_line_amount(line_data.quantity, line_data.unit_price, line_data.discount_percent)
         line = QuoteLine(
@@ -123,8 +171,6 @@ async def create_quote(
         db.add(line)
 
     await db.flush()
-
-    # Load lines for total calculation (still inside transaction)
     await db.refresh(quote, attribute_names=["lines"])
     await _recalculate_totals(db, quote)
 
@@ -286,7 +332,6 @@ async def accept_quote(
     quote.status = "accepted"
     quote.accepted_at = now
 
-    # Auto-generate SalesOrder
     order_number = await _next_order_number(db, workspace_id)
     order = SalesOrder(
         workspace_id=workspace_id,
@@ -303,6 +348,20 @@ async def accept_quote(
     )
     db.add(order)
     await db.flush()
+
+    # Copy QuoteLines → SalesOrderLines
+    for ql in quote.lines:
+        db.add(SalesOrderLine(
+            workspace_id=workspace_id,
+            order_id=order.id,
+            line_order=ql.line_order,
+            description=ql.description,
+            quantity=ql.quantity,
+            unit_price=ql.unit_price,
+            discount_percent=ql.discount_percent,
+            amount=ql.amount,
+            product_id=ql.product_id,
+        ))
 
     await publish_event(Event(
         event_type=QUOTE_ACCEPTED,
@@ -329,7 +388,7 @@ async def accept_quote(
     ))
 
     await db.commit()
-    await db.refresh(order)
+    order = await _load_order_with_lines(db, workspace_id, order.id)
     quote = await _reload_quote(db, workspace_id, quote_id)
     return quote, order
 
@@ -370,24 +429,19 @@ async def get_quote_pdf_data(
     workspace_id: str,
     quote_id: str,
 ) -> tuple[Quote, str | None, str | None]:
-    """Returns (quote, contact_name, org_name) for PDF generation."""
     quote = await _load_quote(db, workspace_id, quote_id)
 
     contact_name: str | None = None
     org_name: str | None = None
 
     if quote.contact_id:
-        result = await db.execute(
-            select(Person).where(Person.id == quote.contact_id)
-        )
+        result = await db.execute(select(Person).where(Person.id == quote.contact_id))
         person = result.scalar_one_or_none()
         if person:
             contact_name = person.full_name
 
     if quote.organization_id:
-        result = await db.execute(
-            select(Organization).where(Organization.id == quote.organization_id)
-        )
+        result = await db.execute(select(Organization).where(Organization.id == quote.organization_id))
         org = result.scalar_one_or_none()
         if org:
             org_name = org.brand_name or org.legal_name
@@ -404,7 +458,11 @@ async def list_orders(
     limit: int = 50,
     offset: int = 0,
 ):
-    q = select(SalesOrder).where(SalesOrder.workspace_id == workspace_id)
+    q = (
+        select(SalesOrder)
+        .options(selectinload(SalesOrder.lines))
+        .where(SalesOrder.workspace_id == workspace_id)
+    )
     if status:
         q = q.where(SalesOrder.status == status)
     q = q.order_by(SalesOrder.created_at.desc()).limit(limit).offset(offset)
@@ -413,15 +471,7 @@ async def list_orders(
 
 
 async def get_order(db: AsyncSession, workspace_id: str, order_id: str) -> SalesOrder:
-    result = await db.execute(
-        select(SalesOrder).where(
-            SalesOrder.id == order_id, SalesOrder.workspace_id == workspace_id
-        )
-    )
-    order = result.scalar_one_or_none()
-    if not order:
-        raise HTTPException(status_code=404, detail="Sales order not found")
-    return order
+    return await _load_order_with_lines(db, workspace_id, order_id)
 
 
 async def confirm_order(
@@ -431,9 +481,8 @@ async def confirm_order(
     order_id: str,
     data: SalesOrderConfirm,
 ) -> SalesOrder:
-    order = await get_order(db, workspace_id, order_id)
-    if order.status != "draft":
-        raise HTTPException(status_code=409, detail="Order is not in draft status")
+    order = await _load_order_with_lines(db, workspace_id, order_id)
+    _assert_order_transition(order.status, "confirmed")
 
     order.status = "confirmed"
     order.confirmed_at = datetime.now(timezone.utc)
@@ -450,5 +499,74 @@ async def confirm_order(
     ))
 
     await db.commit()
-    await db.refresh(order)
-    return order
+    return await _load_order_with_lines(db, workspace_id, order_id)
+
+
+async def fulfill_order(
+    db: AsyncSession,
+    workspace_id: str,
+    actor_id: str,
+    order_id: str,
+) -> SalesOrder:
+    order = await _load_order_with_lines(db, workspace_id, order_id)
+    _assert_order_transition(order.status, "fulfilled")
+
+    order.status = "fulfilled"
+    order.fulfilled_at = datetime.now(timezone.utc)
+
+    # Consume reserved stock for all lines that have a product_id
+    from app.modules.inventory import service as inv_service
+    await inv_service.consume_reserved_stock(db, workspace_id, actor_id, order_id)
+
+    await publish_event(Event(
+        event_type=SALES_ORDER_FULFILLED,
+        source_module="sales",
+        workspace_id=workspace_id,
+        actor_id=actor_id,
+        entity_id=order.id,
+        payload={"order_number": order.order_number, "total": order.total},
+    ))
+    await publish_event(Event(
+        event_type=FULFILLMENT_COMPLETED,
+        source_module="sales",
+        workspace_id=workspace_id,
+        actor_id=actor_id,
+        entity_id=order.id,
+        payload={
+            "order_number": order.order_number,
+            "order_id": order.id,
+            "organization_id": order.organization_id,
+        },
+    ))
+
+    await db.commit()
+    return await _load_order_with_lines(db, workspace_id, order_id)
+
+
+async def cancel_order(
+    db: AsyncSession,
+    workspace_id: str,
+    actor_id: str,
+    order_id: str,
+) -> SalesOrder:
+    order = await _load_order_with_lines(db, workspace_id, order_id)
+    _assert_order_transition(order.status, "cancelled")
+
+    order.status = "cancelled"
+    order.cancelled_at = datetime.now(timezone.utc)
+
+    # Release any inventory reservations tied to this order
+    from app.modules.inventory import service as inv_service
+    await inv_service.release_reservations_for_order(db, workspace_id, actor_id, order_id)
+
+    await publish_event(Event(
+        event_type=SALES_ORDER_CANCELLED,
+        source_module="sales",
+        workspace_id=workspace_id,
+        actor_id=actor_id,
+        entity_id=order.id,
+        payload={"order_number": order.order_number, "total": order.total},
+    ))
+
+    await db.commit()
+    return await _load_order_with_lines(db, workspace_id, order_id)

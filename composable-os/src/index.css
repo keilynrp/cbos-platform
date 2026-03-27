@@ -4,23 +4,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 240 10% 10%;
+    /* ── Base surface ─────────────────────────────────────── */
+    --background: 220 20% 97%;
+    --foreground: 220 15% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
+    --card-foreground: 220 15% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
+    --popover-foreground: 220 15% 12%;
 
+    /* ── Brand ───────────────────────────────────────────── */
     --primary: 262 80% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 10% 10%;
+    --secondary: 220 15% 95%;
+    --secondary-foreground: 220 15% 25%;
 
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 50%;
 
     --accent: 220 80% 55%;
     --accent-foreground: 0 0% 100%;
@@ -28,73 +30,115 @@
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: 262 80% 55%;
 
-    --radius: 0.75rem;
+    /* ── Border radius (base → rounded-2xl cards) ─────────── */
+    --radius: 1rem;
 
+    /* ── Sidebar ─────────────────────────────────────────── */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 10% 30%;
+    --sidebar-foreground: 220 10% 35%;
     --sidebar-primary: 262 80% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 262 60% 96%;
     --sidebar-accent-foreground: 262 80% 40%;
-    --sidebar-border: 240 6% 92%;
+    --sidebar-border: 220 13% 92%;
     --sidebar-ring: 262 80% 55%;
 
+    /* ── Semantic palette (TailAdmin-style) ──────────────── */
+    --success-50:  152 60% 96%;
+    --success-100: 152 60% 90%;
+    --success-500: 152 60% 45%;
+    --success-600: 152 60% 38%;
+    --success-700: 152 60% 30%;
+
+    --error-50:  0 86% 97%;
+    --error-100: 0 86% 93%;
+    --error-500: 0 84% 60%;
+    --error-600: 0 72% 51%;
+    --error-700: 0 72% 42%;
+
+    --warning-50:  38 100% 96%;
+    --warning-100: 38 100% 90%;
+    --warning-500: 38 92% 50%;
+    --warning-600: 32 90% 44%;
+    --warning-700: 28 85% 36%;
+
+    /* ── Legacy tokens (keep for existing components) ─────── */
     --cbs-purple: 262 80% 55%;
     --cbs-blue: 220 80% 55%;
     --cbs-purple-light: 262 80% 95%;
     --cbs-blue-light: 220 80% 95%;
-    --cbs-green: 152 60% 48%;
+    --cbs-green: 152 60% 45%;
     --cbs-amber: 38 92% 50%;
+    --cbs-orange: 24 90% 52%;
   }
 
   .dark {
-    --background: 240 10% 6%;
-    --foreground: 0 0% 95%;
+    --background: 222 25% 8%;
+    --foreground: 220 15% 93%;
 
-    --card: 240 10% 8%;
-    --card-foreground: 0 0% 95%;
+    --card: 222 20% 11%;
+    --card-foreground: 220 15% 93%;
 
-    --popover: 240 10% 8%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 222 20% 11%;
+    --popover-foreground: 220 15% 93%;
 
-    --primary: 262 80% 60%;
+    --primary: 262 80% 62%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 15%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 222 15% 18%;
+    --secondary-foreground: 220 15% 80%;
 
-    --muted: 240 5% 15%;
-    --muted-foreground: 240 4% 65%;
+    --muted: 222 15% 18%;
+    --muted-foreground: 220 10% 58%;
 
-    --accent: 220 80% 60%;
+    --accent: 220 80% 62%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62% 30%;
+    --destructive: 0 62% 35%;
     --destructive-foreground: 0 0% 95%;
 
-    --border: 240 5% 18%;
-    --input: 240 5% 18%;
-    --ring: 262 80% 60%;
+    --border: 222 15% 20%;
+    --input: 222 15% 20%;
+    --ring: 262 80% 62%;
 
-    --sidebar-background: 240 10% 8%;
-    --sidebar-foreground: 240 4% 80%;
-    --sidebar-primary: 262 80% 60%;
+    --sidebar-background: 222 20% 11%;
+    --sidebar-foreground: 220 10% 72%;
+    --sidebar-primary: 262 80% 62%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 262 40% 15%;
-    --sidebar-accent-foreground: 262 60% 80%;
-    --sidebar-border: 240 5% 15%;
-    --sidebar-ring: 262 80% 60%;
+    --sidebar-accent: 262 40% 18%;
+    --sidebar-accent-foreground: 262 60% 78%;
+    --sidebar-border: 222 15% 18%;
+    --sidebar-ring: 262 80% 62%;
 
-    --cbs-purple: 262 80% 60%;
-    --cbs-blue: 220 80% 60%;
-    --cbs-purple-light: 262 40% 15%;
-    --cbs-blue-light: 220 40% 15%;
+    --success-50:  152 30% 14%;
+    --success-100: 152 30% 18%;
+    --success-500: 152 60% 48%;
+    --success-600: 152 60% 40%;
+    --success-700: 152 60% 55%;
+
+    --error-50:  0 40% 14%;
+    --error-100: 0 40% 18%;
+    --error-500: 0 84% 65%;
+    --error-600: 0 84% 55%;
+    --error-700: 0 84% 70%;
+
+    --warning-50:  38 60% 14%;
+    --warning-100: 38 60% 18%;
+    --warning-500: 38 92% 55%;
+    --warning-600: 38 90% 48%;
+    --warning-700: 38 92% 62%;
+
+    --cbs-purple: 262 80% 62%;
+    --cbs-blue: 220 80% 62%;
+    --cbs-purple-light: 262 40% 18%;
+    --cbs-blue-light: 220 40% 18%;
     --cbs-green: 152 60% 48%;
     --cbs-amber: 38 92% 50%;
+    --cbs-orange: 24 90% 55%;
   }
 }
 
@@ -105,6 +149,7 @@
 
   body {
     @apply bg-background text-foreground transition-colors duration-300;
+    font-family: "Outfit", ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
