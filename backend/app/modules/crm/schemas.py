@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 # ── Lead ────────────────────────────────────────────────────────────────────
@@ -92,6 +92,12 @@ class OpportunityUpdate(BaseModel):
 class OpportunityStageChange(BaseModel):
     stage: str
     lost_reason: str | None = None  # requerido si stage == "lost"
+
+    @model_validator(mode="after")
+    def lost_reason_required_when_lost(self) -> "OpportunityStageChange":
+        if self.stage == "lost" and not self.lost_reason:
+            raise ValueError("lost_reason is required when stage='lost'")
+        return self
 
 
 class OpportunityRead(BaseModel):

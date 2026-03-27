@@ -94,6 +94,24 @@ class QuoteReject(BaseModel):
     reason: str | None = None
 
 
+# ── SalesOrderLine ───────────────────────────────────────────────────────────
+
+class SalesOrderLineRead(BaseModel):
+    id: str
+    order_id: str
+    line_order: int
+    description: str
+    quantity: float
+    unit_price: float
+    discount_percent: float
+    amount: float
+    product_id: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 # ── SalesOrder ───────────────────────────────────────────────────────────────
 
 class SalesOrderRead(BaseModel):
@@ -106,11 +124,13 @@ class SalesOrderRead(BaseModel):
     notes: str | None
     confirmed_at: datetime | None
     fulfilled_at: datetime | None
+    cancelled_at: datetime | None
     quote_id: str | None
     opportunity_id: str | None
     contact_id: str | None
     organization_id: str | None
     owner_id: str | None
+    lines: list[SalesOrderLineRead] = []
     created_at: datetime
     updated_at: datetime
 

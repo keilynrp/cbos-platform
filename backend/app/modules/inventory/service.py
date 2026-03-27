@@ -433,6 +433,139 @@ async def list_movements(
 
 # ── Auto-reserve for SalesOrder ───────────────────────────────────────────────
 
+async def consume_reserved_stock(
+    db: AsyncSession,
+    workspace_id: str,
+    actor_id: str,
+    order_id: str,
+) -> None:
+    """
+    Convierte las reservas activas de un order en salidas reales de stock.
+    Llamado al fulfillment de una SalesOrder.
+    Por cada movimiento type='reserve' con reference_id=order_id:
+      - Crea StockMovement(type='out')
+      - Decrementa current_stock e borra la reserva del item
+    """
+    result = await db.execute(
+        select(StockMovement).where(
+            StockMovement.workspace_id == workspace_id,
+            StockMovement.movement_type == "reserve",
+            StockMovement.reference_id == order_id,
+        )
+    )
+    reservations = result.scalars().all()
+
+    for reservation in reservations:
+        item_result = await db.execute(
+            select(InventoryItem).where(InventoryItem.id == reservation.inventory_item_id)
+        )
+        item = item_result.scalar_one_or_none()
+        if not item:
+            continue
+
+        qty = reservation.quantity
+        stock_before = item.current_stock
+
+        item.current_stock = max(0.0, item.current_stock - qty)
+        item.reserved_stock = max(0.0, item.reserved_stock - qty)
+
+        movement = StockMovement(
+            workspace_id=workspace_id,
+            product_id=reservation.product_id,
+            inventory_item_id=item.id,
+            movement_type="out",
+            quantity=-qty,
+            stock_before=stock_before,
+            stock_after=item.current_stock,
+            reference_type="fulfillment",
+            reference_id=order_id,
+            notes=f"Stock consumed on fulfillment of order {order_id}",
+            user_id=actor_id,
+        )
+        db.add(movement)
+
+        await publish_event(Event(
+            event_type=STOCK_MOVEMENT_RECORDED,
+            source_module="inventory",
+            workspace_id=workspace_id,
+            actor_id=actor_id,
+            entity_id=reservation.product_id,
+            payload={
+                "product_id": reservation.product_id,
+                "movement_type": "out",
+                "quantity": -qty,
+                "stock_before": stock_before,
+                "stock_after": item.current_stock,
+                "reference_type": "fulfillment",
+                "reference_id": order_id,
+            },
+        ))
+
+
+async def release_reservations_for_order(
+    db: AsyncSession,
+    workspace_id: str,
+    actor_id: str,
+    order_id: str,
+) -> None:
+    """
+    Libera todas las reservas activas de un order.
+    Llamado al cancelar una SalesOrder.
+    Por cada movimiento type='reserve' con reference_id=order_id:
+      - Decrementa reserved_stock del item
+      - Crea StockMovement(type='release')
+    """
+    result = await db.execute(
+        select(StockMovement).where(
+            StockMovement.workspace_id == workspace_id,
+            StockMovement.movement_type == "reserve",
+            StockMovement.reference_id == order_id,
+        )
+    )
+    reservations = result.scalars().all()
+
+    for reservation in reservations:
+        item_result = await db.execute(
+            select(InventoryItem).where(InventoryItem.id == reservation.inventory_item_id)
+        )
+        item = item_result.scalar_one_or_none()
+        if not item:
+            continue
+
+        qty = min(reservation.quantity, item.reserved_stock)
+        stock_before = item.current_stock
+        item.reserved_stock = max(0.0, item.reserved_stock - qty)
+
+        movement = StockMovement(
+            workspace_id=workspace_id,
+            product_id=reservation.product_id,
+            inventory_item_id=item.id,
+            movement_type="release",
+            quantity=qty,
+            stock_before=stock_before,
+            stock_after=item.current_stock,
+            reference_type="cancellation",
+            reference_id=order_id,
+            notes=f"Reservation released on cancellation of order {order_id}",
+            user_id=actor_id,
+        )
+        db.add(movement)
+
+        await publish_event(Event(
+            event_type=INVENTORY_RELEASED,
+            source_module="inventory",
+            workspace_id=workspace_id,
+            actor_id=actor_id,
+            entity_id=reservation.product_id,
+            payload={
+                "product_id": reservation.product_id,
+                "quantity": qty,
+                "reference_type": "cancellation",
+                "reference_id": order_id,
+            },
+        ))
+
+
 async def auto_reserve_for_order(
     db: AsyncSession,
     workspace_id: str,
