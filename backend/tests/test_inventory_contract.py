@@ -223,3 +223,108 @@ async def test_movements_filter_by_product_id(client: AsyncClient, auth_headers:
     movements = resp.json()
     assert len(movements) >= 1
     assert all(m["product_id"] == product["id"] for m in movements)
+
+
+# ── Reserve / Release ─────────────────────────────────────────────────────────
+
+async def test_reserve_reduces_available_stock(client: AsyncClient, auth_headers: dict):
+    product = await _create_product(client, auth_headers, sku="RES-AVAIL-01")
+    await _add_stock(client, auth_headers, product["id"], 100.0)
+
+    resp = await client.post(f"{BASE}/reserve", headers=auth_headers, json={
+        "product_id": product["id"],
+        "quantity": 30.0,
+        "location": "main",
+        "reference_type": "sales_order",
+        "reference_id": "order-abc-123",
+    })
+    assert resp.status_code == 201, resp.text
+
+    # Check stock levels reflect reservation
+    resp2 = await client.get(f"{BASE}/stock?product_id={product['id']}", headers=auth_headers)
+    stock = resp2.json()[0]
+    assert stock["total_reserved"] >= 30.0
+    assert stock["total_available"] <= 70.0  # 100 - 30
+
+
+async def test_over_reserve_returns_422(client: AsyncClient, auth_headers: dict):
+    product = await _create_product(client, auth_headers, sku="OVER-RES-01")
+    await _add_stock(client, auth_headers, product["id"], 10.0)
+
+    resp = await client.post(f"{BASE}/reserve", headers=auth_headers, json={
+        "product_id": product["id"],
+        "quantity": 50.0,  # more than available
+        "location": "main",
+    })
+    assert resp.status_code == 422
+    assert "Insufficient" in resp.json()["detail"]
+
+
+async def test_release_restores_available_stock(client: AsyncClient, auth_headers: dict):
+    product = await _create_product(client, auth_headers, sku="REL-01")
+    await _add_stock(client, auth_headers, product["id"], 100.0)
+
+    # Reserve
+    await client.post(f"{BASE}/reserve", headers=auth_headers, json={
+        "product_id": product["id"],
+        "quantity": 40.0,
+        "location": "main",
+        "reference_id": "order-rel-test",
+    })
+
+    # Release
+    resp = await client.post(f"{BASE}/release", headers=auth_headers, json={
+        "product_id": product["id"],
+        "quantity": 40.0,
+        "location": "main",
+        "reference_id": "order-rel-test",
+    })
+    assert resp.status_code == 201, resp.text
+
+    # Stock is restored
+    resp2 = await client.get(f"{BASE}/stock?product_id={product['id']}", headers=auth_headers)
+    stock = resp2.json()[0]
+    assert stock["total_reserved"] == 0.0
+    assert stock["total_available"] >= 100.0
+
+
+async def test_auto_reserve_for_order_partial(client: AsyncClient, auth_headers: dict):
+    """Lines with enough stock are reserved; lines without stock go to failed list."""
+    # Product A: has stock
+    prod_a = await _create_product(client, auth_headers, sku="AUTO-A-01")
+    await _add_stock(client, auth_headers, prod_a["id"], 50.0)
+
+    # Product B: no stock
+    prod_b = await _create_product(client, auth_headers, sku="AUTO-B-01")
+    # (no stock added)
+
+    resp = await client.post(f"{BASE}/orders/reserve", headers=auth_headers, json={
+        "order_id": "test-order-partial",
+        "lines": [
+            {"product_id": prod_a["id"], "quantity": 10.0, "location": "main"},
+            {"product_id": prod_b["id"], "quantity": 5.0, "location": "main"},
+        ],
+    })
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert prod_a["id"] in data["reserved"]
+    assert prod_b["id"] in data["failed"]
+    assert data["partial"] is True
+
+
+async def test_auto_reserve_for_order_full_success(client: AsyncClient, auth_headers: dict):
+    """When all lines have sufficient stock, partial=False and no failed lines."""
+    prod = await _create_product(client, auth_headers, sku="AUTO-FULL-01")
+    await _add_stock(client, auth_headers, prod["id"], 200.0)
+
+    resp = await client.post(f"{BASE}/orders/reserve", headers=auth_headers, json={
+        "order_id": "test-order-full",
+        "lines": [
+            {"product_id": prod["id"], "quantity": 20.0, "location": "main"},
+        ],
+    })
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert prod["id"] in data["reserved"]
+    assert data["failed"] == []
+    assert data["partial"] is False
