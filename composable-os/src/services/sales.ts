@@ -117,8 +117,10 @@ export interface UpdateQuoteDto {
 export const salesService = {
   // Quotes
   getQuotes: (params?: { status?: string; opportunity_id?: string }) => {
-    const qs = params?.status ? `?status=${params.status}` : "";
-    return api.get<Quote[]>(`/sales/quotes${qs}`);
+    const qs = new URLSearchParams(
+      Object.entries(params ?? {}).filter(([, v]) => v != null) as [string, string][]
+    ).toString();
+    return api.get<Quote[]>(`/sales/quotes${qs ? `?${qs}` : ""}`);
   },
   getQuote: (id: string) => api.get<Quote>(`/sales/quotes/${id}`),
   createQuote: (dto: CreateQuoteDto) => api.post<Quote>("/sales/quotes", dto),
@@ -137,8 +139,10 @@ export const salesService = {
 
   // Orders
   getOrders: (params?: { status?: string }) => {
-    const qs = params?.status ? `?status=${params.status}` : "";
-    return api.get<SalesOrder[]>(`/sales/orders${qs}`);
+    const qs = new URLSearchParams(
+      Object.entries(params ?? {}).filter(([, v]) => v != null) as [string, string][]
+    ).toString();
+    return api.get<SalesOrder[]>(`/sales/orders${qs ? `?${qs}` : ""}`);
   },
   getOrder: (id: string) => api.get<SalesOrder>(`/sales/orders/${id}`),
   confirmOrder: (id: string) =>
