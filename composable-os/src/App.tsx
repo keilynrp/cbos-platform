@@ -44,6 +44,7 @@ import IntelligenceGraphOS from "./pages/IntelligenceGraphOS";
 import Workflows from "./pages/Workflows";
 import Discovery from "./pages/Discovery";
 import Invoicing from "./pages/Invoicing";
+import CustomerPortal from "./pages/CustomerPortal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -76,6 +77,7 @@ const App = () => (
               {/* Public */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/portal/:token" element={<CustomerPortal />} />
 
               {/* Protected — all wrapped in AppLayout */}
               <Route

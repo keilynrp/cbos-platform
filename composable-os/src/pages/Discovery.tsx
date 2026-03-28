@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search, Plus, Send, Sparkles, CheckCircle2, Clock, Package,
   ChevronRight, Loader2, Bot, User, Rocket, X, Building2,
-  Users, BarChart3
+  Users, BarChart3, ArrowRight,
 } from "lucide-react";
+import type { ApplyResult } from "@/services/discovery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,10 +77,12 @@ export default function Discovery() {
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const [newForm, setNewForm] = useState({ business_description: "", industry: "", company_size: "" });
   const [blueprintData, setBlueprintData] = useState<ReturnType<typeof discoveryService.generateBlueprint> extends Promise<infer T> ? T : never | null>(null as unknown);
+  const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: sessions = [], isLoading: loadingSessions } = useQuery({
     queryKey: ["discovery-sessions"],
@@ -159,7 +163,7 @@ export default function Discovery() {
   const applyBlueprint = useMutation({
     mutationFn: () => discoveryService.applyBlueprint(selectedSession!.id),
     onSuccess: (result) => {
-      toast({ title: "¡Blueprint aplicado!", description: result.message });
+      setApplyResult(result);
       qc.invalidateQueries({ queryKey: ["discovery-sessions"] });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -441,15 +445,35 @@ export default function Discovery() {
 
                     <Separator />
 
-                    <Button
-                      className="w-full mt-3"
-                      onClick={() => applyBlueprint.mutate()}
-                      disabled={applyBlueprint.isPending}
-                    >
-                      {applyBlueprint.isPending
-                        ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> Aplicando…</>
-                        : <><Rocket className="h-3.5 w-3.5 mr-2" /> Aplicar blueprint</>}
-                    </Button>
+                    {applyResult ? (
+                      <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-200 p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-emerald-800">
+                          <CheckCircle2 className="h-4 w-4 shrink-0" />
+                          <span className="font-semibold text-sm">¡Workspace activado!</span>
+                        </div>
+                        {applyResult.activated_modules.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {applyResult.activated_modules.map((m) => (
+                              <Badge key={m} className="bg-emerald-100 text-emerald-800 text-[10px] capitalize border-0">{m}</Badge>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-xs text-emerald-700">{applyResult.message}</p>
+                        <Button size="sm" className="w-full" onClick={() => navigate("/crm")}>
+                          Ir al CRM <ArrowRight className="h-3.5 w-3.5 ml-2" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        className="w-full mt-3"
+                        onClick={() => applyBlueprint.mutate()}
+                        disabled={applyBlueprint.isPending}
+                      >
+                        {applyBlueprint.isPending
+                          ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> Aplicando…</>
+                          : <><Rocket className="h-3.5 w-3.5 mr-2" /> Aplicar blueprint</>}
+                      </Button>
+                    )}
                   </ScrollArea>
                 </div>
               )}
