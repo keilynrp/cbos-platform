@@ -37,7 +37,7 @@ import WarehouseBuilder from "./pages/WarehouseBuilder";
 import IoTBuilder from "./pages/IoTBuilder";
 import SynapticModeler from "./pages/SynapticModeler";
 import ContractStudio from "./pages/ContractStudio";
-import SalesBuilder from "./pages/SalesBuilder";
+import Sales from "./pages/Sales";
 import PlatformMap from "./pages/PlatformMap";
 import TeamStructure from "./pages/TeamStructure";
 import IntelligenceGraphOS from "./pages/IntelligenceGraphOS";
@@ -112,7 +112,7 @@ const App = () => (
                 <Route path="/iot-builder" element={<IoTBuilder />} />
                 <Route path="/system-modeler" element={<SynapticModeler />} />
                 <Route path="/contract-studio" element={<ContractStudio />} />
-                <Route path="/sales-builder" element={<SalesBuilder />} />
+                <Route path="/sales-builder" element={<Sales />} />
                 <Route path="/platform-map" element={<PlatformMap />} />
                 <Route path="/team-structure" element={<TeamStructure />} />
                 <Route path="/intelligence-graph" element={<IntelligenceGraphOS />} />
