@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { salesService } from "@/services/sales";
+import { crmService } from "@/services/crm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -15,14 +16,15 @@ import {
   Target, Percent, Receipt, Layers, Cable, Network, Shield, Play, Monitor
 } from "lucide-react";
 
-/* ─── Mock Data ─── */
-const pipelineStages = [
-  { name: "Qualification", count: 12, value: "$180K", color: "bg-blue-500" },
-  { name: "Discovery", count: 8, value: "$320K", color: "bg-cyan-500" },
-  { name: "Proposal", count: 15, value: "$540K", color: "bg-purple-500" },
-  { name: "Negotiation", count: 6, value: "$420K", color: "bg-amber-500" },
-  { name: "Closed Won", count: 22, value: "$1.2M", color: "bg-emerald-500" },
-];
+/* ─── Stage config ─── */
+const STAGE_META: Record<string, { label: string; color: string }> = {
+  new:         { label: "New",         color: "bg-gray-400" },
+  qualified:   { label: "Qualified",   color: "bg-blue-500" },
+  proposal:    { label: "Proposal",    color: "bg-purple-500" },
+  negotiation: { label: "Negotiation", color: "bg-amber-500" },
+  won:         { label: "Won",         color: "bg-emerald-500" },
+  lost:        { label: "Lost",        color: "bg-red-400" },
+};
 
 const opportunities = [
   { id: "OPP-1024", account: "Nexus Corp", contact: "Sarah Chen", stage: "Proposal", value: "$85,000", probability: 75, close: "Mar 28", products: ["Enterprise Suite", "AI Add-on"], nextAction: "Send revised proposal" },
@@ -141,6 +143,11 @@ export default function SalesBuilder() {
     queryFn: salesService.getOrders,
   });
 
+  const { data: pipeline } = useQuery({
+    queryKey: ["crm-pipeline-summary"],
+    queryFn: crmService.getPipelineSummary,
+  });
+
   // Real KPIs
   const openQuotes = quotes.filter((q) => ["draft", "sent"].includes(q.status));
   const totalQuoteValue = openQuotes.reduce((s, q) => s + q.total, 0);
@@ -188,38 +195,53 @@ export default function SalesBuilder() {
               <Metric icon={Star} label="Accepted Quotes" value={String(acceptedQuotes)} sub="all time" />
               <Metric icon={DollarSign} label="Total Revenue" value={fmtCurrency(orders.reduce((s, o) => s + o.total, 0))} sub="confirmed orders" />
               <Metric icon={Clock} label="Draft Quotes" value={String(quotes.filter((q) => q.status === "draft").length)} sub="pending send" />
-              <Metric icon={Target} label="Open Opportunities" value="—" sub="See CRM module" />
+              <Metric icon={Target} label="Open Opportunities" value={String(pipeline?.total_opportunities ?? "—")} sub={pipeline ? fmtCurrency(pipeline.total_value) + " pipeline" : "See CRM module"} />
               <Metric icon={Bot} label="AI Recommendations" value="7" sub="3 high priority" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <SectionCard title="Pipeline Overview" action={<Button variant="ghost" size="sm" className="text-xs">View All</Button>}>
                 <div className="space-y-3">
-                  {pipelineStages.map((s) => (
-                    <div key={s.name} className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${s.color}`} />
-                      <span className="text-sm text-foreground flex-1">{s.name}</span>
-                      <Badge variant="secondary" className="text-xs">{s.count}</Badge>
-                      <span className="text-xs font-medium text-muted-foreground w-16 text-right">{s.value}</span>
-                    </div>
-                  ))}
+                  {pipeline && pipeline.stages.length > 0 ? (
+                    pipeline.stages.map((s) => {
+                      const meta = STAGE_META[s.stage] ?? { label: s.stage, color: "bg-gray-400" };
+                      return (
+                        <div key={s.stage} className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${meta.color}`} />
+                          <span className="text-sm text-foreground flex-1">{meta.label}</span>
+                          <Badge variant="secondary" className="text-xs">{s.count}</Badge>
+                          <span className="text-xs font-medium text-muted-foreground w-20 text-right">{fmtCurrency(s.total_value)}</span>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-3">
+                      {pipeline ? "Sin oportunidades activas." : "Cargando…"}
+                    </p>
+                  )}
                 </div>
               </SectionCard>
 
               <SectionCard title="Recent Quotations">
                 <div className="space-y-2.5">
-                  {quotations.slice(0, 4).map((q) => (
-                    <div key={q.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div>
-                        <span className="text-xs font-medium text-foreground">{q.id}</span>
-                        <p className="text-xs text-muted-foreground">{q.customer}</p>
+                  {loadingQuotes ? (
+                    <p className="text-xs text-muted-foreground text-center py-3">Cargando…</p>
+                  ) : quotes.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-3">Sin cotizaciones aún.</p>
+                  ) : (
+                    quotes.slice(0, 4).map((q) => (
+                      <div key={q.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div>
+                          <span className="text-xs font-medium text-foreground">{q.quote_number}</span>
+                          <p className="text-xs text-muted-foreground">{q.title}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-semibold">{fmtCurrency(q.total)}</span>
+                          <Badge className={`ml-2 text-[10px] ${statusColor(q.status)}`}>{q.status}</Badge>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs font-semibold">{q.total}</span>
-                        <Badge className={`ml-2 text-[10px] ${statusColor(q.status)}`}>{q.status}</Badge>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </SectionCard>
 

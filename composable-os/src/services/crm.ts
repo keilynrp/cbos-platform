@@ -116,7 +116,23 @@ export interface CreateActivityDto {
 }
 
 // ── API ────────────────────────────────────────────────────────────────────
+export interface PipelineStageCount {
+  stage: string;
+  count: number;
+  total_value: number;
+}
+
+export interface PipelineSummary {
+  stages: PipelineStageCount[];
+  total_opportunities: number;
+  total_value: number;
+  weighted_value: number;
+}
+
 export const crmService = {
+  // Pipeline
+  getPipelineSummary: () => api.get<PipelineSummary>("/crm/pipeline/summary"),
+
   // Leads
   getLeads: () => api.get<Lead[]>("/crm/leads"),
   createLead: (dto: CreateLeadDto) => api.post<Lead>("/crm/leads", dto),
