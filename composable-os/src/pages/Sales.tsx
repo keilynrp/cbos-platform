@@ -73,6 +73,53 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
+// ── Reject Quote Dialog ────────────────────────────────────────────────────
+
+function RejectQuoteDialog({
+  open,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  onConfirm: (reason: string) => void;
+  onCancel: () => void;
+}) {
+  const [reason, setReason] = useState("");
+
+  function handleConfirm() {
+    onConfirm(reason || "No reason provided");
+    setReason("");
+  }
+
+  function handleCancel() {
+    setReason("");
+    onCancel();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && handleCancel()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader><DialogTitle>Rechazar Cotización</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Razón (opcional)</Label>
+            <textarea
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Razón de rechazo..."
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleCancel}>Cancelar</Button>
+            <Button type="button" variant="destructive" onClick={handleConfirm}>Rechazar</Button>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ── New Quote Dialog ───────────────────────────────────────────────────────
 
 function NewQuoteDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -141,6 +188,7 @@ function CotizacionesTab() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
 
   const { data: quotes = [], isLoading, error } = useQuery({
     queryKey: ["sales-quotes", filter],
@@ -182,8 +230,7 @@ function CotizacionesTab() {
   });
 
   function handleReject(id: string) {
-    const reason = window.prompt("Razón de rechazo (opcional):") ?? "No reason provided";
-    rejectQuote.mutate({ id, reason: reason || "No reason provided" });
+    setRejectTarget(id);
   }
 
   function handleDownloadPdf(id: string) {
@@ -289,6 +336,14 @@ function CotizacionesTab() {
       )}
 
       <NewQuoteDialog open={newOpen} onClose={() => setNewOpen(false)} />
+      <RejectQuoteDialog
+        open={rejectTarget !== null}
+        onConfirm={(reason) => {
+          if (rejectTarget) rejectQuote.mutate({ id: rejectTarget, reason });
+          setRejectTarget(null);
+        }}
+        onCancel={() => setRejectTarget(null)}
+      />
     </div>
   );
 }
@@ -367,7 +422,7 @@ function OrdenesTab() {
             <TableHeader>
               <TableRow>
                 <TableHead>Order #</TableHead>
-                <TableHead>Quote #</TableHead>
+                <TableHead>Quote ID</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
