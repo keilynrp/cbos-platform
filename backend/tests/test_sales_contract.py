@@ -42,9 +42,9 @@ async def test_start_fulfillment_transitions_to_in_fulfillment(
     order_id = order["id"]
 
     # draft → confirmed
-    await client.patch(
+    assert (await client.patch(
         f"{BASE}/orders/{order_id}/confirm", headers=auth_headers, json={}
-    )
+    )).json()["status"] == "confirmed"
 
     # confirmed → in_fulfillment
     resp = await client.patch(
@@ -52,3 +52,20 @@ async def test_start_fulfillment_transitions_to_in_fulfillment(
     )
     assert resp.status_code == 200
     assert resp.json()["status"] == "in_fulfillment"
+
+
+async def test_start_fulfillment_rejects_draft_order(
+    client: AsyncClient, auth_headers: dict
+):
+    """Calling start-fulfillment on a draft order must return 422."""
+    quote = await _create_quote(client, auth_headers, title="Draft Fulfillment Guard")
+    order = (await client.patch(
+        f"{BASE}/quotes/{quote['id']}/accept", headers=auth_headers
+    )).json()
+    order_id = order["id"]
+
+    # draft → in_fulfillment should be rejected
+    resp = await client.patch(
+        f"{BASE}/orders/{order_id}/start-fulfillment", headers=auth_headers
+    )
+    assert resp.status_code == 422

@@ -511,17 +511,18 @@ async def start_fulfillment(
     order = await _load_order_with_lines(db, workspace_id, order_id)
     _assert_order_transition(order.status, "in_fulfillment")
     order.status = "in_fulfillment"
-    await db.commit()
-    await db.refresh(order)
+
     await publish_event(Event(
         event_type=SALES_ORDER_IN_FULFILLMENT,
         source_module="sales",
         workspace_id=workspace_id,
         actor_id=actor_id,
         entity_id=order.id,
-        payload={"order_number": order.order_number, "status": "in_fulfillment"},
+        payload={"order_number": order.order_number, "total": order.total},
     ))
-    return order
+
+    await db.commit()
+    return await _load_order_with_lines(db, workspace_id, order_id)
 
 
 async def fulfill_order(
