@@ -145,7 +145,8 @@ async def create_person(workspace_id: str, data, db: AsyncSession) -> Person:
 async def create_organization(workspace_id: str, data, db: AsyncSession) -> Organization:
     org = Organization(workspace_id=workspace_id, **data.model_dump())
     db.add(org)
-    await db.flush()
+    await db.commit()
+    await db.refresh(org)
     return org
 
 
