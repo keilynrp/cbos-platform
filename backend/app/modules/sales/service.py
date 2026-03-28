@@ -16,6 +16,7 @@ from app.events.types import (
     SALES_ORDER_CONFIRMED,
     SALES_ORDER_CREATED,
     SALES_ORDER_FULFILLED,
+    SALES_ORDER_IN_FULFILLMENT,
     Event,
 )
 from app.core.validators import validate_workspace_ownership
@@ -499,6 +500,28 @@ async def confirm_order(
 
     await db.commit()
     return await _load_order_with_lines(db, workspace_id, order_id)
+
+
+async def start_fulfillment(
+    db: AsyncSession,
+    workspace_id: str,
+    actor_id: str,
+    order_id: str,
+) -> SalesOrder:
+    order = await _load_order_with_lines(db, workspace_id, order_id)
+    _assert_order_transition(order.status, "in_fulfillment")
+    order.status = "in_fulfillment"
+    await db.commit()
+    await db.refresh(order)
+    await publish_event(Event(
+        event_type=SALES_ORDER_IN_FULFILLMENT,
+        source_module="sales",
+        workspace_id=workspace_id,
+        actor_id=actor_id,
+        entity_id=order.id,
+        payload={"order_number": order.order_number, "status": "in_fulfillment"},
+    ))
+    return order
 
 
 async def fulfill_order(
