@@ -193,11 +193,14 @@ async def dispatch_event(db: AsyncSession, event: Event) -> None:
         ))
 
         status, steps, error = await run_workflow(
-            wf.id, wf.actions, context, event.workspace_id
+            wf.id, wf.actions, context, event.workspace_id, db=db
         )
         run.status = status
         run.steps_result = steps
         run.error = error
+
+        # Refresh wf in case it was expired by nested flush/commit inside actions
+        await db.refresh(wf)
 
         # Update workflow metadata
         wf.run_count = (wf.run_count or 0) + 1

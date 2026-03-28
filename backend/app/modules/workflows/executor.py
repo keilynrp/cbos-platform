@@ -89,6 +89,7 @@ async def execute_action(
     action: dict,
     context: dict,
     workspace_id: str,
+    db=None,
 ) -> dict:
     """
     Ejecuta una acción individual.
@@ -107,9 +108,10 @@ async def execute_action(
             result = await _action_webhook(config, context)
         elif action_type == "log":
             result = _action_log(config, context)
-        elif action_type in ("update_status", "create_activity"):
-            # Placeholder — Phase 6 MVP: se implementa via events
-            result = {"note": f"Action '{action_type}' recorded. Full impl in Phase 7."}
+        elif action_type == "create_activity":
+            result = await _action_create_activity(config, context, workspace_id, db)
+        elif action_type == "update_status":
+            result = {"note": "Action 'update_status' recorded. Full impl in Phase 7."}
         else:
             result = {"error": f"Unknown action type: {action_type}"}
 
@@ -208,6 +210,57 @@ def _action_log(config: dict, context: dict) -> dict:
     return {"logged": formatted}
 
 
+async def _action_create_activity(config: dict, context: dict, workspace_id: str, db) -> dict:
+    """
+    Creates a CRM activity linked to a lead or opportunity.
+    config keys: activity_type, title, entity_type, entity_id, description (optional)
+    Values support {placeholder} interpolation from context via _SafeFormatter.
+    """
+    if db is None:
+        raise ValueError("create_activity action requires a database session")
+
+    flat_ctx = _flatten_context(context)
+    fmt = _SafeFormatter(flat_ctx)
+
+    activity_type = str(config.get("activity_type", "task")).format_map(fmt)
+    title = str(config.get("title", "Workflow activity")).format_map(fmt)
+    description = config.get("description")
+    if description:
+        description = str(description).format_map(fmt)
+    entity_type = str(config.get("entity_type", "opportunity")).format_map(fmt)
+    entity_id = str(config.get("entity_id", "")).format_map(fmt)
+
+    if not entity_id or entity_id.startswith("{"):
+        raise ValueError(
+            f"create_activity: entity_id could not be resolved. "
+            f"context keys: {list(flat_ctx.keys())}"
+        )
+
+    # Only use actor_id as user_id if it looks like a real UUID (not a placeholder like "system")
+    raw_actor = context.get("actor_id") or ""
+    import re as _re
+    _uuid_re = _re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", _re.I
+    )
+    actor_user_id: str | None = raw_actor if _uuid_re.match(raw_actor) else None
+
+    from app.modules.crm.models import Activity
+
+    activity = Activity(
+        workspace_id=workspace_id,
+        user_id=actor_user_id,
+        activity_type=activity_type,
+        title=title,
+        description=description,
+        entity_type=entity_type,
+        entity_id=entity_id,
+    )
+    db.add(activity)
+    await db.flush()
+    await db.refresh(activity)
+    return {"activity_id": activity.id, "title": activity.title}
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _flatten_context(context: dict) -> dict:
@@ -233,6 +286,7 @@ async def run_workflow(
     actions: list[dict],
     context: dict,
     workspace_id: str,
+    db=None,
 ) -> tuple[str, list[dict], str | None]:
     """
     Ejecuta todas las acciones de un workflow en secuencia.
@@ -243,7 +297,7 @@ async def run_workflow(
     error_msg = None
 
     for action in actions:
-        step = await execute_action(action, context, workspace_id)
+        step = await execute_action(action, context, workspace_id, db=db)
         steps_result.append(step)
         if step["status"] == "failed":
             overall_status = "failed"
