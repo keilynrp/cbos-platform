@@ -93,9 +93,10 @@ async def test_create_quote_requires_auth(client: AsyncClient):
 async def test_get_quote_by_id(client: AsyncClient, auth_headers: dict):
     quote = await _create_quote(client, auth_headers, title="Find Me")
     resp = await client.get(f"{BASE}/quotes/{quote['id']}", headers=auth_headers)
-    assert resp.status_code == 200
-    assert resp.json()["id"] == quote["id"]
-    assert resp.json()["title"] == "Find Me"
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["id"] == quote["id"]
+    assert data["title"] == "Find Me"
 
 
 async def test_get_quote_not_found_returns_404(client: AsyncClient, auth_headers: dict):
@@ -110,7 +111,7 @@ async def test_update_quote_patches_title(client: AsyncClient, auth_headers: dic
     resp = await client.patch(
         f"{BASE}/quotes/{quote['id']}", headers=auth_headers, json={"title": "After"}
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     assert resp.json()["title"] == "After"
 
 
@@ -124,25 +125,29 @@ async def test_send_quote_transitions_to_sent(client: AsyncClient, auth_headers:
     resp = await client.patch(
         f"{BASE}/quotes/{quote['id']}/send", headers=auth_headers
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "sent"
     assert resp.json()["sent_at"] is not None
 
 
 async def test_reject_quote_transitions_to_rejected(client: AsyncClient, auth_headers: dict):
     quote = await _create_quote(client, auth_headers)
-    await client.patch(f"{BASE}/quotes/{quote['id']}/send", headers=auth_headers)
+    assert (await client.patch(f"{BASE}/quotes/{quote['id']}/send", headers=auth_headers)).status_code == 200
     resp = await client.patch(
         f"{BASE}/quotes/{quote['id']}/reject", headers=auth_headers,
         json={"reason": "Price too high"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     assert resp.json()["status"] == "rejected"
 
 
 async def test_list_quotes_filter_by_status(client: AsyncClient, auth_headers: dict):
     await _create_quote(client, auth_headers, title="Draft Quote")
+    # Create a sent quote to confirm it's excluded from draft filter
+    sent_q = await _create_quote(client, auth_headers, title="Sent Quote")
+    await client.patch(f"{BASE}/quotes/{sent_q['id']}/send", headers=auth_headers)
+
     resp = await client.get(f"{BASE}/quotes?status=draft", headers=auth_headers)
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     assert all(q["status"] == "draft" for q in resp.json())
     assert len(resp.json()) >= 1
