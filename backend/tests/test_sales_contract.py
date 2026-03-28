@@ -164,6 +164,7 @@ async def test_accept_quote_creates_order(client: AsyncClient, auth_headers: dic
     order = resp.json()
     assert order["order_number"].startswith("SO-")
     assert order["status"] == "draft"
+    assert order["quote_id"] == quote["id"]
 
 
 async def test_full_order_traversal_to_fulfilled(client: AsyncClient, auth_headers: dict):
@@ -181,9 +182,11 @@ async def test_full_order_traversal_to_fulfilled(client: AsyncClient, auth_heade
     assert data["confirmed_at"] is not None
 
     # confirmed → in_fulfillment
-    data = (await client.patch(
+    sf_resp = await client.patch(
         f"{BASE}/orders/{order_id}/start-fulfillment", headers=auth_headers
-    )).json()
+    )
+    assert sf_resp.status_code == 200, sf_resp.text
+    data = sf_resp.json()
     assert data["status"] == "in_fulfillment"
 
     # in_fulfillment → fulfilled
@@ -199,9 +202,10 @@ async def test_cancel_confirmed_order(client: AsyncClient, auth_headers: dict):
     order_id = (await client.patch(
         f"{BASE}/quotes/{quote['id']}/accept", headers=auth_headers
     )).json()["id"]
-    assert (await client.patch(
+    confirm_resp = await client.patch(
         f"{BASE}/orders/{order_id}/confirm", headers=auth_headers, json={}
-    )).status_code == 200
+    )
+    assert confirm_resp.status_code == 200, confirm_resp.text
     resp = await client.patch(
         f"{BASE}/orders/{order_id}/cancel", headers=auth_headers
     )
@@ -215,9 +219,12 @@ async def test_fulfilled_order_cannot_be_cancelled(client: AsyncClient, auth_hea
     order_id = (await client.patch(
         f"{BASE}/quotes/{quote['id']}/accept", headers=auth_headers
     )).json()["id"]
-    assert (await client.patch(f"{BASE}/orders/{order_id}/confirm", headers=auth_headers, json={})).status_code == 200
-    assert (await client.patch(f"{BASE}/orders/{order_id}/start-fulfillment", headers=auth_headers)).status_code == 200
-    assert (await client.patch(f"{BASE}/orders/{order_id}/fulfill", headers=auth_headers)).status_code == 200
+    r = await client.patch(f"{BASE}/orders/{order_id}/confirm", headers=auth_headers, json={})
+    assert r.status_code == 200, r.text
+    r = await client.patch(f"{BASE}/orders/{order_id}/start-fulfillment", headers=auth_headers)
+    assert r.status_code == 200, r.text
+    r = await client.patch(f"{BASE}/orders/{order_id}/fulfill", headers=auth_headers)
+    assert r.status_code == 200, r.text
     # fulfilled is terminal
     resp = await client.patch(f"{BASE}/orders/{order_id}/cancel", headers=auth_headers)
     assert resp.status_code == 422
