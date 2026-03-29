@@ -5,7 +5,7 @@
 #   - Apuntar al repo, seleccionar este archivo como compose
 #   - Variables de entorno se configuran en el UI de Dokploy
 #   - SSL/TLS y dominio manejados por Traefik (built-in Dokploy)
-#   - Dokploy configura: dbos.inbounduxd.com → nginx:80
+#   - Traefik enruta dbos.inbounduxd.com → nginx:80 via labels
 #
 # Variables requeridas en Dokploy (sin defaults):
 #   POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
@@ -89,17 +89,37 @@ services:
     restart: always
 
   # ── Nginx (único punto de entrada → Traefik) ─────────────────────────────
+  # NO usa ports — Traefik enruta al contenedor via dokploy-network + labels.
+  # Puerto 80 del host pertenece a Traefik, no a nginx.
   nginx:
     image: nginx:alpine
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     volumes:
       - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - frontend
       - backend
     restart: always
+    networks:
+      - default
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cbos.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.cbos.entrypoints=websecure"
+      - "traefik.http.routers.cbos.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cbos.loadbalancer.server.port=80"
+      # HTTP → HTTPS redirect
+      - "traefik.http.routers.cbos-http.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.cbos-http.entrypoints=web"
+      - "traefik.http.routers.cbos-http.middlewares=redirect-to-https@docker"
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  default:
+  dokploy-network:
+    external: true

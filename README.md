@@ -195,7 +195,7 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-Cobertura actual: **39 tests** — identity, CRM, sales, inventory, workflows.
+Cobertura actual: **163 tests** en 12 archivos — identity, CRM, sales, inventory, workflows, portal, discovery (tests unitarios + contrato).
 
 ```bash
 # Ver cobertura detallada
@@ -251,13 +251,12 @@ REDIS_PASSWORD=<password-seguro>
 # Autenticación
 SECRET_KEY=<string-aleatorio-minimo-32-chars>
 
-# Dominios
-API_DOMAIN=api.tudominio.com
-FRONTEND_DOMAIN=app.tudominio.com
-ALLOWED_ORIGINS=["https://app.tudominio.com"]
+# Dominio (nginx enruta /api/ → backend, / → frontend)
+DOMAIN=app.tudominio.com
 
 # Opcionales
 ANTHROPIC_API_KEY=<api-key>    # Requerido para el módulo Discovery
+FROM_EMAIL=no-reply@tudominio.com
 SMTP_HOST=...                   # Requerido para notificaciones por email
 SMTP_PORT=587
 SMTP_USER=...
@@ -280,6 +279,7 @@ Ver `.env.prod.example` para la lista completa con descripciones.
 | `SECRET_KEY` | `dev-secret-key-...` | Clave para firmar JWT — cambiar en producción |
 | `ENVIRONMENT` | `development` | `development` o `production` |
 | `ALLOWED_ORIGINS` | `["http://localhost", ...]` | CORS — lista JSON de orígenes permitidos |
+| `DOMAIN` | — | Dominio de producción (Dokploy) — nginx enruta API + frontend |
 | `ANTHROPIC_API_KEY` | — | API key de Anthropic (módulo Discovery) |
 
 ---
