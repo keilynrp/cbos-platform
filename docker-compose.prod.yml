@@ -101,6 +101,10 @@ services:
       - frontend
       - backend
     restart: always
+    # conf_version forces Docker Compose to recreate this container whenever
+    # nginx/prod.conf changes (bind mounts alone don't trigger recreates).
+    environment:
+      NGINX_CONF_VERSION: "3"
     networks:
       - default
       - dokploy-network
