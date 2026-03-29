@@ -1,11 +1,9 @@
 # ═══════════════════════════════════════════════════════════
 # CBOS Platform — Docker Compose PRODUCCIÓN
 #
-# Uso en Dokploy:
-#   - Apuntar al repo, seleccionar este archivo como compose
-#   - Variables de entorno se configuran en el UI de Dokploy
-#   - SSL/TLS y dominio manejados por Traefik (built-in Dokploy)
-#   - Traefik enruta dbos.inbounduxd.com → nginx:80 via labels
+# Arquitectura: Traefik → backend:8000 (/api/)
+#                       → frontend:80  (todo lo demás)
+# Sin nginx intermedio — Traefik enruta directo a cada servicio.
 #
 # Variables requeridas en Dokploy (sin defaults):
 #   POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
@@ -50,7 +48,8 @@ services:
     restart: always
 
   # ── Backend ──────────────────────────────────────────────────────────────
-  # entrypoint.sh corre alembic upgrade head antes de arrancar uvicorn
+  # entrypoint.sh corre alembic upgrade head antes de arrancar uvicorn.
+  # Traefik enruta /api/ directamente aquí (sin nginx intermedio).
   backend:
     build:
       context: ./backend
@@ -74,16 +73,32 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     expose:
       - "8000"
-    labels:
-      - "traefik.enable=false"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     restart: always
+    networks:
+      - default
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      # HTTPS — /api/ → backend:8000
+      - "traefik.http.routers.cbos-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.cbos-api.entrypoints=websecure"
+      - "traefik.http.routers.cbos-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cbos-api.loadbalancer.server.port=8000"
+      # HTTP → HTTPS redirect
+      - "traefik.http.routers.cbos-api-http.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.cbos-api-http.entrypoints=web"
+      - "traefik.http.routers.cbos-api-http.middlewares=cbos-https-redirect@docker"
+      # Define el middleware de redirect (compartido con frontend)
+      - "traefik.http.middlewares.cbos-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.cbos-https-redirect.redirectscheme.permanent=true"
 
   # ── Frontend (React build → nginx static) ────────────────────────────────
+  # Traefik enruta todo lo que no sea /api/ directamente aquí.
   frontend:
     build:
       context: ./composable-os
@@ -92,40 +107,21 @@ services:
         VITE_API_URL: https://${DOMAIN}/api/v1
     expose:
       - "80"
-    labels:
-      - "traefik.enable=false"
     restart: always
-
-  # ── Nginx (único punto de entrada → Traefik) ─────────────────────────────
-  # NO usa ports — Traefik enruta al contenedor via dokploy-network + labels.
-  # Puerto 80 del host pertenece a Traefik, no a nginx.
-  nginx:
-    image: nginx:alpine
-    expose:
-      - "80"
-    volumes:
-      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - frontend
-      - backend
-    restart: always
-    # conf_version forces Docker Compose to recreate this container whenever
-    # nginx/prod.conf changes (bind mounts alone don't trigger recreates).
-    environment:
-      NGINX_CONF_VERSION: "3"
     networks:
       - default
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.cbos.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.cbos.entrypoints=websecure"
-      - "traefik.http.routers.cbos.tls.certresolver=letsencrypt"
-      - "traefik.http.services.cbos.loadbalancer.server.port=80"
+      # HTTPS — / → frontend:80
+      - "traefik.http.routers.cbos-frontend.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.cbos-frontend.entrypoints=websecure"
+      - "traefik.http.routers.cbos-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cbos-frontend.loadbalancer.server.port=80"
       # HTTP → HTTPS redirect
-      - "traefik.http.routers.cbos-http.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.cbos-http.entrypoints=web"
-      - "traefik.http.routers.cbos-http.middlewares=redirect-to-https@docker"
+      - "traefik.http.routers.cbos-frontend-http.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.cbos-frontend-http.entrypoints=web"
+      - "traefik.http.routers.cbos-frontend-http.middlewares=cbos-https-redirect@docker"
 
 volumes:
   postgres_data:
