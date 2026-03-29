@@ -18,6 +18,8 @@ services:
   # ── PostgreSQL ───────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
+    labels:
+      - "traefik.enable=false"
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -35,6 +37,8 @@ services:
   # ── Redis ────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
+    labels:
+      - "traefik.enable=false"
     command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
     volumes:
       - redis_data:/data
@@ -70,6 +74,8 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     expose:
       - "8000"
+    labels:
+      - "traefik.enable=false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,6 +92,8 @@ services:
         VITE_API_URL: https://${DOMAIN}/api/v1
     expose:
       - "80"
+    labels:
+      - "traefik.enable=false"
     restart: always
 
   # ── Nginx (único punto de entrada → Traefik) ─────────────────────────────
