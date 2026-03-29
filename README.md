@@ -82,7 +82,7 @@ cbos-platform/
 │   │   ├── core/                   Config, deps, middleware, event bus
 │   │   ├── modules/                9 dominios de negocio (ver arriba)
 │   │   └── main.py                 Lifespan, routers, CORS
-│   ├── tests/                      pytest-asyncio — 39 tests
+│   ├── tests/                      pytest-asyncio — 161 tests
 │   ├── alembic/                    Migraciones de base de datos
 │   └── requirements.txt
 ├── composable-os/                  React 18 + Vite frontend
@@ -195,7 +195,7 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-Cobertura actual: **163 tests** en 12 archivos — identity, CRM, sales, inventory, workflows, portal, discovery (tests unitarios + contrato).
+Cobertura actual: **161 tests** en 12 archivos — identity, CRM, sales, inventory, workflows, portal, discovery, wedge smoke (tests unitarios + contrato).
 
 ```bash
 # Ver cobertura detallada
