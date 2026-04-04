@@ -65,5 +65,7 @@ PORTAL_SESSION_ACCESSED = "PortalSessionAccessed"
 CUSTOMER_ACTION_PERFORMED = "CustomerActionPerformed"
 
 # ── Platform ───────────────────────────────────────────────
+USER_REGISTERED = "UserRegistered"
+WORKSPACE_CREATED = "WorkspaceCreated"
 USER_AUTHENTICATED = "UserAuthenticated"
 MODULE_ACTIVATED = "ModuleActivated"

@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, verify_token
 from app.events.bus import publish as publish_event
-from app.events.types import USER_AUTHENTICATED, Event
+from app.events.types import USER_AUTHENTICATED, USER_REGISTERED, WORKSPACE_CREATED, Event
 from app.modules.identity.models import Workspace, User, Person, Organization
 from app.modules.identity.schemas import RegisterRequest, LoginRequest, TokenResponse
 
@@ -63,6 +63,31 @@ async def register(data: RegisterRequest, db: AsyncSession) -> TokenResponse:
     await db.flush()
 
     await db.commit()
+
+    # Publish platform events
+    await publish_event(Event(
+        event_type=WORKSPACE_CREATED,
+        source_module="identity",
+        workspace_id=workspace.id,
+        entity_id=workspace.id,
+        actor_id=user.id,
+        payload={
+            "workspace_name": workspace.name,
+            "workspace_slug": workspace.slug,
+        },
+    ))
+    await publish_event(Event(
+        event_type=USER_REGISTERED,
+        source_module="identity",
+        workspace_id=workspace.id,
+        entity_id=user.id,
+        actor_id=user.id,
+        payload={
+            "email": user.email,
+            "role": user.role,
+            "is_owner": user.is_owner,
+        },
+    ))
 
     token_payload = {
         "sub": user.id,
