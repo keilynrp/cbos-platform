@@ -108,3 +108,18 @@ class WorkflowTestResult(BaseModel):
     dry_run: bool = True
     steps_preview: list[dict]
     message: str
+
+
+# ── DLQ Monitoring ────────────────────────────────────────────────────────────
+
+class DLQEntryRead(BaseModel):
+    """A single entry in the Dead Letter Queue."""
+    entry_id: str          # Redis stream entry ID (e.g. "1712345678000-0")
+    msg_id: str            # Original stream message ID
+    data: dict             # Parsed event payload (or {"raw": ...} if unparseable)
+    error: str             # Reason for DLQ placement
+    failed_at: datetime    # Derived from entry_id timestamp (ms since epoch)
+
+class DLQListResponse(BaseModel):
+    total: int
+    entries: list[DLQEntryRead]
