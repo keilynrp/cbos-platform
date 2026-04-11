@@ -131,3 +131,91 @@ def quote_portal_email(
 </html>"""
 
     return subject, text_body, html_body
+
+
+def quote_accepted_email(
+    contact_name: str,
+    quote_number: str,
+    total: float,
+    currency: str,
+    order_number: str,
+) -> tuple[str, str, str]:
+    """Email notification when a quote is accepted by the customer."""
+    subject = f"Cotización {quote_number} aceptada"
+    text = (
+        f"Hola,\n\n"
+        f"La cotización {quote_number} por {currency} {total:,.2f} ha sido aceptada.\n"
+        f"Número de orden generada: {order_number}\n\n"
+        f"CBOS Platform"
+    )
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#16a34a">Cotización aceptada ✓</h2>
+      <p>La cotización <strong>{quote_number}</strong> por <strong>{currency} {total:,.2f}</strong> fue aceptada.</p>
+      <p>Orden generada: <strong>{order_number}</strong></p>
+      <hr style="border:1px solid #e5e7eb"/>
+      <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
+    </div>"""
+    return subject, text, html
+
+
+def sales_order_created_email(
+    order_number: str,
+    total: float,
+    currency: str,
+) -> tuple[str, str, str]:
+    """Email notification when a new sales order is created."""
+    subject = f"Nueva orden de venta {order_number}"
+    text = (
+        f"Se ha creado la orden de venta {order_number} por {currency} {total:,.2f}.\n\n"
+        f"CBOS Platform"
+    )
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#2563eb">Nueva orden de venta</h2>
+      <p>Orden <strong>{order_number}</strong> creada por <strong>{currency} {total:,.2f}</strong>.</p>
+      <hr style="border:1px solid #e5e7eb"/>
+      <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
+    </div>"""
+    return subject, text, html
+
+
+def workflow_failed_email(
+    workflow_name: str,
+    error: str,
+) -> tuple[str, str, str]:
+    """Email alert when a workflow fails."""
+    subject = f"Workflow falló: {workflow_name}"
+    text = f"El workflow '{workflow_name}' falló con el error:\n{error}\n\nCBOS Platform"
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#dc2626">Workflow falló</h2>
+      <p>El workflow <strong>{workflow_name}</strong> falló.</p>
+      <pre style="background:#fef2f2;padding:12px;border-radius:4px;font-size:13px">{error}</pre>
+      <hr style="border:1px solid #e5e7eb"/>
+      <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
+    </div>"""
+    return subject, text, html
+
+
+def low_stock_email(
+    product_name: str,
+    sku: str,
+    current_stock: float,
+    min_stock: float,
+) -> tuple[str, str, str]:
+    """Email alert when inventory falls below threshold."""
+    subject = f"Stock bajo: {product_name} ({sku})"
+    text = (
+        f"El producto {product_name} (SKU: {sku}) tiene stock bajo.\n"
+        f"Stock actual: {current_stock} | Mínimo: {min_stock}\n\nCBOS Platform"
+    )
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#d97706">Alerta de stock bajo</h2>
+      <p>Producto: <strong>{product_name}</strong> (SKU: {sku})</p>
+      <p>Stock actual: <strong>{current_stock}</strong> | Mínimo requerido: <strong>{min_stock}</strong></p>
+      <hr style="border:1px solid #e5e7eb"/>
+      <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
+    </div>"""
+    return subject, text, html

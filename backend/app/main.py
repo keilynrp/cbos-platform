@@ -8,6 +8,7 @@ from app.core.exceptions import CBOSException, cbos_exception_handler
 from app.core.middleware import CorrelationIDMiddleware
 from app.events.bus import close as close_redis
 from app.modules.workflows.consumer import start_consumer, stop_consumer
+from app.modules.notifications.email_notifier import run_email_notifier
 from app.modules.workflows.router import router as workflows_router
 from app.modules.crm.router import router as crm_router
 from app.modules.identity.router import router as identity_router
@@ -23,9 +24,12 @@ from app.modules.accounting.router import router as accounting_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    import asyncio
     start_consumer()
+    email_task = asyncio.create_task(run_email_notifier())
     yield
     # Shutdown
+    email_task.cancel()
     await stop_consumer()
     await close_redis()
 
