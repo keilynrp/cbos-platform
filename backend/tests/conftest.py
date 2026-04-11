@@ -88,19 +88,48 @@ async def ensure_test_db():
 
 # ── Session-scoped engine — create schema once per session ────────────────────
 
+async def _reset_schema(url: str) -> None:
+    """Reset the public schema via a raw asyncpg connection.
+
+    Using a direct asyncpg connection (not SQLAlchemy) avoids the
+    stale prepared-statement / composite-type cache that causes
+    ``duplicate key value violates unique constraint pg_type_typname_nsp_index``
+    when ``DROP SCHEMA CASCADE`` + ``create_all`` share the same asyncpg
+    connection or when asyncpg retains old OIDs for recycled type names.
+    """
+    import asyncpg
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url.replace("postgresql+asyncpg://", "postgresql://"))
+    conn = await asyncpg.connect(
+        host=parsed.hostname,
+        port=parsed.port or 5432,
+        user=parsed.username,
+        password=parsed.password,
+        database=parsed.path.lstrip("/"),
+    )
+    try:
+        await conn.execute("DROP SCHEMA public CASCADE")
+        await conn.execute("CREATE SCHEMA public")
+    finally:
+        await conn.close()
+
+
 @pytest_asyncio.fixture(scope="session")
 async def test_engine(ensure_test_db):
     # NullPool: no connection pooling — each connection is created fresh in the
     # current event loop, eliminating asyncpg "Future attached to different loop"
     # errors that occur when pytest-asyncio creates a new loop per test function.
+    #
+    # Schema reset via raw asyncpg (not SQLAlchemy) so the type cache is fully
+    # cleared before create_all opens its own fresh connection.
+    await _reset_schema(TEST_DATABASE_URL)
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     yield engine
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
+    await _reset_schema(TEST_DATABASE_URL)
 
 
 @pytest.fixture(scope="session")
