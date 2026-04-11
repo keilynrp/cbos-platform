@@ -48,12 +48,14 @@ async def create_workflow(
 
 
 async def list_workflows(
-    db: AsyncSession, workspace_id: str
+    db: AsyncSession, workspace_id: str, limit: int = 50, offset: int = 0
 ) -> list[WorkflowRead]:
     result = await db.execute(
         select(Workflow)
         .where(Workflow.workspace_id == workspace_id)
         .order_by(Workflow.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     )
     return [WorkflowRead.model_validate(wf) for wf in result.scalars().all()]
 
@@ -105,7 +107,7 @@ async def delete_workflow(
 # ── Workflow runs ─────────────────────────────────────────────────────────────
 
 async def list_runs(
-    db: AsyncSession, workspace_id: str, workflow_id: str, limit: int = 50
+    db: AsyncSession, workspace_id: str, workflow_id: str, limit: int = 50, offset: int = 0
 ) -> list[WorkflowRunRead]:
     await get_workflow(db, workspace_id, workflow_id)  # access check
     result = await db.execute(
@@ -113,6 +115,7 @@ async def list_runs(
         .where(WorkflowRun.workflow_id == workflow_id)
         .order_by(WorkflowRun.created_at.desc())
         .limit(limit)
+        .offset(offset)
     )
     return [WorkflowRunRead.model_validate(r) for r in result.scalars().all()]
 

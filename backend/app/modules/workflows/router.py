@@ -27,11 +27,13 @@ router = APIRouter(prefix="/workflows", tags=["Workflow Engine"])
 
 @router.get("", response_model=list[WorkflowRead])
 async def list_workflows(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
 ):
-    return await service.list_workflows(db, workspace_id)
+    return await service.list_workflows(db, workspace_id, limit, offset)
 
 
 @router.post("", response_model=WorkflowRead, status_code=201)
@@ -92,12 +94,13 @@ async def delete_workflow(
 @router.get("/{workflow_id}/runs", response_model=list[WorkflowRunRead])
 async def list_runs(
     workflow_id: str,
-    limit: int = Query(default=50, le=200),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
 ):
-    return await service.list_runs(db, workspace_id, workflow_id, limit)
+    return await service.list_runs(db, workspace_id, workflow_id, limit, offset)
 
 
 # ── Test ──────────────────────────────────────────────────────────────────────
@@ -122,12 +125,14 @@ async def test_workflow(
 @router.get("/dlq", response_model=DLQListResponse)
 async def list_dlq_entries(
     limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     current_user=Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
 ):
     """List messages in the Dead Letter Queue (failed workflow events)."""
     r = await get_redis()
-    raw_entries = await r.xrange("cbos:events:dlq", "-", "+", count=limit)
+    raw_entries = await r.xrange("cbos:events:dlq", "-", "+", count=offset + limit)
+    raw_entries = raw_entries[offset:]
 
     entries: list[DLQEntryRead] = []
     for entry_id, fields in raw_entries:
