@@ -195,7 +195,7 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-Cobertura actual: **227 tests** en 15 archivos — identity, CRM, sales, inventory, workflows, portal, discovery, accounting, notifications, wedge smoke (tests unitarios + contrato + integración).
+Cobertura actual: **239 tests** en 17 archivos — identity, CRM, sales, inventory, workflows, portal, discovery, accounting, notifications, wedge smoke (tests unitarios + contrato + integración).
 
 ```bash
 # Ver cobertura detallada
