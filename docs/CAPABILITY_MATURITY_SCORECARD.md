@@ -35,23 +35,27 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 
 ### Tier 2 — Wedge Support
 
+> 4 modules as of 2026-04-11. Discovery and Accounting promoted from Tier 3 (ADR 0008). All four modules hold the same hardening bar.
+
 | Module | Contract Tests | Integration Tests | Events | Frontend | Spec | Production | Score |
 |--------|:-:|:-:|:-:|:-:|:-:|:-:|-------|
 | **Portal** | 🟢 | 🟢 | 🟡 | 🟢 | 🟢 | 🟢 | **5/6** |
 | **Notifications** | 🟢 | 🟢 | 🟢 | 🟡 | 🟢 | 🟢 | **5/6** |
-
-> Portal: 17 contract + 5 integration tests. Capability spec added. Events 🟡 — PortalSessionCreated not consistently emitted. Promoted to active Tier 2 (ADR 0006).
-> Notifications: 32 unit tests added Q2 (WebSocket + ConnectionManager). Capability spec added. Email notifier connected to event bus — QuoteAccepted, SalesOrderCreated, WorkflowFailed, LowStock now trigger emails automatically. Frontend 🟡 — WebSocket delivery works; email UI not yet surfaced.
-
-### Tier 3 — Controlled Expansion
-
-| Module | Contract Tests | Integration Tests | Events | Frontend | Spec | Production | Score |
-|--------|:-:|:-:|:-:|:-:|:-:|:-:|-------|
 | **Discovery** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 | **Accounting** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 
-> Discovery: 22 contract + 7 integration tests. Capability spec added. All 7 domain events confirmed implemented in service layer.
-> Accounting: 21 contract + 5 integration tests added Q2. 4 events published (InvoiceCreated, InvoiceSent, InvoicePaid, PaymentRecorded). Capability spec added.
+> Portal: 17 contract + 5 integration tests. Capability spec added. Events 🟡 — PortalSessionCreated not consistently emitted. Promoted to active Tier 2 (ADR 0006).
+> Notifications: 32 unit tests added Q2 (WebSocket + ConnectionManager). Capability spec added. Email notifier connected to event bus — QuoteAccepted, SalesOrderCreated, WorkflowFailed, LowStock now trigger emails automatically. Frontend 🟡 — WebSocket delivery works; email UI not yet surfaced.
+> Discovery: 22 contract + 7 integration tests. Capability spec added. All 7 domain events confirmed implemented in service layer. Promoted to active Tier 2 (ADR 0008).
+> Accounting: 21 contract + 5 integration tests added Q2. 4 events published (InvoiceCreated, InvoiceSent, InvoicePaid, PaymentRecorded). Capability spec added. Promoted to active Tier 2 (ADR 0008).
+
+### Tier 3 — Controlled Expansion
+
+> No modules currently in Tier 3. Tier 3 is a transient state — all modules have been promoted.
+
+| Module | Contract Tests | Integration Tests | Events | Frontend | Spec | Production | Score |
+|--------|:-:|:-:|:-:|:-:|:-:|:-:|-------|
+| — | — | — | — | — | — | — | — |
 
 ---
 
@@ -75,7 +79,7 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 4. Capability spec: 🟢
 5. At least one end-to-end scenario involving this module
 
-> Discovery (6/6) and Accounting (6/6) now meet all criteria for Tier 2 promotion. Formal ADR pending.
+> Discovery (6/6) and Accounting (6/6) promoted to Tier 2 (ADR 0008, 2026-04-11).
 
 ---
 
@@ -89,18 +93,21 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Portal | Write capability spec + integration tests | ✅ Done Q2 |
 | Notifications | Add contract tests; connect email to event bus | ✅ Done Q2 |
 | Discovery | Write capability spec; add integration tests | ✅ Done Q2 |
+| Discovery | Promote to Tier 2 | ✅ Done Q2 (ADR 0008) |
 | Accounting | Write contract + integration tests; capability spec | ✅ Done Q2 |
+| Accounting | Promote to Tier 2 | ✅ Done Q2 (ADR 0008) |
 | Sales→Inventory | Resolve direct-invocation coupling in quote acceptance | 🔴 In progress |
 
 ---
 
 ## Overall Platform Score
 
-| Tier | Modules | Avg Score | vs. Sprint 6 |
-|------|---------|-----------|--------------|
-| Tier 1 | 5 modules | **6.0 / 6** | ↑ from 5.4/6 |
-| Tier 2 | 2 modules | **5.0 / 6** | ↑ from 3.0/6 |
-| Tier 3 | 2 modules | **6.0 / 6** | ↑ from 2.0/6 |
+| Tier | Modules | Avg Score | vs. Q2 pre-promotion |
+|------|---------|-----------|----------------------|
+| Tier 1 | 5 modules | **6.0 / 6** | — |
+| Tier 2 | 4 modules | **5.5 / 6** | ↑ from 2 modules |
+| Tier 3 | 0 modules | — | ↓ from 2 modules (all promoted) |
 
-**All tiers at 6.0/6 average or above.** Tier 1 fully hardened. Discovery and Accounting meet Tier 2 promotion criteria (ADR pending).
+**Tier 1 fully hardened. Tier 2 expanded to 4 modules (ADR 0008).** Tier 3 is clear — no modules remain in Controlled Expansion.
 **Sales→Inventory boundary:** Resolved via Gateway pattern (ADR 0007). No remaining architectural gaps.
+**Next Tier 1 candidates:** Discovery and Accounting — eligible if end-to-end wedge integration scenarios are demonstrated (apply_blueprint provisioning; SalesOrder → Invoice → Payment flow).
