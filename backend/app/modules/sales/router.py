@@ -112,21 +112,14 @@ async def accept_quote(
 ):
     quote, order = await service.accept_quote(db, workspace_id, current_user.id, quote_id)
 
-    # Auto-reserve inventory for lines that have a product_id linked.
-    # Best-effort: a failure here never blocks the quote acceptance.
+    # Auto-reserve inventory via gateway (best-effort, never blocks quote acceptance).
     lines_with_product = [
-        line for line in quote.lines if line.product_id
+        {"product_id": line.product_id, "quantity": line.quantity}
+        for line in quote.lines if line.product_id
     ]
     if lines_with_product:
-        try:
-            from app.modules.inventory import service as inv_service
-            from app.modules.inventory.schemas import OrderLineReserve
-            await inv_service.auto_reserve_for_order(
-                db, workspace_id, current_user.id, order.id,
-                [OrderLineReserve(product_id=l.product_id, quantity=l.quantity) for l in lines_with_product],
-            )
-        except Exception as exc:
-            logger.warning("Auto-reserve failed for order %s: %s", order.id, exc)
+        from app.modules.sales.inventory_gateway import reserve_for_order
+        await reserve_for_order(db, workspace_id, current_user.id, order.id, lines_with_product)
 
     return order
 

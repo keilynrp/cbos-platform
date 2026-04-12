@@ -538,8 +538,8 @@ async def fulfill_order(
     order.fulfilled_at = datetime.now(timezone.utc)
 
     # Consume reserved stock for all lines that have a product_id
-    from app.modules.inventory import service as inv_service
-    await inv_service.consume_reserved_stock(db, workspace_id, actor_id, order_id)
+    from app.modules.sales.inventory_gateway import consume_for_order
+    await consume_for_order(db, workspace_id, actor_id, order_id)
 
     await publish_event(Event(
         event_type=SALES_ORDER_FULFILLED,
@@ -579,8 +579,8 @@ async def cancel_order(
     order.cancelled_at = datetime.now(timezone.utc)
 
     # Release any inventory reservations tied to this order
-    from app.modules.inventory import service as inv_service
-    await inv_service.release_reservations_for_order(db, workspace_id, actor_id, order_id)
+    from app.modules.sales.inventory_gateway import release_for_order
+    await release_for_order(db, workspace_id, actor_id, order_id)
 
     await publish_event(Event(
         event_type=SALES_ORDER_CANCELLED,
