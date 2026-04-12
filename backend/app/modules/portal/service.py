@@ -129,21 +129,22 @@ async def create_session(
     )
     db.add(session)
 
+    await db.commit()
+    await db.refresh(session)
+
     await publish_event(Event(
         event_type=PORTAL_SESSION_CREATED,
         source_module="portal",
-        workspace_id=workspace_id,
-        actor_id=actor_id,
-        entity_id=data.quote_id,
+        workspace_id=session.workspace_id,
+        entity_id=session.id,
+        actor_id=session.created_by_id,
         payload={
-            "quote_id": data.quote_id,
-            "client_email": data.client_email,
-            "expires_at": expires_at.isoformat(),
+            "quote_id": session.quote_id,
+            "token": session.token,
+            "expires_at": session.expires_at.isoformat(),
+            "client_email": session.client_email,
         },
     ))
-
-    await db.commit()
-    await db.refresh(session)
 
     return PortalSessionRead(
         **{c: getattr(session, c) for c in [

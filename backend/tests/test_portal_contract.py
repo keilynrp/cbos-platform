@@ -309,3 +309,35 @@ async def test_cannot_create_session_for_accepted_quote(
         "quote_id": quote["id"],
     })
     assert resp.status_code == 409, resp.text
+
+
+# ── Event emission ────────────────────────────────────────────────────────────
+
+async def test_create_session_emits_portal_session_created_event(
+    client: AsyncClient, auth_headers: dict
+):
+    """PortalSessionCreated event is published when a portal session is created."""
+    from unittest.mock import AsyncMock, patch
+
+    # Create quote first
+    quote_resp = await client.post("/api/v1/sales/quotes", headers=auth_headers, json={
+        "title": "Event Test Quote",
+        "lines": [{"description": "Item", "quantity": 1, "unit_price": 100.0}],
+    })
+    assert quote_resp.status_code == 201, quote_resp.text
+    quote_id = quote_resp.json()["id"]
+
+    published_events = []
+
+    async def capture_event(event):
+        published_events.append(event)
+
+    with patch("app.modules.portal.service.publish_event", side_effect=capture_event):
+        resp = await client.post("/api/v1/portal/sessions", headers=auth_headers, json={
+            "quote_id": quote_id,
+        })
+        assert resp.status_code == 201, resp.text
+
+    portal_events = [e for e in published_events if e.event_type == "PortalSessionCreated"]
+    assert len(portal_events) == 1
+    assert portal_events[0].payload["quote_id"] == quote_id
