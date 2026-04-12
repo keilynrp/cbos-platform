@@ -39,12 +39,12 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 
 | Module | Contract Tests | Integration Tests | Events | Frontend | Spec | Production | Score |
 |--------|:-:|:-:|:-:|:-:|:-:|:-:|-------|
-| **Portal** | 🟢 | 🟢 | 🟡 | 🟢 | 🟢 | 🟢 | **5/6** |
+| **Portal** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 | **Notifications** | 🟢 | 🟢 | 🟢 | 🟡 | 🟢 | 🟢 | **5/6** |
 | **Discovery** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 | **Accounting** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 
-> Portal: 17 contract + 5 integration tests. Capability spec added. Events 🟡 — PortalSessionCreated not consistently emitted. Promoted to active Tier 2 (ADR 0006).
+> Portal: 18 contract + 5 integration tests. Capability spec added. PortalSessionCreated now emitted consistently post-commit (fixed Q3). Score: 6/6. Promoted to active Tier 2 (ADR 0006).
 > Notifications: 32 unit tests added Q2 (WebSocket + ConnectionManager). Capability spec added. Email notifier connected to event bus — QuoteAccepted, SalesOrderCreated, WorkflowFailed, LowStock now trigger emails automatically. Frontend 🟡 — WebSocket delivery works; email UI not yet surfaced.
 > Discovery: 22 contract + 7 integration tests. Capability spec added. All 7 domain events confirmed implemented in service layer. Promoted to active Tier 2 (ADR 0008).
 > Accounting: 21 contract + 5 integration tests added Q2. 4 events published (InvoiceCreated, InvoiceSent, InvoicePaid, PaymentRecorded). Capability spec added. Promoted to active Tier 2 (ADR 0008).
@@ -105,7 +105,7 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Tier | Modules | Avg Score | vs. Q2 pre-promotion |
 |------|---------|-----------|----------------------|
 | Tier 1 | 5 modules | **6.0 / 6** | — |
-| Tier 2 | 4 modules | **5.5 / 6** | ↑ from 2 modules |
+| Tier 2 | 4 modules | **5.75 / 6** | ↑ from 2 modules (Portal now 6/6) |
 | Tier 3 | 0 modules | — | ↓ from 2 modules (all promoted) |
 
 **Tier 1 fully hardened. Tier 2 expanded to 4 modules (ADR 0008).** Tier 3 is clear — no modules remain in Controlled Expansion.
