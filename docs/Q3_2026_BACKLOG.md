@@ -10,12 +10,12 @@
 _Scorecard note: Discovery and Accounting are 6/6 in Tier 2. Promotion to Tier 1 requires at
 least one end-to-end wedge integration scenario per module (promotion criteria §5)._
 
-| # | Item | Evidence | Tier 1 Prereq |
-|---|------|----------|:---:|
-| 1.1 | E2E test: `apply_blueprint` provisioning flow (Discovery → workspace setup) | Scorecard note on Discovery promotion path | Yes |
-| 1.2 | E2E test: `SalesOrder → Invoice → Payment` full accounting lifecycle | Scorecard note on Accounting promotion path | Yes |
-| 1.3 | ADR for Discovery Tier 1 promotion once E2E scenario passes | Promotion criteria require formal ADR | Yes |
-| 1.4 | ADR for Accounting Tier 1 promotion once E2E scenario passes | Promotion criteria require formal ADR | Yes |
+| # | Item | Evidence | Tier 1 Prereq | Status |
+|---|------|----------|:---:|--------|
+| 1.1 | E2E test: `apply_blueprint` provisioning flow (Discovery → workspace setup) | Scorecard note on Discovery promotion path | Yes | ✅ Done — `test_e2e_discovery_blueprint.py` (3 tests) |
+| 1.2 | E2E test: `SalesOrder → Invoice → Payment` full accounting lifecycle | Scorecard note on Accounting promotion path | Yes | ✅ Done — `test_e2e_sales_accounting.py` (1 cross-module test) |
+| 1.3 | ADR for Discovery Tier 1 promotion once E2E scenario passes | Promotion criteria require formal ADR | Yes | 🔴 Pending |
+| 1.4 | ADR for Accounting Tier 1 promotion once E2E scenario passes | Promotion criteria require formal ADR | Yes | 🔴 Pending |
 
 ---
 
@@ -23,13 +23,13 @@ least one end-to-end wedge integration scenario per module (promotion criteria �
 
 _Portal scores 5/6 (Events 🟡). Notifications scores 5/6 (Frontend 🟡). Both are active Tier 2._
 
-| # | Item | Evidence |
-|---|------|----------|
-| 2.1 | Emit `PortalSessionCreated` consistently from Portal service layer | `portal.md` Events table — 🟡 "not consistently emitted"; scorecard Portal Events 🟡 |
-| 2.2 | Add contract test covering `PortalSessionCreated` emission | Scorecard Portal Events 🟡; promotion criteria require event publishing 🟢 |
-| 2.3 | Surface email notification status in frontend (notification tray / settings) | Scorecard Notifications Frontend 🟡; `notifications.md` gap #5 |
-| 2.4 | Define email delivery policy: which events trigger email, recipient resolution, opt-out | `notifications.md` gap — "delivery policy undefined"; required for full frontend alignment |
-| 2.5 | Verify and document WebSocket reconnection + missed-event handling in frontend | `notifications.md` gap #4 — "reconnection unverified" |
+| # | Item | Evidence | Status |
+|---|------|----------|--------|
+| 2.1 | Emit `PortalSessionCreated` consistently from Portal service layer | `portal.md` Events table — 🟡 "not consistently emitted"; scorecard Portal Events 🟡 | ✅ Done — fixed post-commit emit; portal.md updated |
+| 2.2 | Add contract test covering `PortalSessionCreated` emission | Scorecard Portal Events 🟡; promotion criteria require event publishing 🟢 | ✅ Done — `test_portal_contract.py` test 18 |
+| 2.3 | Surface email notification status in frontend (notification tray / settings) | Scorecard Notifications Frontend 🟡; `notifications.md` gap #5 | 🔴 Pending |
+| 2.4 | Define email delivery policy: which events trigger email, recipient resolution, opt-out | `notifications.md` gap — "delivery policy undefined"; required for full frontend alignment | 🟡 Partial — `EMAIL_NOTIFY_EVENTS` defined in `email_notifier.py`; no opt-out yet |
+| 2.5 | Verify and document WebSocket reconnection + missed-event handling in frontend | `notifications.md` gap #4 — "reconnection unverified" | 🔴 Pending |
 
 ---
 
@@ -38,11 +38,11 @@ _Portal scores 5/6 (Events 🟡). Notifications scores 5/6 (Frontend 🟡). Both
 _Existing E2E: wedge smoke, workflow consumer, portal accept. No cross-module flows covering
 Discovery, Accounting, or the event→notification delivery path._
 
-| # | Item | Evidence |
-|---|------|----------|
-| 3.1 | E2E: domain event → Redis pub/sub → WebSocket client delivery (Notifications) | `notifications.md` — "end-to-end path from bus.publish() through Redis to WS client not covered" |
-| 3.2 | E2E: Portal session creation → `PortalSessionCreated` event emitted → WS notification received | Combines Portal Events gap + Notifications E2E gap |
-| 3.3 | E2E: Quote accepted via Portal → SalesOrder created → Invoice auto-created (Sales + Accounting) | Accounting promotion path; no existing cross-module test covers this flow |
+| # | Item | Evidence | Status |
+|---|------|----------|--------|
+| 3.1 | E2E: domain event → Redis pub/sub → WebSocket client delivery (Notifications) | `notifications.md` — "end-to-end path from bus.publish() through Redis to WS client not covered" | ✅ Done — `test_e2e_notifications_pipeline.py` (17 tests, 5 layers) |
+| 3.2 | E2E: Portal session creation → `PortalSessionCreated` event emitted → WS notification received | Combines Portal Events gap + Notifications E2E gap | 🔴 Pending |
+| 3.3 | E2E: Quote accepted via Portal → SalesOrder created → Invoice auto-created (Sales + Accounting) | Accounting promotion path; no existing cross-module test covers this flow | 🔴 Pending |
 
 ---
 
@@ -50,12 +50,12 @@ Discovery, Accounting, or the event→notification delivery path._
 
 _Known items carried or deferred from Q2._
 
-| # | Item | Evidence |
-|---|------|----------|
-| 4.1 | Normalize pagination policy across all wedge-critical APIs | Alignment gap register: CRM/Sales use 50/200, Inventory 100/500, Workflows missing `offset` |
-| 4.2 | Standardize event envelope and registration (versioned domain contracts) | Alignment gap register: "Events exist but need stricter governance"; ADR 0004 target state |
-| 4.3 | Resolve `Workflows` contract test entry still marked 🟡 in action register | Scorecard action register: "Extract dedicated `test_workflows_contract.py`" — 🟡 Pending |
-| 4.4 | Archive legacy docs that contradict governing architecture set | Alignment gap: "Historical docs describe multiple stacks; several frontend surfaces ahead of maturity" |
+| # | Item | Evidence | Status |
+|---|------|----------|--------|
+| 4.1 | Normalize pagination policy across all wedge-critical APIs | Alignment gap register: CRM/Sales use 50/200, Inventory 100/500, Workflows missing `offset` | ✅ Done Q3 — Inventory + Workflows normalized to 50/200 |
+| 4.2 | Standardize event envelope and registration (versioned domain contracts) | Alignment gap register: "Events exist but need stricter governance"; ADR 0004 target state | 🔴 Pending |
+| 4.3 | Resolve `Workflows` contract test entry still marked 🟡 in action register | Scorecard action register: "Extract dedicated `test_workflows_contract.py`" — 🟡 Pending | ✅ Done Q3 — `test_workflows_contract.py` (23 tests) |
+| 4.4 | Archive legacy docs that contradict governing architecture set | Alignment gap: "Historical docs describe multiple stacks; several frontend surfaces ahead of maturity" | 🔴 Pending |
 
 ---
 
