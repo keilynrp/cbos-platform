@@ -46,6 +46,63 @@ async def create_workflow(
     return await service.create_workflow(db, workspace_id, data)
 
 
+# ── DLQ Monitoring ────────────────────────────────────────────────────────────
+# NOTE: these static-path routes must be declared before /{workflow_id} so
+# FastAPI does not capture "dlq" as a workflow_id path parameter.
+
+@router.get("/dlq", response_model=DLQListResponse)
+async def list_dlq_entries(
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    current_user=Depends(get_current_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+):
+    """List messages in the Dead Letter Queue (failed workflow events)."""
+    r = await get_redis()
+    raw_entries = await r.xrange("cbos:events:dlq", "-", "+", count=offset + limit)
+    raw_entries = raw_entries[offset:]
+
+    entries: list[DLQEntryRead] = []
+    for entry_id, fields in raw_entries:
+        # Parse timestamp from Redis stream ID (format: "<ms>-<seq>")
+        try:
+            ms = int(entry_id.split("-")[0])
+            failed_at = datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+        except Exception:
+            failed_at = datetime.now(timezone.utc)
+
+        # Parse event data
+        try:
+            data = json.loads(fields.get("data", "{}"))
+        except Exception:
+            data = {"raw": fields.get("data", "")}
+
+        entries.append(DLQEntryRead(
+            entry_id=entry_id,
+            msg_id=fields.get("msg_id", ""),
+            data=data,
+            error=fields.get("error", "unknown"),
+            failed_at=failed_at,
+        ))
+
+    return DLQListResponse(total=len(entries), entries=entries)
+
+
+@router.delete("/dlq/{entry_id}", status_code=204)
+async def delete_dlq_entry(
+    entry_id: str,
+    current_user=Depends(get_current_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+):
+    """Remove a specific entry from the Dead Letter Queue (acknowledge/resolve)."""
+    r = await get_redis()
+    deleted = await r.xdel("cbos:events:dlq", entry_id)
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="DLQ entry not found")
+
+
+# ── Per-workflow routes ────────────────────────────────────────────────────────
+
 @router.get("/{workflow_id}", response_model=WorkflowRead)
 async def get_workflow(
     workflow_id: str,
@@ -118,56 +175,3 @@ async def test_workflow(
     Dry run — no ejecuta acciones reales.
     """
     return await service.test_workflow(db, workspace_id, workflow_id, data)
-
-
-# ── DLQ Monitoring ────────────────────────────────────────────────────────────
-
-@router.get("/dlq", response_model=DLQListResponse)
-async def list_dlq_entries(
-    limit: int = Query(50, ge=1, le=200),
-    offset: int = Query(0, ge=0),
-    current_user=Depends(get_current_user),
-    workspace_id: str = Depends(get_current_workspace_id),
-):
-    """List messages in the Dead Letter Queue (failed workflow events)."""
-    r = await get_redis()
-    raw_entries = await r.xrange("cbos:events:dlq", "-", "+", count=offset + limit)
-    raw_entries = raw_entries[offset:]
-
-    entries: list[DLQEntryRead] = []
-    for entry_id, fields in raw_entries:
-        # Parse timestamp from Redis stream ID (format: "<ms>-<seq>")
-        try:
-            ms = int(entry_id.split("-")[0])
-            failed_at = datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
-        except Exception:
-            failed_at = datetime.now(timezone.utc)
-
-        # Parse event data
-        try:
-            data = json.loads(fields.get("data", "{}"))
-        except Exception:
-            data = {"raw": fields.get("data", "")}
-
-        entries.append(DLQEntryRead(
-            entry_id=entry_id,
-            msg_id=fields.get("msg_id", ""),
-            data=data,
-            error=fields.get("error", "unknown"),
-            failed_at=failed_at,
-        ))
-
-    return DLQListResponse(total=len(entries), entries=entries)
-
-
-@router.delete("/dlq/{entry_id}", status_code=204)
-async def delete_dlq_entry(
-    entry_id: str,
-    current_user=Depends(get_current_user),
-    workspace_id: str = Depends(get_current_workspace_id),
-):
-    """Remove a specific entry from the Dead Letter Queue (acknowledge/resolve)."""
-    r = await get_redis()
-    deleted = await r.xdel("cbos:events:dlq", entry_id)
-    if deleted == 0:
-        raise HTTPException(status_code=404, detail="DLQ entry not found")
