@@ -27,11 +27,11 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 | **CRM** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 | **Sales** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 | **Inventory** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
-| **Workflows** | 🟡 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **5/6** |
+| **Workflows** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 
 > Identity: `UserRegistered` + `WorkspaceCreated` events added Q2.
 > Inventory: All stock-change events confirmed implemented (StockMovementRecorded, InventoryReserved, InventoryReleased, InventoryLowThresholdDetected).
-> Workflows: Contract tests still embedded in `test_workflows.py` rather than a dedicated `test_workflows_contract.py`. DLQ monitoring endpoint added Q2.
+> Workflows: Dedicated `test_workflows_contract.py` added (23 tests). DLQ monitoring endpoint added Q2. Route ordering bug fixed (DLQ routes now correctly precede `/{workflow_id}`).
 
 ### Tier 2 — Wedge Support
 
@@ -98,9 +98,9 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 
 | Tier | Modules | Avg Score | vs. Sprint 6 |
 |------|---------|-----------|--------------|
-| Tier 1 | 5 modules | **5.8 / 6** | ↑ from 5.4/6 |
+| Tier 1 | 5 modules | **6.0 / 6** | ↑ from 5.4/6 |
 | Tier 2 | 2 modules | **5.0 / 6** | ↑ from 3.0/6 |
 | Tier 3 | 2 modules | **6.0 / 6** | ↑ from 2.0/6 |
 
-**All tiers improved significantly.** Tier 3 reached 6.0/6 — both Discovery and Accounting meet Tier 2 promotion criteria.
-**Remaining architectural gap:** Sales→Inventory direct invocation (quote acceptance bypasses event bus).
+**All tiers at 6.0/6 average or above.** Tier 1 fully hardened. Discovery and Accounting meet Tier 2 promotion criteria (ADR pending).
+**Sales→Inventory boundary:** Resolved via Gateway pattern (ADR 0007). No remaining architectural gaps.
