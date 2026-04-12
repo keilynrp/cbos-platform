@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { api } from "@/lib/api";
 import {
   Settings2,
   Server,
@@ -16,6 +17,7 @@ import {
   Shield,
   Users,
   Bell,
+  Mail,
   Palette,
   Cpu,
   Network,
@@ -28,6 +30,7 @@ import {
   ArrowRight,
   Box,
   Layers,
+  Loader2,
 } from "lucide-react";
 
 // --- Architecture Data ---
@@ -222,10 +225,68 @@ const statusBadge: Record<string, string> = {
   degraded: "bg-destructive/15 text-destructive border-destructive/20",
 };
 
+// --- Email Notification Preferences ---
+
+interface NotificationPreferences {
+  email_enabled: boolean;
+  email_events: Record<string, boolean>;
+}
+
+const EMAIL_EVENT_LABELS: Record<string, { label: string; desc: string }> = {
+  QuoteAccepted: {
+    label: "Cotizaciones aceptadas",
+    desc: "Cuando un cliente acepta una cotizacion",
+  },
+  SalesOrderCreated: {
+    label: "Ordenes de venta creadas",
+    desc: "Cuando se genera una nueva orden de venta",
+  },
+  WorkflowFailed: {
+    label: "Workflows fallidos",
+    desc: "Cuando un workflow automatizado falla",
+  },
+  InventoryLowThresholdDetected: {
+    label: "Stock bajo",
+    desc: "Cuando un producto alcanza el umbral minimo de inventario",
+  },
+};
+
+function useNotificationPreferences() {
+  const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<NotificationPreferences>("/notifications/preferences")
+      .then(setPrefs)
+      .catch(() => setPrefs({ email_enabled: true, email_events: {} }))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const update = useCallback(async (patch: Partial<NotificationPreferences>) => {
+    setSaving(true);
+    try {
+      const updated = await api.put<NotificationPreferences>(
+        "/notifications/preferences",
+        patch
+      );
+      setPrefs(updated);
+    } catch {
+      // Revert handled by re-reading state
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  return { prefs, loading, saving, update };
+}
+
 // --- Main ---
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("architecture");
+  const { prefs: notifPrefs, loading: notifLoading, saving: notifSaving, update: updateNotifPrefs } = useNotificationPreferences();
 
   return (
     <div className="space-y-6">
@@ -238,6 +299,7 @@ const Settings = () => {
         <TabsList>
           <TabsTrigger value="architecture" className="gap-1.5"><Layers className="h-3.5 w-3.5" /> Architecture</TabsTrigger>
           <TabsTrigger value="health" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> System Health</TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" /> Notifications</TabsTrigger>
           <TabsTrigger value="general" className="gap-1.5"><Settings2 className="h-3.5 w-3.5" /> General</TabsTrigger>
           <TabsTrigger value="team" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Team</TabsTrigger>
         </TabsList>
@@ -312,6 +374,118 @@ const Settings = () => {
           </div>
         </TabsContent>
 
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="mt-4 space-y-6">
+          <Card className="border border-border/60">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-primary" /> Email Notifications
+                </CardTitle>
+                {notifSaving && (
+                  <Badge variant="outline" className="text-[10px] gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Saving...
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Control which business events trigger email alerts. Changes are saved automatically.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {notifLoading ? (
+                <div className="flex items-center justify-center py-8 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  <span className="text-sm">Loading preferences...</span>
+                </div>
+              ) : (
+                <>
+                  {/* Global toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
+                    <div>
+                      <p className="text-sm font-semibold">Email notifications</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Master switch — disable to stop all email alerts
+                      </p>
+                    </div>
+                    <Switch
+                      checked={notifPrefs?.email_enabled ?? true}
+                      onCheckedChange={(checked) =>
+                        updateNotifPrefs({ email_enabled: checked })
+                      }
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Per-event toggles */}
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                      Event Types
+                    </p>
+                    {Object.entries(EMAIL_EVENT_LABELS).map(([eventKey, meta]) => {
+                      const enabled = notifPrefs?.email_events?.[eventKey] ?? true;
+                      const globalOff = !(notifPrefs?.email_enabled ?? true);
+
+                      return (
+                        <div
+                          key={eventKey}
+                          className={`flex items-center justify-between p-3 rounded-lg hover:bg-muted/40 transition-colors ${
+                            globalOff ? "opacity-50" : ""
+                          }`}
+                        >
+                          <div>
+                            <p className="text-sm font-medium">{meta.label}</p>
+                            <p className="text-[11px] text-muted-foreground">{meta.desc}</p>
+                          </div>
+                          <Switch
+                            checked={enabled && !globalOff}
+                            disabled={globalOff}
+                            onCheckedChange={(checked) =>
+                              updateNotifPrefs({
+                                email_events: { [eventKey]: checked },
+                              })
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Status summary */}
+                  <Separator />
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--cbs-green))]" />
+                    <span>
+                      {notifPrefs?.email_enabled
+                        ? `${
+                            Object.values(notifPrefs?.email_events ?? {}).filter(Boolean).length
+                          } of ${Object.keys(EMAIL_EVENT_LABELS).length} event types active`
+                        : "All email notifications disabled"}
+                    </span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Real-time notifications info card */}
+          <Card className="border border-border/60">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Bell className="h-4 w-4 text-primary" /> Real-time Notifications
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                In-app notifications are delivered via WebSocket and always active while you are connected.
+                They cover 13 event types including workflow status, sales activity, inventory alerts,
+                portal interactions, and accounting updates. Use the bell icon in the header to view them.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* General Tab */}
         <TabsContent value="general" className="mt-4 space-y-6">
           <Card className="border border-border/60">
@@ -336,7 +510,6 @@ const Settings = () => {
                   { label: "Enable AI recommendations", desc: "Show AI insights across all modules", default: true },
                   { label: "Auto-create projects from deals", desc: "Automatically generate a project when a CRM deal closes", default: true },
                   { label: "Knowledge graph auto-linking", desc: "Automatically detect and link entities in documents", default: true },
-                  { label: "Email notifications", desc: "Receive email alerts for important events", default: false },
                 ].map(pref => (
                   <div key={pref.label} className="flex items-center justify-between">
                     <div>

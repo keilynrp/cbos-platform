@@ -57,6 +57,9 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), default="member")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_owner: Mapped[bool] = mapped_column(Boolean, default=False)
+    notification_preferences: Mapped[dict] = mapped_column(
+        JSON, default=lambda: {"email_enabled": True, "email_events": {}},
+    )
 
     # Relationships
     workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="users")

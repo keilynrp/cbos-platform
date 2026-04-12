@@ -30,21 +30,40 @@ EMAIL_NOTIFY_EVENTS = {
 }
 
 
-async def _get_workspace_owner_email(workspace_id: str) -> str | None:
-    """Look up the workspace owner's email address."""
+async def _get_eligible_recipients(workspace_id: str, event_type: str) -> list[str]:
+    """
+    Return email addresses of workspace users who should receive this event.
+    Checks per-user notification_preferences:
+    - email_enabled must be True (default: True)
+    - email_events[event_type] must be True (default: True if not set)
+    Falls back to workspace owner if no preferences column exists yet.
+    """
     try:
         from app.modules.identity.models import User
         async with AsyncSessionLocal() as db:
             result = await db.execute(
-                select(User.email)
+                select(User)
                 .where(User.workspace_id == workspace_id)
                 .where(User.is_owner == True)  # noqa: E712
-                .limit(1)
+                .where(User.is_active == True)  # noqa: E712
             )
-            return result.scalar_one_or_none()
+            users = result.scalars().all()
+
+            recipients = []
+            for user in users:
+                prefs = user.notification_preferences or {}
+                if not prefs.get("email_enabled", True):
+                    continue
+                event_prefs = prefs.get("email_events", {})
+                # Default: send if event not explicitly disabled
+                if not event_prefs.get(event_type, True):
+                    continue
+                recipients.append(user.email)
+
+            return recipients
     except Exception as e:
-        logger.error(f"Failed to look up workspace owner email: {e}")
-        return None
+        logger.error(f"Failed to look up eligible recipients: {e}")
+        return []
 
 
 async def _send_event_email(event: dict) -> None:
@@ -53,9 +72,9 @@ async def _send_event_email(event: dict) -> None:
     workspace_id = event.get("workspace_id", "")
     payload = event.get("payload", {})
 
-    to_email = await _get_workspace_owner_email(workspace_id)
-    if not to_email:
-        logger.debug(f"No owner email for workspace {workspace_id}, skipping email for {event_type}")
+    recipients = await _get_eligible_recipients(workspace_id, event_type)
+    if not recipients:
+        logger.debug(f"No eligible recipients for workspace {workspace_id}, skipping email for {event_type}")
         return
 
     try:
@@ -88,8 +107,9 @@ async def _send_event_email(event: dict) -> None:
         else:
             return
 
-        await send_email(to=to_email, subject=subject, html_body=html, text_body=text)
-        logger.info(f"Email sent for {event_type} to {to_email}")
+        for to_email in recipients:
+            await send_email(to=to_email, subject=subject, html_body=html, text_body=text)
+            logger.info(f"Email sent for {event_type} to {to_email}")
 
     except Exception as e:
         logger.error(f"Failed to send email for {event_type}: {e}")

@@ -1,3 +1,7 @@
+> **\xe2\x9a\xa0\xef\xb8\x8f ARCHIVED** \xe2\x80\x94 This document is historical reference only. It has been superseded by the governing architecture (ADRs 0001\xe2\x80\x930010) and current capability specs in `docs/capabilities/`. Do not use for implementation decisions.
+
+---
+
 La pregunta clave es:
 
 ¿Qué problema real podemos resolver mejor que cualquier alternativa existente usando solo una pequeña parte de la arquitectura?
