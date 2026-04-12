@@ -69,10 +69,10 @@ The module meets all five promotion criteria:
 
 **Negative / Risks:**
 
-- Event type constants (`INVOICE_CREATED`, `INVOICE_SENT`, etc.) are still defined locally in `accounting/service.py` rather than in `app/events/types.py` — consolidation is a Q3 backlog item (4.2) and a prerequisite for full ADR 0004 event governance compliance
+- ~~Event type constants: consolidated to `app/events/types.py` (Q3 item 4.2, commit `5f16fb8`)~~ ✅ Resolved
 - Overdue invoice status transitions are not automated — `overdue` state requires a scheduled job not yet built; this is a functional gap carried from ADR 0008
-- Accounting has no lane in `test_wedge_smoke.py` — the smoke test should be extended to include an invoice creation step after order fulfillment in a future sprint
-- `SalesOrder → Invoice` linkage is not yet automatic (via event); the E2E test creates the invoice explicitly via API. Auto-invoice-on-fulfillment via event consumer is a Phase 6 backlog item
+- ~~Accounting has no lane in `test_wedge_smoke.py`~~ ✅ Resolved — `test_full_wedge_with_inventory_portal_accounting` covers 7-module funnel including Accounting (commit `6c59e12`)
+- ~~`SalesOrder → Invoice` linkage is not automatic~~ ✅ Resolved — `invoice_consumer.py` auto-creates invoices on `SalesOrderFulfilled` via Redis Streams consumer group `cbos-invoice` (commit `50d8a89`)
 
 ---
 
