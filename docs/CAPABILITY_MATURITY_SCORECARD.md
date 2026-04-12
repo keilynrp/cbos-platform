@@ -69,6 +69,7 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 | `test_e2e_sales_accounting.py` | Sales → Accounting (SalesOrder → Invoice → Payment) | 🟢 Passing (1 cross-module test) |
 | `test_e2e_discovery_blueprint.py` | Discovery (Session → Chat → Blueprint → Apply → WorkspaceActivated) | 🟢 Passing (3 tests) |
 | `test_e2e_notifications_pipeline.py` | Notifications (event bus → Redis → WebSocket delivery chain) | 🟢 Passing (17 tests, 5 layers) |
+| `test_e2e_portal_accounting.py` | Portal → Sales → Accounting (Quote accept via token → SalesOrder → Invoice → Payment) | 🟢 Passing (2 tests) |
 
 ---
 

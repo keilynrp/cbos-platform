@@ -42,7 +42,7 @@ Discovery, Accounting, or the event→notification delivery path._
 |---|------|----------|--------|
 | 3.1 | E2E: domain event → Redis pub/sub → WebSocket client delivery (Notifications) | `notifications.md` — "end-to-end path from bus.publish() through Redis to WS client not covered" | ✅ Done — `test_e2e_notifications_pipeline.py` (17 tests, 5 layers) |
 | 3.2 | E2E: Portal session creation → `PortalSessionCreated` event emitted → WS notification received | Combines Portal Events gap + Notifications E2E gap | 🔴 Pending |
-| 3.3 | E2E: Quote accepted via Portal → SalesOrder created → Invoice auto-created (Sales + Accounting) | Accounting promotion path; no existing cross-module test covers this flow | 🔴 Pending |
+| 3.3 | E2E: Quote accepted via Portal → SalesOrder created → Invoice auto-created (Sales + Accounting) | Accounting promotion path; no existing cross-module test covers this flow | ✅ Done — `test_e2e_portal_accounting.py` (2 tests: accept→paid + reject path) |
 
 ---
 
