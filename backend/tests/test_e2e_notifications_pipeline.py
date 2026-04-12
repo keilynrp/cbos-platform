@@ -201,8 +201,8 @@ def test_lead_captured_not_in_notify_events():
     assert "LeadCaptured" not in NOTIFY_EVENTS
 
 
-def test_all_ten_notify_events_would_pass_filter():
-    """All 10 NOTIFY_EVENTS pass the filter check."""
+def test_all_notify_events_would_pass_filter():
+    """All NOTIFY_EVENTS pass the filter check."""
     for event_type in NOTIFY_EVENTS:
         assert event_type in NOTIFY_EVENTS
 

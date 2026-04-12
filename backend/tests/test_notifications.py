@@ -46,8 +46,8 @@ def test_notify_events_contains_customer_action():
 
 
 def test_notify_events_total_count():
-    """Exactly 10 event types should be whitelisted."""
-    assert len(NOTIFY_EVENTS) == 10
+    """Exactly 13 event types should be whitelisted (10 original + PortalSessionCreated, InvoiceCreated, InvoicePaid)."""
+    assert len(NOTIFY_EVENTS) == 13
 
 
 def test_notify_events_does_not_include_internal_events():
@@ -101,8 +101,8 @@ def test_empty_event_type_blocked():
     assert event["event_type"] not in NOTIFY_EVENTS
 
 
-def test_all_ten_notify_events_pass_filter():
-    """Each of the 10 whitelisted events must pass the filter check."""
+def test_all_notify_events_pass_filter():
+    """Each of the 13 whitelisted events must pass the filter check."""
     for event_type in NOTIFY_EVENTS:
         assert event_type in NOTIFY_EVENTS  # trivially true — documents intent
 

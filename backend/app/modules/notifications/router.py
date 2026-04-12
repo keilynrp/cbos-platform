@@ -28,6 +28,9 @@ NOTIFY_EVENTS = {
     "CustomerActionPerformed",
     "OpportunityWon",
     "OpportunityLost",
+    "PortalSessionCreated",
+    "InvoiceCreated",
+    "InvoicePaid",
 }
 
 NOTIFY_LABELS = {
@@ -41,6 +44,9 @@ NOTIFY_LABELS = {
     "CustomerActionPerformed":        "Acción del cliente",
     "OpportunityWon":                 "Deal ganado 🎉",
     "OpportunityLost":                "Deal perdido",
+    "PortalSessionCreated":           "Portal compartido con cliente",
+    "InvoiceCreated":                 "Factura generada",
+    "InvoicePaid":                    "Factura pagada 💰",
 }
 
 

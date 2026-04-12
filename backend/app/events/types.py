@@ -64,6 +64,12 @@ PORTAL_SESSION_CREATED = "PortalSessionCreated"
 PORTAL_SESSION_ACCESSED = "PortalSessionAccessed"
 CUSTOMER_ACTION_PERFORMED = "CustomerActionPerformed"
 
+# ── Accounting & Finance ───────────────────────────────────
+INVOICE_CREATED = "InvoiceCreated"
+INVOICE_SENT = "InvoiceSent"
+INVOICE_PAID = "InvoicePaid"
+PAYMENT_RECORDED = "PaymentRecorded"
+
 # ── Platform ───────────────────────────────────────────────
 USER_REGISTERED = "UserRegistered"
 WORKSPACE_CREATED = "WorkspaceCreated"

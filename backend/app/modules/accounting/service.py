@@ -7,7 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.events.bus import publish as publish_event
-from app.events.types import Event
+from app.events.types import (
+    Event,
+    INVOICE_CREATED,
+    INVOICE_SENT,
+    INVOICE_PAID,
+    PAYMENT_RECORDED,
+)
 from app.modules.accounting.models import Invoice, InvoiceLine, Payment
 from app.modules.accounting.schemas import (
     AccountingSummary,
@@ -20,13 +26,6 @@ from app.modules.accounting.schemas import (
 )
 
 logger = logging.getLogger(__name__)
-
-# New event types (string constants — not added to types.py to keep it focused)
-INVOICE_CREATED = "InvoiceCreated"
-INVOICE_SENT = "InvoiceSent"
-INVOICE_PAID = "InvoicePaid"
-PAYMENT_RECORDED = "PaymentRecorded"
-
 
 # ── Numbering ─────────────────────────────────────────────────────────────────
 
