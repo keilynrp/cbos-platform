@@ -41,7 +41,7 @@ Discovery, Accounting, or the event→notification delivery path._
 | # | Item | Evidence | Status |
 |---|------|----------|--------|
 | 3.1 | E2E: domain event → Redis pub/sub → WebSocket client delivery (Notifications) | `notifications.md` — "end-to-end path from bus.publish() through Redis to WS client not covered" | ✅ Done — `test_e2e_notifications_pipeline.py` (17 tests, 5 layers) |
-| 3.2 | E2E: Portal session creation → `PortalSessionCreated` event emitted → WS notification received | Combines Portal Events gap + Notifications E2E gap | 🔴 Pending |
+| 3.2 | E2E: Portal session creation → `PortalSessionCreated` event emitted → WS notification received | Combines Portal Events gap + Notifications E2E gap | ✅ Done — `test_e2e_portal_ws_notification.py` (11 tests, 5 layers) |
 | 3.3 | E2E: Quote accepted via Portal → SalesOrder created → Invoice auto-created (Sales + Accounting) | Accounting promotion path; no existing cross-module test covers this flow | ✅ Done — `test_e2e_portal_accounting.py` (2 tests: accept→paid + reject path) |
 
 ---
@@ -53,7 +53,7 @@ _Known items carried or deferred from Q2._
 | # | Item | Evidence | Status |
 |---|------|----------|--------|
 | 4.1 | Normalize pagination policy across all wedge-critical APIs | Alignment gap register: CRM/Sales use 50/200, Inventory 100/500, Workflows missing `offset` | ✅ Done Q3 — Inventory + Workflows normalized to 50/200 |
-| 4.2 | Standardize event envelope and registration (versioned domain contracts) | Alignment gap register: "Events exist but need stricter governance"; ADR 0004 target state | 🔴 Pending |
+| 4.2 | Standardize event envelope and registration (versioned domain contracts) | Alignment gap register: "Events exist but need stricter governance"; ADR 0004 target state | ✅ Done — Accounting event constants consolidated to `app/events/types.py` |
 | 4.3 | Resolve `Workflows` contract test entry still marked 🟡 in action register | Scorecard action register: "Extract dedicated `test_workflows_contract.py`" — 🟡 Pending | ✅ Done Q3 — `test_workflows_contract.py` (23 tests) |
 | 4.4 | Archive legacy docs that contradict governing architecture set | Alignment gap: "Historical docs describe multiple stacks; several frontend surfaces ahead of maturity" | 🔴 Pending |
 
