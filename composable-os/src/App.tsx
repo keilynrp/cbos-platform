@@ -19,6 +19,7 @@ import Workflows from "./pages/Workflows";
 import Discovery from "./pages/Discovery";
 import Invoicing from "./pages/Invoicing";
 import Analytics from "./pages/Analytics";
+import Contracts from "./pages/Contracts";
 import Settings from "./pages/Settings";
 import CustomerPortal from "./pages/CustomerPortal";
 import NotFound from "./pages/NotFound";
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="/inventory" element={<InventoryOrders />} />
                 <Route path="/portal-builder" element={<PortalBuilder />} />
                 <Route path="/invoicing" element={<Invoicing />} />
+                <Route path="/contracts" element={<Contracts />} />
                 <Route path="/workflows" element={<Workflows />} />
                 <Route path="/discovery" element={<Discovery />} />
                 <Route path="/analytics" element={<Analytics />} />

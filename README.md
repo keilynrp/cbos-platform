@@ -61,23 +61,24 @@ Discovery → Lead → Opportunity → Quote → Order → Inventory → Portal 
 
 ## Módulos implementados
 
-9 módulos activos en `backend/app/modules/` — todos Tier 1 (6/6 en maturity scorecard):
+9 módulos Tier 1 + 1 módulo Tier 2 en `backend/app/modules/`:
 
-| Módulo | Descripción | Tests |
-|--------|-------------|-------|
-| **Identity** | Auth JWT, registro, usuarios, workspaces, roles | Contract + integration |
-| **CRM** | Leads, Opportunities (kanban: new → qualified → proposal → negotiation → won/lost), Activities | Contract + integration + e2e |
-| **Sales** | Cotizaciones con líneas, SalesOrders, conversión Quote → Order | Contract + integration + e2e |
-| **Inventory** | Catálogo de productos, stock por ubicación, movimientos, reservas, alertas de stock bajo | Contract + integration |
-| **Portal** | Portal del cliente: cotizaciones públicas, aceptación vía token, sesiones | Contract + integration + e2e |
-| **Discovery** | Solution Discovery AI — diagnóstico de necesidades vía Anthropic Claude API, blueprints | Contract + integration + e2e |
-| **Workflows** | Motor de automatización event-driven (Redis Streams), acciones condicionales, DLQ | Contract + integration + consumer |
-| **Notifications** | Email transaccional + WebSocket tiempo real, preferencias por usuario | Contract + integration + e2e pipeline |
-| **Accounting** | Facturación completa: invoices, pagos parciales/totales, auto-invoice, overdue scanner | Contract + integration + e2e |
+| Módulo | Descripción | Tests | Tier |
+|--------|-------------|-------|------|
+| **Identity** | Auth JWT, registro, usuarios, workspaces, roles | Contract + integration | 1 |
+| **CRM** | Leads, Opportunities (kanban: new → qualified → proposal → negotiation → won/lost), Activities | Contract + integration + e2e | 1 |
+| **Sales** | Cotizaciones con líneas, SalesOrders, conversión Quote → Order | Contract + integration + e2e | 1 |
+| **Inventory** | Catálogo de productos, stock por ubicación, movimientos, reservas, alertas de stock bajo | Contract + integration | 1 |
+| **Portal** | Portal del cliente: cotizaciones públicas, aceptación vía token, sesiones | Contract + integration + e2e | 1 |
+| **Discovery** | Solution Discovery AI — diagnóstico de necesidades vía Anthropic Claude API, blueprints | Contract + integration + e2e | 1 |
+| **Workflows** | Motor de automatización event-driven (Redis Streams), acciones condicionales, DLQ | Contract + integration + consumer | 1 |
+| **Notifications** | Email transaccional + WebSocket tiempo real, preferencias por usuario | Contract + integration + e2e pipeline | 1 |
+| **Accounting** | Facturación completa: invoices, pagos parciales/totales, auto-invoice, overdue scanner | Contract + integration + e2e | 1 |
+| **Contracts** | Gestión de contratos: state machine, cláusulas, eventos de ciclo de vida | 28 contract tests | 2 |
 
 **Cross-módulo:**
 - **Analytics** — 3 endpoints de agregación (summary, revenue time-series, pipeline breakdown). 24 tests.
-- **Event bus** — 14+ tipos de eventos, consumers dedicados (workflow, invoice, notification).
+- **Event bus** — 19+ tipos de eventos, consumers dedicados (workflow, invoice, notification).
 
 Documentación detallada por módulo: [`docs/capabilities/`](docs/capabilities/).
 
@@ -212,16 +213,17 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-**365 tests** en 30 archivos:
+**393 tests** en 31 archivos:
 
 | Categoría | Archivos | Cobertura |
 |-----------|----------|-----------|
-| Contract tests | 9 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation por módulo |
+| Contract tests | 10 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation por módulo |
 | Integration tests | 9 archivos (`test_*.py`) | Flows de servicio, lógica de negocio |
 | E2E cross-module | 5 archivos (`test_e2e_*.py`) | Sales→Accounting, Portal→WS, Discovery→Blueprint, Notification pipeline |
 | Consumer / scanner | 3 archivos | Workflow consumer, invoice consumer, overdue scanner |
 | Smoke | 1 archivo (`test_wedge_smoke.py`) | Funnel completo: CRM→Sales→Inventory→Portal→Accounting (7 módulos) |
 | Analytics | 1 archivo | Summary, revenue, pipeline: auth, shape, workspace isolation, empty state |
+| Contracts | 1 archivo (`test_contracts_contract.py`) | State machine, clause management, workspace isolation (28 tests) |
 
 ```bash
 # Cobertura detallada

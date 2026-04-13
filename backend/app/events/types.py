@@ -71,6 +71,13 @@ INVOICE_PAID = "InvoicePaid"
 INVOICE_OVERDUE = "InvoiceOverdue"
 PAYMENT_RECORDED = "PaymentRecorded"
 
+# ── Contracts ─────────────────────────────────────────────
+CONTRACT_CREATED    = "ContractCreated"
+CONTRACT_SENT       = "ContractSent"
+CONTRACT_SIGNED     = "ContractSigned"
+CONTRACT_EXECUTED   = "ContractExecuted"
+CONTRACT_TERMINATED = "ContractTerminated"
+
 # ── Platform ───────────────────────────────────────────────
 USER_REGISTERED = "UserRegistered"
 WORKSPACE_CREATED = "WorkspaceCreated"

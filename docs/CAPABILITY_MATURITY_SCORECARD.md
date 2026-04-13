@@ -1,6 +1,6 @@
 # Capability Maturity Scorecard
 
-> Updated 2026-04-12 (post Q3 close — ADRs 0009–0012). Previous assessment: 2026-04-11 (post ADRs 0009–0010).
+> Updated 2026-04-13 (post M1 — Contracts module). Previous assessment: 2026-04-12 (post Q3 close — ADRs 0009–0012).
 
 ## Scoring Dimensions
 
@@ -43,15 +43,15 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 
 ### Tier 2 — Wedge Support
 
-> 0 modules as of 2026-04-12. All 9 modules promoted to Tier 1.
-
 | Module | Contract Tests | Integration Tests | Events | Frontend | Spec | Production | Score |
 |--------|:-:|:-:|:-:|:-:|:-:|:-:|-------|
-| — | — | — | — | — | — | — | — |
+| **Contracts** | 🟢 | 🟡 | 🟢 | 🟢 | 🔴 | 🔴 | **4/6** |
+
+> Contracts: 28 contract tests (28/28 passing). State machine: draft→sent→signed→executed→expired/terminated. 5 contract events published. Frontend page with split-panel view, clause management, KPI cards. Integration tests and capability spec pending.
 
 ### Tier 3 — Controlled Expansion
 
-> No modules currently in Tier 3. Tier 3 is a transient state — all modules have been promoted.
+> No modules currently in Tier 3. Tier 3 is a transient state.
 
 | Module | Contract Tests | Integration Tests | Events | Frontend | Spec | Production | Score |
 |--------|:-:|:-:|:-:|:-:|:-:|:-:|-------|
@@ -108,6 +108,8 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Notifications | Frontend email status surface | ✅ Done Q3 (Notifications tab + preferences API) |
 | Notifications | Promote to Tier 1 | ✅ Done Q3 (ADR 0012) |
 | Portal | Promote to Tier 1 | ✅ Done Q3 (ADR 0011) |
+| Contracts | Implement M1 module (models, service, router, tests, frontend) | ✅ Done M1 (2026-04-13, 28 tests) |
+| Contracts | Integration tests + capability spec | 🔄 Pending Tier 1 promotion |
 | Discovery | Write capability spec; add integration tests | ✅ Done Q2 |
 | Discovery | Promote to Tier 2 | ✅ Done Q2 (ADR 0008) |
 | Discovery | E2E scenario for Tier 1 promotion | ✅ Done Q3 (`test_e2e_discovery_blueprint.py`) |
@@ -126,9 +128,9 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Tier | Modules | Avg Score | vs. Q2 post-ADR 0008 |
 |------|---------|-----------|----------------------|
 | Tier 1 | **9 modules** | **6.0 / 6** | ↑ from 5 (Discovery, Accounting, Portal, Notifications promoted) |
-| Tier 2 | **0 modules** | — | All promoted to Tier 1 |
+| Tier 2 | **1 module** | **4.0 / 6** | Contracts (M1, 2026-04-13) |
 | Tier 3 | 0 modules | — | Unchanged — Tier 3 remains clear |
 
-**All 9 modules are Tier 1 — Wedge-Critical, all scoring 6/6.**
-Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications.
-**365 tests across 30 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete. Q4 Q1 (frontend CI type-check) complete. Q4 Q2 (invoice PDF download) complete.
+**9 modules Tier 1 + 1 module Tier 2 (Contracts) — 10 total modules.**
+Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications → Contracts.
+**393 tests across 31 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete. Q4 Q1 (frontend CI type-check) complete. Q4 Q2 (invoice PDF download) complete. M1 (Contracts) complete.

@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, BarChart3, Settings, Blocks, Sun, Moon,
-  PanelTop, Receipt, Zap, PackageSearch, Search, FileText,
+  PanelTop, Receipt, Zap, PackageSearch, Search, FileText, ScrollText,
   ChevronLeft, ChevronRight, type LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -40,6 +40,7 @@ const navSections: NavSection[] = [
       { title: "Inventario",    url: "/inventory",       icon: PackageSearch },
       { title: "Portal",        url: "/portal-builder",  icon: PanelTop },
       { title: "Facturacion",   url: "/invoicing",       icon: FileText },
+      { title: "Contratos",     url: "/contracts",       icon: ScrollText },
     ],
   },
   {
