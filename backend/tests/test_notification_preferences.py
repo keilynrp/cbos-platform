@@ -17,7 +17,7 @@ async def test_get_default_preferences(client: AsyncClient, auth_headers: dict):
     data = resp.json()
     assert data["email_enabled"] is True
     assert isinstance(data["email_events"], dict)
-    assert len(data["email_events"]) == 4
+    assert len(data["email_events"]) == 5
     for evt, enabled in data["email_events"].items():
         assert enabled is True, f"{evt} should default to True"
 
@@ -106,7 +106,7 @@ async def test_partial_update_preserves_other_fields(client: AsyncClient, auth_h
 
 
 async def test_response_always_includes_all_events(client: AsyncClient, auth_headers: dict):
-    """Response should always list all 4 EMAIL_NOTIFY_EVENTS, even if only some were set."""
+    """Response should always list all 5 EMAIL_NOTIFY_EVENTS, even if only some were set."""
     resp = await client.put(
         PREFS_URL,
         json={"email_events": {"QuoteAccepted": False}},
@@ -115,6 +115,7 @@ async def test_response_always_includes_all_events(client: AsyncClient, auth_hea
     events = resp.json()["email_events"]
     expected_events = {
         "InventoryLowThresholdDetected",
+        "InvoiceOverdue",
         "QuoteAccepted",
         "SalesOrderCreated",
         "WorkflowFailed",

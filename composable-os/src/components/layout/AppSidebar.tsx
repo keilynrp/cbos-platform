@@ -1,10 +1,6 @@
 import {
-  LayoutDashboard, FolderKanban, Users, Share2, FileText,
-  BarChart3, Bot, Store, Settings, Blocks, Sun, Moon,
-  PanelTop, Landmark, ShoppingBag, GitBranch, MessageSquare,
-  UserCircle, Crosshair, Magnet, Calendar, Layers, CalendarClock,
-  Cable, Monitor, PackageSearch, Warehouse as WarehouseIcon, Cpu,
-  Network, FileSignature, Receipt, Map, Brain, Zap, Search,
+  LayoutDashboard, Users, BarChart3, Settings, Blocks, Sun, Moon,
+  PanelTop, Receipt, Zap, PackageSearch, Search, FileText,
   ChevronLeft, ChevronRight, type LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -23,7 +19,6 @@ interface NavItem {
   title: string;
   url: string;
   icon: LucideIcon;
-  comingSoon?: boolean;
 }
 interface NavSection {
   label: string;
@@ -38,61 +33,27 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    label: "Plataforma",
-    items: [
-      { title: "Proyectos",       url: "/projects",   icon: FolderKanban, comingSoon: true },
-      { title: "CRM",             url: "/crm",         icon: Users },
-      { title: "Documentos",      url: "/documents",   icon: FileText,    comingSoon: true },
-      { title: "Analítica",       url: "/analytics",   icon: BarChart3,   comingSoon: true },
-      { title: "Knowledge Graph", url: "/knowledge",   icon: Share2,      comingSoon: true },
-    ],
-  },
-  {
-    label: "Crecimiento",
-    items: [
-      { title: "AI Agents",         url: "/ai-agents",         icon: Bot,          comingSoon: true },
-      { title: "Chatbot Builder",   url: "/chatbot-builder",   icon: MessageSquare,comingSoon: true },
-      { title: "RevPath",           url: "/revpath",           icon: GitBranch,    comingSoon: true },
-      { title: "Persona Builder",   url: "/persona-builder",   icon: UserCircle,   comingSoon: true },
-      { title: "Prospecting",       url: "/prospecting",       icon: Crosshair,    comingSoon: true },
-      { title: "Lead Magnets",      url: "/lead-magnets",      icon: Magnet,       comingSoon: true },
-      { title: "Eventos",           url: "/events",            icon: Calendar,     comingSoon: true },
-      { title: "Experience Mapper", url: "/experience-mapper", icon: Layers,       comingSoon: true },
-      { title: "Citas",             url: "/appointments",      icon: CalendarClock,comingSoon: true },
-    ],
-  },
-  {
     label: "Comercio",
     items: [
-      { title: "Sales Builder",     url: "/sales-builder",    icon: Receipt },
-      { title: "Inventario",        url: "/inventory-orders", icon: PackageSearch },
-      { title: "POS Builder",       url: "/pos-builder",      icon: Monitor,      comingSoon: true },
-      { title: "Almacén",           url: "/warehouse",        icon: WarehouseIcon,comingSoon: true },
-      { title: "Facturación",       url: "/invoicing",        icon: FileText },
-      { title: "Cuentas",           url: "/accounts",         icon: Landmark,     comingSoon: true },
-      { title: "Contratos",         url: "/contract-studio",  icon: FileSignature,comingSoon: true },
+      { title: "CRM",           url: "/crm",            icon: Users },
+      { title: "Ventas",        url: "/sales",           icon: Receipt },
+      { title: "Inventario",    url: "/inventory",       icon: PackageSearch },
+      { title: "Portal",        url: "/portal-builder",  icon: PanelTop },
+      { title: "Facturacion",   url: "/invoicing",       icon: FileText },
     ],
   },
   {
-    label: "Builders",
+    label: "Operaciones",
     items: [
-      { title: "Portal Builder",  url: "/portal-builder",  icon: PanelTop },
-      { title: "Shop Builder",    url: "/shop-builder",    icon: ShoppingBag, comingSoon: true },
-      { title: "MCP Hub",         url: "/mcp-hub",         icon: Cable,       comingSoon: true },
-      { title: "IoT Builder",     url: "/iot-builder",     icon: Cpu,         comingSoon: true },
-      { title: "System Modeler",  url: "/system-modeler",  icon: Network,     comingSoon: true },
-      { title: "Workflows",       url: "/workflows",       icon: Zap },
+      { title: "Workflows",  url: "/workflows",  icon: Zap },
+      { title: "Discovery",  url: "/discovery",   icon: Search },
+      { title: "Analitica",  url: "/analytics",   icon: BarChart3 },
     ],
   },
   {
     label: "Sistema",
     items: [
-      { title: "Marketplace",        url: "/marketplace",        icon: Store,   comingSoon: true },
-      { title: "Discovery",          url: "/discovery",          icon: Search },
-      { title: "Platform Map",       url: "/platform-map",       icon: Map,     comingSoon: true },
-      { title: "Team Structure",     url: "/team-structure",     icon: Users,   comingSoon: true },
-      { title: "Intelligence Graph", url: "/intelligence-graph", icon: Brain,   comingSoon: true },
-      { title: "Ajustes",            url: "/settings",           icon: Settings },
+      { title: "Ajustes", url: "/settings", icon: Settings },
     ],
   },
 ];
@@ -117,8 +78,6 @@ function NavItemEl({
         "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 outline-none",
         active
           ? "bg-primary/10 text-primary dark:bg-primary/15 dark:text-primary"
-          : item.comingSoon
-          ? "text-gray-400 hover:bg-gray-50 hover:text-gray-500 dark:text-gray-600 dark:hover:bg-white/3 dark:hover:text-gray-500"
           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200",
         collapsed && "justify-center px-2",
       )}
@@ -128,18 +87,11 @@ function NavItemEl({
           "h-[18px] w-[18px] shrink-0 transition-colors",
           active
             ? "text-primary"
-            : item.comingSoon
-            ? "text-gray-300 group-hover:text-gray-400 dark:text-gray-700 dark:group-hover:text-gray-600"
             : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300",
         )}
       />
       {!collapsed && (
         <span className="truncate flex-1">{item.title}</span>
-      )}
-      {!collapsed && item.comingSoon && (
-        <span className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600">
-          Próximo
-        </span>
       )}
     </NavLink>
   );
@@ -149,7 +101,7 @@ function NavItemEl({
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>{inner}</TooltipTrigger>
         <TooltipContent side="right" className="text-xs font-medium">
-          {item.comingSoon ? `${item.title} (próximamente)` : item.title}
+          {item.title}
         </TooltipContent>
       </Tooltip>
     );
@@ -186,7 +138,7 @@ export function AppSidebar() {
             {!collapsed && (
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">
-                  Composable OS
+                  CBOS
                 </span>
                 <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                   Business Platform

@@ -45,9 +45,13 @@ def test_notify_events_contains_customer_action():
     assert "CustomerActionPerformed" in NOTIFY_EVENTS
 
 
+def test_notify_events_contains_invoice_overdue():
+    assert "InvoiceOverdue" in NOTIFY_EVENTS
+
+
 def test_notify_events_total_count():
-    """Exactly 13 event types should be whitelisted (10 original + PortalSessionCreated, InvoiceCreated, InvoicePaid)."""
-    assert len(NOTIFY_EVENTS) == 13
+    """Exactly 14 event types should be whitelisted (10 original + PortalSessionCreated, InvoiceCreated, InvoicePaid, InvoiceOverdue)."""
+    assert len(NOTIFY_EVENTS) == 14
 
 
 def test_notify_events_does_not_include_internal_events():

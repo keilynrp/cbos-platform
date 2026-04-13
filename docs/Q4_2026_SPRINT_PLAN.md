@@ -87,12 +87,12 @@ _28 of 39 pages use mock/static data. These were early UI explorations that pred
 
 | # | Item | Type | Details |
 |---|------|------|---------|
-| G6.1 | Move 25 pure-mock pages to `pages/_archived/` | Code | Preserve code but remove from active routing; reduces bundle and sidebar noise |
-| G6.2 | Remove routes for archived pages from `App.tsx` | Code | 25 fewer protected routes |
-| G6.3 | Remove sidebar navigation items for archived pages | Code | Clean navigation — only show what works |
-| G6.4 | Clean SalesBuilder.tsx mock data | Code | Remove inline mock arrays, keep real API calls |
-| G6.5 | Keep Analytics.tsx (for E1) but mark clearly as "pending backend" | Code | Will be wired to real data in E1 |
-| G6.6 | Update CI test count if any component tests exist for archived pages | CI | Verify no test breakage |
+| G6.1 | Move 25 pure-mock pages to `pages/_archived/` | Code | ✅ Done — 25 files archived |
+| G6.2 | Remove routes for archived pages from `App.tsx` | Code | ✅ Done — 10 active routes (was 33) |
+| G6.3 | Remove sidebar navigation items for archived pages | Code | ✅ Done — 10 items in 4 sections (was 35 items across 6 sections) |
+| G6.4 | Clean SalesBuilder.tsx mock data | Code | ✅ Done — SalesBuilder archived; Sales.tsx is the active real page |
+| G6.5 | Keep Analytics.tsx (for E1) but mark clearly as "pending backend" | Code | ✅ Done — Analytics kept, route `/analytics` active |
+| G6.6 | Update test counts for added InvoiceOverdue event | CI | ✅ Done — test_notifications.py (13→14) + test_notification_preferences.py (4→5) |
 
 ### Design Decisions
 
