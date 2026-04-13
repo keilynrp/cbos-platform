@@ -212,7 +212,7 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-**360 tests** en 30 archivos:
+**365 tests** en 30 archivos:
 
 | Categoría | Archivos | Cobertura |
 |-----------|----------|-----------|

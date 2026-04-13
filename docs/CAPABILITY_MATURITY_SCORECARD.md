@@ -131,4 +131,4 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 
 **All 9 modules are Tier 1 — Wedge-Critical, all scoring 6/6.**
 Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications.
-**359 tests across 30 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete.
+**365 tests across 30 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete. Q4 Q1 (frontend CI type-check) complete. Q4 Q2 (invoice PDF download) complete.

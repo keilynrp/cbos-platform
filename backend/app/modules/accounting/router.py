@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_workspace_id
 from app.modules.accounting import service
+from app.modules.accounting.pdf import generate_invoice_pdf
 from app.modules.accounting.schemas import (
     AccountingSummary,
     InvoiceCreate,
@@ -71,6 +73,24 @@ async def update_invoice(
     workspace_id: str = Depends(get_current_workspace_id),
 ):
     return await service.update_invoice(db, workspace_id, current_user.id, invoice_id, data)
+
+
+@router.get("/invoices/{invoice_id}/pdf", response_class=Response)
+async def download_invoice_pdf(
+    invoice_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+):
+    """Download a PDF rendition of an invoice."""
+    inv = await service.get_invoice(db, workspace_id, invoice_id)
+    pdf_bytes = generate_invoice_pdf(inv)
+    filename = f"{inv.invoice_number}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.delete("/invoices/{invoice_id}", status_code=204)

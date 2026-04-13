@@ -93,6 +93,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Type-check
+        run: npx tsc --noEmit
+
       - name: Lint (non-blocking — legacy warnings in non-wedge pages)
         run: npm run lint || true
 

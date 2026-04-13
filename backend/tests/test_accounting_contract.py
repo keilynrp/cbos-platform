@@ -254,3 +254,48 @@ async def test_summary_returns_valid_shape(client: AsyncClient, auth_headers: di
     assert "total_invoiced" in data
     assert "total_paid" in data
     assert "total_outstanding" in data
+
+
+# ── PDF download ──────────────────────────────────────────────────────────────
+
+async def test_invoice_pdf_requires_auth(client: AsyncClient):
+    resp = await client.get(f"{BASE}/invoices/any-id/pdf")
+    assert resp.status_code == 401
+
+
+async def test_invoice_pdf_not_found_returns_404(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(f"{BASE}/invoices/nonexistent-id/pdf", headers=auth_headers)
+    assert resp.status_code == 404
+
+
+async def test_invoice_pdf_returns_pdf_bytes(client: AsyncClient, auth_headers: dict):
+    """Creating an invoice then downloading its PDF returns valid PDF content."""
+    invoice = await _create_invoice(client, auth_headers, lines=[
+        {"description": "Consultoría Q4", "quantity": 4.0, "unit_price": 200.0},
+        {"description": "Soporte técnico mensual", "quantity": 1.0, "unit_price": 150.0},
+    ])
+
+    resp = await client.get(f"{BASE}/invoices/{invoice['id']}/pdf", headers=auth_headers)
+    assert resp.status_code == 200, resp.text
+    assert resp.headers["content-type"] == "application/pdf"
+    # PDF files start with %PDF
+    assert resp.content[:4] == b"%PDF"
+    assert len(resp.content) > 1024  # must be a real document, not empty
+
+
+async def test_invoice_pdf_filename_matches_number(client: AsyncClient, auth_headers: dict):
+    """Content-Disposition header must reference the invoice number."""
+    invoice = await _create_invoice(client, auth_headers)
+    resp = await client.get(f"{BASE}/invoices/{invoice['id']}/pdf", headers=auth_headers)
+    assert resp.status_code == 200
+    disposition = resp.headers.get("content-disposition", "")
+    assert invoice["invoice_number"] in disposition
+
+
+async def test_invoice_pdf_workspace_isolated(client: AsyncClient, auth_headers: dict):
+    """WS2 cannot download an invoice that belongs to WS1."""
+    invoice = await _create_invoice(client, auth_headers)
+
+    ws2 = await _get_second_auth_headers(client)
+    resp = await client.get(f"{BASE}/invoices/{invoice['id']}/pdf", headers=ws2)
+    assert resp.status_code == 404
