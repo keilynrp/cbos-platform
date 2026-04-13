@@ -21,6 +21,7 @@ import Invoicing from "./pages/Invoicing";
 import Analytics from "./pages/Analytics";
 import Contracts from "./pages/Contracts";
 import Projects from "./pages/Projects";
+import HR from "./pages/HR";
 import Settings from "./pages/Settings";
 import CustomerPortal from "./pages/CustomerPortal";
 import NotFound from "./pages/NotFound";
@@ -73,6 +74,7 @@ const App = () => (
                 <Route path="/invoicing" element={<Invoicing />} />
                 <Route path="/contracts" element={<Contracts />} />
                 <Route path="/projects" element={<Projects />} />
+                <Route path="/hr" element={<HR />} />
                 <Route path="/workflows" element={<Workflows />} />
                 <Route path="/discovery" element={<Discovery />} />
                 <Route path="/analytics" element={<Analytics />} />

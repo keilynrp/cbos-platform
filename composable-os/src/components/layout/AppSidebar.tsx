@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Users, BarChart3, Settings, Blocks, Sun, Moon,
-  PanelTop, Receipt, Zap, PackageSearch, Search, FileText, ScrollText, FolderKanban,
+  PanelTop, Receipt, Zap, PackageSearch, Search, FileText, ScrollText, FolderKanban, UserCog,
   ChevronLeft, ChevronRight, type LucideIcon,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -42,6 +42,7 @@ const navSections: NavSection[] = [
       { title: "Facturacion",   url: "/invoicing",       icon: FileText },
       { title: "Contratos",     url: "/contracts",       icon: ScrollText },
       { title: "Proyectos",     url: "/projects",        icon: FolderKanban },
+      { title: "Equipo",        url: "/hr",              icon: UserCog },
     ],
   },
   {

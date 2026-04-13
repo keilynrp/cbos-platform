@@ -76,6 +76,7 @@ Discovery → Lead → Opportunity → Quote → Order → Inventory → Portal 
 | **Accounting** | Facturación completa: invoices, pagos parciales/totales, auto-invoice, overdue scanner | Contract + integration + e2e | 1 |
 | **Contracts** | Gestión de contratos: state machine, cláusulas, eventos de ciclo de vida | 28 contract tests | 2 |
 | **Projects**  | Gestión de proyectos: state machine, tareas, eventos de ciclo de vida | 28 contract tests | 2 |
+| **HR/Team**   | Empleados, departamentos, state machine (activo/permiso/terminado) | 30 contract tests | 2 |
 
 **Cross-módulo:**
 - **Analytics** — 3 endpoints de agregación (summary, revenue time-series, pipeline breakdown). 24 tests.
@@ -214,11 +215,11 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-**421 tests** en 32 archivos:
+**451 tests** en 33 archivos:
 
 | Categoría | Archivos | Cobertura |
 |-----------|----------|-----------|
-| Contract tests | 11 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation por módulo |
+| Contract tests | 12 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation por módulo |
 | Integration tests | 9 archivos (`test_*.py`) | Flows de servicio, lógica de negocio |
 | E2E cross-module | 5 archivos (`test_e2e_*.py`) | Sales→Accounting, Portal→WS, Discovery→Blueprint, Notification pipeline |
 | Consumer / scanner | 3 archivos | Workflow consumer, invoice consumer, overdue scanner |
@@ -226,6 +227,7 @@ cd backend && pytest --tb=short -q
 | Analytics | 1 archivo | Summary, revenue, pipeline: auth, shape, workspace isolation, empty state |
 | Contracts | 1 archivo (`test_contracts_contract.py`) | State machine, clause management, workspace isolation (28 tests) |
 | Projects  | 1 archivo (`test_projects_contract.py`) | State machine, task management, workspace isolation (28 tests) |
+| HR/Team   | 1 archivo (`test_hr_contract.py`) | Auth guards, departments, employee lifecycle, state machine (30 tests) |
 
 ```bash
 # Cobertura detallada

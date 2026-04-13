@@ -85,6 +85,12 @@ PROJECT_COMPLETED      = "ProjectCompleted"
 PROJECT_CANCELLED      = "ProjectCancelled"
 PROJECT_TASK_COMPLETED = "ProjectTaskCompleted"
 
+# ── HR ────────────────────────────────────────────────────
+EMPLOYEE_ONBOARDED     = "EmployeeOnboarded"
+EMPLOYEE_TERMINATED    = "EmployeeTerminated"
+EMPLOYEE_STATUS_CHANGED = "EmployeeStatusChanged"
+DEPARTMENT_CREATED     = "DepartmentCreated"
+
 # ── Platform ───────────────────────────────────────────────
 USER_REGISTERED = "UserRegistered"
 WORKSPACE_CREATED = "WorkspaceCreated"

@@ -1,6 +1,6 @@
 # Capability Maturity Scorecard
 
-> Updated 2026-04-13 (post M2 — Projects module). Previous assessment: 2026-04-13 (post M1 — Contracts).
+> Updated 2026-04-13 (post M3 — HR/Team module). Previous assessment: 2026-04-13 (post M2 — Projects).
 
 ## Scoring Dimensions
 
@@ -47,9 +47,11 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 |--------|:-:|:-:|:-:|:-:|:-:|:-:|-------|
 | **Contracts** | 🟢 | 🟡 | 🟢 | 🟢 | 🔴 | 🔴 | **4/6** |
 | **Projects**  | 🟢 | 🟡 | 🟢 | 🟢 | 🔴 | 🔴 | **4/6** |
+| **HR/Team**   | 🟢 | 🟡 | 🟢 | 🟢 | 🔴 | 🔴 | **4/6** |
 
 > Contracts: 28 contract tests (28/28 passing). State machine: draft→sent→signed→executed→expired/terminated. 5 contract events published. Frontend page with split-panel view, clause management, KPI cards. Integration tests and capability spec pending.
 > Projects: 28 contract tests (28/28 passing). State machine: planning→active→on_hold→completed/cancelled. 5 project events published. Frontend page with task management, KPI cards, split-panel detail. Integration tests and capability spec pending.
+> HR/Team: 30 contract tests (30/30 passing). Employee state machine: active→on_leave→active/terminated. Department CRUD (5 tests). 4 HR events published. Frontend with employee table, dept cards, split-panel detail, status transitions. Two sub-routers: /employees + /departments.
 
 ### Tier 3 — Controlled Expansion
 
@@ -114,6 +116,8 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Contracts | Integration tests + capability spec | 🔄 Pending Tier 1 promotion |
 | Projects  | Implement M2 module (models, service, router, tests, frontend) | ✅ Done M2 (2026-04-13, 28 tests) |
 | Projects  | Integration tests + capability spec | 🔄 Pending Tier 1 promotion |
+| HR/Team   | Implement M3 module (employees, departments, state machine, frontend) | ✅ Done M3 (2026-04-13, 30 tests) |
+| HR/Team   | Integration tests + capability spec | 🔄 Pending Tier 1 promotion |
 | Discovery | Write capability spec; add integration tests | ✅ Done Q2 |
 | Discovery | Promote to Tier 2 | ✅ Done Q2 (ADR 0008) |
 | Discovery | E2E scenario for Tier 1 promotion | ✅ Done Q3 (`test_e2e_discovery_blueprint.py`) |
@@ -132,9 +136,9 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Tier | Modules | Avg Score | vs. Q2 post-ADR 0008 |
 |------|---------|-----------|----------------------|
 | Tier 1 | **9 modules** | **6.0 / 6** | ↑ from 5 (Discovery, Accounting, Portal, Notifications promoted) |
-| Tier 2 | **2 modules** | **4.0 / 6** | Contracts (M1), Projects (M2) — both 2026-04-13 |
+| Tier 2 | **3 modules** | **4.0 / 6** | Contracts (M1), Projects (M2), HR/Team (M3) — all 2026-04-13 |
 | Tier 3 | 0 modules | — | Unchanged — Tier 3 remains clear |
 
-**9 modules Tier 1 + 2 modules Tier 2 (Contracts, Projects) — 11 total modules.**
-Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications → Contracts → Projects.
-**421 tests across 32 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete. Q4 Q1 (frontend CI type-check) complete. Q4 Q2 (invoice PDF download) complete. M1 (Contracts) complete. M2 (Projects) complete.
+**9 modules Tier 1 + 3 modules Tier 2 (Contracts, Projects, HR/Team) — 12 total modules.**
+Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications → Contracts → Projects → HR.
+**451 tests across 33 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete. Q4 Q1 (frontend CI type-check) complete. Q4 Q2 (invoice PDF download) complete. M1 (Contracts) complete. M2 (Projects) complete. M3 (HR/Team) complete.
