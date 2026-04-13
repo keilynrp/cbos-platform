@@ -68,6 +68,7 @@ CUSTOMER_ACTION_PERFORMED = "CustomerActionPerformed"
 INVOICE_CREATED = "InvoiceCreated"
 INVOICE_SENT = "InvoiceSent"
 INVOICE_PAID = "InvoicePaid"
+INVOICE_OVERDUE = "InvoiceOverdue"
 PAYMENT_RECORDED = "PaymentRecorded"
 
 # ── Platform ───────────────────────────────────────────────

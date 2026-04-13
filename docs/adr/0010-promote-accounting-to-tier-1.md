@@ -70,7 +70,7 @@ The module meets all five promotion criteria:
 **Negative / Risks:**
 
 - ~~Event type constants: consolidated to `app/events/types.py` (Q3 item 4.2, commit `5f16fb8`)~~ ✅ Resolved
-- Overdue invoice status transitions are not automated — `overdue` state requires a scheduled job not yet built; this is a functional gap carried from ADR 0008
+- ~~Overdue invoice status transitions are not automated~~ ✅ Resolved — `overdue_scanner.py` background task runs hourly, transitions `sent`/`partial` invoices past due to `overdue`, emits `InvoiceOverdue` event + email notification (Q4 item G2)
 - ~~Accounting has no lane in `test_wedge_smoke.py`~~ ✅ Resolved — `test_full_wedge_with_inventory_portal_accounting` covers 7-module funnel including Accounting (commit `6c59e12`)
 - ~~`SalesOrder → Invoice` linkage is not automatic~~ ✅ Resolved — `invoice_consumer.py` auto-creates invoices on `SalesOrderFulfilled` via Redis Streams consumer group `cbos-invoice` (commit `50d8a89`)
 

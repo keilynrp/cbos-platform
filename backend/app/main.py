@@ -10,6 +10,7 @@ from app.events.bus import close as close_redis
 from app.modules.workflows.consumer import start_consumer, stop_consumer
 from app.modules.notifications.email_notifier import run_email_notifier
 from app.modules.accounting.invoice_consumer import start_invoice_consumer, stop_invoice_consumer
+from app.modules.accounting.overdue_scanner import run_overdue_scanner
 from app.modules.workflows.router import router as workflows_router
 from app.modules.crm.router import router as crm_router
 from app.modules.identity.router import router as identity_router
@@ -29,8 +30,10 @@ async def lifespan(app: FastAPI):
     start_consumer()
     start_invoice_consumer()
     email_task = asyncio.create_task(run_email_notifier())
+    overdue_task = asyncio.create_task(run_overdue_scanner())
     yield
     # Shutdown
+    overdue_task.cancel()
     email_task.cancel()
     await stop_invoice_consumer()
     await stop_consumer()

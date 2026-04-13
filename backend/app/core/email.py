@@ -198,6 +198,33 @@ def workflow_failed_email(
     return subject, text, html
 
 
+def invoice_overdue_email(
+    invoice_number: str,
+    total: float,
+    amount_due: float,
+    currency: str,
+    due_date: str,
+) -> tuple[str, str, str]:
+    """Email alert when an invoice becomes overdue."""
+    subject = f"Factura vencida: {invoice_number}"
+    text = (
+        f"La factura {invoice_number} por {currency} {total:,.2f} esta vencida.\n"
+        f"Monto pendiente: {currency} {amount_due:,.2f}\n"
+        f"Fecha de vencimiento: {due_date}\n\n"
+        f"CBOS Platform"
+    )
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#d97706">Factura vencida</h2>
+      <p>La factura <strong>{invoice_number}</strong> por <strong>{currency} {total:,.2f}</strong> ha vencido.</p>
+      <p>Monto pendiente: <strong>{currency} {amount_due:,.2f}</strong></p>
+      <p>Fecha de vencimiento: <strong>{due_date}</strong></p>
+      <hr style="border:1px solid #e5e7eb"/>
+      <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
+    </div>"""
+    return subject, text, html
+
+
 def low_stock_email(
     product_name: str,
     sku: str,

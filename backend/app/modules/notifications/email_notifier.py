@@ -15,6 +15,7 @@ from app.core.email import (
     quote_accepted_email,
     sales_order_created_email,
     workflow_failed_email,
+    invoice_overdue_email,
 )
 from app.core.database import AsyncSessionLocal
 from app.events.bus import get_redis
@@ -27,6 +28,7 @@ EMAIL_NOTIFY_EVENTS = {
     "SalesOrderCreated",
     "WorkflowFailed",
     "InventoryLowThresholdDetected",
+    "InvoiceOverdue",
 }
 
 
@@ -103,6 +105,14 @@ async def _send_event_email(event: dict) -> None:
                 sku=payload.get("sku", ""),
                 current_stock=payload.get("current_stock", 0),
                 min_stock=payload.get("min_stock", 0),
+            )
+        elif event_type == "InvoiceOverdue":
+            subject, text, html = invoice_overdue_email(
+                invoice_number=payload.get("invoice_number", ""),
+                total=payload.get("total", 0.0),
+                amount_due=payload.get("amount_due", 0.0),
+                currency=payload.get("currency", "USD"),
+                due_date=payload.get("due_date", ""),
             )
         else:
             return

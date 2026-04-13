@@ -36,6 +36,7 @@ NOTIFY_EVENTS = {
     "PortalSessionCreated",
     "InvoiceCreated",
     "InvoicePaid",
+    "InvoiceOverdue",
 }
 
 NOTIFY_LABELS = {
@@ -52,6 +53,7 @@ NOTIFY_LABELS = {
     "PortalSessionCreated":           "Portal compartido con cliente",
     "InvoiceCreated":                 "Factura generada",
     "InvoicePaid":                    "Factura pagada 💰",
+    "InvoiceOverdue":                 "Factura vencida ⚠️",
 }
 
 

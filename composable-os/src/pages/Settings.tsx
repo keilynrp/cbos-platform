@@ -249,6 +249,10 @@ const EMAIL_EVENT_LABELS: Record<string, { label: string; desc: string }> = {
     label: "Stock bajo",
     desc: "Cuando un producto alcanza el umbral minimo de inventario",
   },
+  InvoiceOverdue: {
+    label: "Facturas vencidas",
+    desc: "Cuando una factura supera su fecha de vencimiento sin pago",
+  },
 };
 
 function useNotificationPreferences() {

@@ -37,7 +37,7 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 > Inventory: All stock-change events confirmed implemented (StockMovementRecorded, InventoryReserved, InventoryReleased, InventoryLowThresholdDetected).
 > Workflows: Dedicated `test_workflows_contract.py` added (23 tests). DLQ monitoring endpoint added Q2. Route ordering bug fixed (DLQ routes now correctly precede `/{workflow_id}`).
 > Discovery: Promoted Tier 2 → Tier 1 (ADR 0009, 2026-04-11). E2E: `test_e2e_discovery_blueprint.py` (3 tests). Known gap: `apply_blueprint` provisioning stub pending Phase 6.
-> Accounting: Promoted Tier 2 → Tier 1 (ADR 0010, 2026-04-11). E2E: `test_e2e_sales_accounting.py` (SalesOrder→Invoice→Payment). Auto-invoice consumer implemented Q3.
+> Accounting: Promoted Tier 2 → Tier 1 (ADR 0010, 2026-04-11). E2E: `test_e2e_sales_accounting.py` (SalesOrder→Invoice→Payment). Auto-invoice consumer implemented Q3. Overdue scanner implemented Q4 (G2) — all ADR 0010 gaps resolved.
 > Portal: Promoted Tier 2 → Tier 1 (ADR 0011, 2026-04-12). 18 contract + 5 integration tests. E2E: `test_e2e_portal_accounting.py`.
 > Notifications: Promoted Tier 2 → Tier 1 (ADR 0012, 2026-04-12). 70 tests across 4 files. Email preferences UI + API. Frontend 🟢 — Notifications tab in Settings with granular email toggles.
 
@@ -74,6 +74,7 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 | `test_wedge_smoke.py::full_wedge` | CRM → Inventory → Sales → Portal → Accounting (7-module funnel) | 🟢 Passing |
 | `test_invoice_consumer.py` | Sales → Accounting (auto-invoice on SalesOrderFulfilled) | 🟢 Passing (16 tests) |
 | `test_notification_preferences.py` | Notifications (email preferences CRUD) | 🟢 Passing (10 tests) |
+| `test_overdue_scanner.py` | Accounting (overdue invoice automation) | 🟢 Passing (15 tests) |
 
 ---
 
@@ -129,4 +130,4 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 
 **All 9 modules are Tier 1 — Wedge-Critical, all scoring 6/6.**
 Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications.
-**320 tests across 28 test files.** Q3 backlog 100% closed.
+**335 tests across 29 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete.

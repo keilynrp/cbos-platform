@@ -16,8 +16,8 @@ The Notifications module delivers real-time in-app alerts to authenticated users
 ## Wedge Role
 
 - Every domain event published via `events.bus.publish()` is simultaneously broadcast to the workspace's Redis pub/sub channel (`cbos:notifications:{workspace_id}`)
-- Connected browser clients receive filtered notifications (13 event types) without polling
-- Email notifications for 4 critical event types (QuoteAccepted, SalesOrderCreated, WorkflowFailed, InventoryLowThresholdDetected) with per-user opt-in/opt-out
+- Connected browser clients receive filtered notifications (14 event types) without polling
+- Email notifications for 5 critical event types (QuoteAccepted, SalesOrderCreated, WorkflowFailed, InventoryLowThresholdDetected, InvoiceOverdue) with per-user opt-in/opt-out
 - Covers the full wedge lifecycle: workflow state changes, inventory alerts, quote/portal outcomes, sales orders, CRM opportunities, and accounting events
 
 ---
@@ -28,7 +28,7 @@ The Notifications module delivers real-time in-app alerts to authenticated users
 |---|---|---|
 | Real-time notification stream | `WS /api/v1/ws/notifications?token=<jwt>` | JWT passed as query param (WebSocket cannot send headers) |
 | Workspace-scoped fan-out | Internal — `ConnectionManager.broadcast()` | All active WS connections for the workspace receive the event |
-| Event filtering | Internal | Only the 13 events in `NOTIFY_EVENTS` are forwarded |
+| Event filtering | Internal | Only the 14 events in `NOTIFY_EVENTS` are forwarded |
 | Dead-connection pruning | Internal — `ConnectionManager.broadcast()` | Failed sends are removed from the active set automatically |
 | Get email preferences | `GET /api/v1/notifications/preferences` | Returns global toggle + per-event enabled/disabled |
 | Update email preferences | `PUT /api/v1/notifications/preferences` | Accepts partial updates; persists to `users.notification_preferences` |
@@ -84,6 +84,7 @@ The module **consumes** events from Redis pub/sub. It does not publish any event
 | `PortalSessionCreated` | Portal compartido con cliente | Portal |
 | `InvoiceCreated` | Factura generada | Accounting |
 | `InvoicePaid` | Factura pagada 💰 | Accounting |
+| `InvoiceOverdue` | Factura vencida ⚠️ | Accounting |
 
 ### Events that trigger email notifications (4)
 
@@ -93,6 +94,7 @@ The module **consumes** events from Redis pub/sub. It does not publish any event
 | `SalesOrderCreated` | Same |
 | `WorkflowFailed` | Same |
 | `InventoryLowThresholdDetected` | Same |
+| `InvoiceOverdue` | Same |
 
 ### Delivery path
 
@@ -100,8 +102,8 @@ The module **consumes** events from Redis pub/sub. It does not publish any event
 Domain module → events.bus.publish()
   → Redis XADD  cbos:events              (stream — consumed by Workflows + Invoice consumers)
   → Redis PUBLISH cbos:notifications:{wid} (pub/sub)
-      → WebSocket clients (filtered by NOTIFY_EVENTS, 13 types)
-      → Email notifier (filtered by EMAIL_NOTIFY_EVENTS, 4 types, respects user preferences)
+      → WebSocket clients (filtered by NOTIFY_EVENTS, 14 types)
+      → Email notifier (filtered by EMAIL_NOTIFY_EVENTS, 5 types, respects user preferences)
 ```
 
 ---
