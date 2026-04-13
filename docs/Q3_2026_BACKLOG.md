@@ -28,8 +28,8 @@ _Portal scores 5/6 (Events 🟡). Notifications scores 5/6 (Frontend 🟡). Both
 | 2.1 | Emit `PortalSessionCreated` consistently from Portal service layer | `portal.md` Events table — 🟡 "not consistently emitted"; scorecard Portal Events 🟡 | ✅ Done — fixed post-commit emit; portal.md updated |
 | 2.2 | Add contract test covering `PortalSessionCreated` emission | Scorecard Portal Events 🟡; promotion criteria require event publishing 🟢 | ✅ Done — `test_portal_contract.py` test 18 |
 | 2.3 | Surface email notification status in frontend (notification tray / settings) | Scorecard Notifications Frontend 🟡; `notifications.md` gap #5 | ✅ Done — Notifications tab in Settings: global toggle + per-event toggles; GET/PUT `/notifications/preferences` API |
-| 2.4 | Define email delivery policy: which events trigger email, recipient resolution, opt-out | `notifications.md` gap — "delivery policy undefined"; required for full frontend alignment | 🟡 Partial — `EMAIL_NOTIFY_EVENTS` defined in `email_notifier.py`; no opt-out yet |
-| 2.5 | Verify and document WebSocket reconnection + missed-event handling in frontend | `notifications.md` gap #4 — "reconnection unverified" | 🔴 Pending |
+| 2.4 | Define email delivery policy: which events trigger email, recipient resolution, opt-out | `notifications.md` gap — "delivery policy undefined"; required for full frontend alignment | ✅ Done — `EMAIL_NOTIFY_EVENTS` (4 types) + per-user opt-out via `notification_preferences` + Settings UI |
+| 2.5 | Verify and document WebSocket reconnection + missed-event handling in frontend | `notifications.md` gap #4 — "reconnection unverified" | ✅ Done — Verified: 3s auto-reconnect in `useNotifications.ts`; documented in `notifications.md` §Reconnection; missed events accepted as MVP limitation |
 
 ---
 

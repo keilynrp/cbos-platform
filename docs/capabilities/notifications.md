@@ -1,24 +1,24 @@
 # Capability Spec: Notifications
 
 **Module:** `backend/app/modules/notifications/`
-**Tier:** 2 — Conditional (not yet promoted to active)
+**Tier:** 1 — Wedge-Critical (promoted Q3, ADR 0012)
 **Owner:** Platform team
-**Status:** WebSocket delivery implemented and production-ready; no persistent model; no automated tests; email delivery conditional on SMTP config
+**Status:** WebSocket + email delivery implemented and production-ready; per-user email preferences; 320+ tests
 
 ---
 
 ## Purpose
 
-The Notifications module delivers real-time in-app alerts to authenticated users via WebSocket. It acts as the delivery layer for domain events emitted by other modules — it does not produce events itself. A secondary email channel exists in `backend/app/core/email.py` (currently limited to portal quote emails) and is not yet wired to the WebSocket event set.
+The Notifications module delivers real-time in-app alerts to authenticated users via WebSocket and email notifications for critical business events. It acts as the delivery layer for domain events emitted by other modules — it does not produce events itself.
 
 ---
 
 ## Wedge Role
 
 - Every domain event published via `events.bus.publish()` is simultaneously broadcast to the workspace's Redis pub/sub channel (`cbos:notifications:{workspace_id}`)
-- Connected browser clients receive filtered notifications (10 event types) without polling
-- Covers the full wedge lifecycle: workflow state changes, inventory alerts, quote outcomes, sales order creation, and CRM opportunity results
-- No dedicated HTTP endpoints — the module exposes a single WebSocket endpoint consumed by the frontend notification bell/tray
+- Connected browser clients receive filtered notifications (13 event types) without polling
+- Email notifications for 4 critical event types (QuoteAccepted, SalesOrderCreated, WorkflowFailed, InventoryLowThresholdDetected) with per-user opt-in/opt-out
+- Covers the full wedge lifecycle: workflow state changes, inventory alerts, quote/portal outcomes, sales orders, CRM opportunities, and accounting events
 
 ---
 
@@ -26,20 +26,21 @@ The Notifications module delivers real-time in-app alerts to authenticated users
 
 | Capability | Route | Notes |
 |---|---|---|
-| Real-time notification stream | `WS /api/v1/ws/notifications?token=<jwt>` | JWT passed as query param (WebSocket protocol cannot send headers) |
+| Real-time notification stream | `WS /api/v1/ws/notifications?token=<jwt>` | JWT passed as query param (WebSocket cannot send headers) |
 | Workspace-scoped fan-out | Internal — `ConnectionManager.broadcast()` | All active WS connections for the workspace receive the event |
-| Event filtering | Internal | Only the 10 events in `NOTIFY_EVENTS` are forwarded; all other events are dropped silently |
+| Event filtering | Internal | Only the 13 events in `NOTIFY_EVENTS` are forwarded |
 | Dead-connection pruning | Internal — `ConnectionManager.broadcast()` | Failed sends are removed from the active set automatically |
-
-There are no HTTP REST endpoints in this module.
+| Get email preferences | `GET /api/v1/notifications/preferences` | Returns global toggle + per-event enabled/disabled |
+| Update email preferences | `PUT /api/v1/notifications/preferences` | Accepts partial updates; persists to `users.notification_preferences` |
+| Email delivery | Background task — `email_notifier.py` | Sends emails for `EMAIL_NOTIFY_EVENTS` respecting user preferences |
 
 ---
 
 ## Access Model
 
-- **Authentication:** JWT access token supplied as `?token=<jwt>` query parameter (standard `Authorization` header cannot be sent by native WebSocket clients)
+- **Authentication:** JWT access token supplied as `?token=<jwt>` query parameter for WebSocket; standard Bearer token for REST endpoints
 - **Token validation:** `verify_token(token, token_type="access")` — same function used by all REST routes
-- **Workspace scoping:** `workspace_id` is extracted from the JWT payload; connections are keyed by workspace — a user only receives events for their own workspace
+- **Workspace scoping:** `workspace_id` is extracted from the JWT payload; connections and preferences are keyed by user/workspace
 - **Rejection codes:** `4001 Unauthorized` (invalid/expired token), `4003 No workspace` (token has no `workspace_id` claim)
 - **Concurrency:** Multiple simultaneous connections per workspace are supported; all receive the same broadcast
 
@@ -47,7 +48,13 @@ There are no HTTP REST endpoints in this module.
 
 ## Data Model
 
-No persistent model. The module holds only in-memory state (active WebSocket connections) via `ConnectionManager` in `backend/app/core/ws_manager.py`.
+### Persistent
+
+| Component | Location | Description |
+|---|---|---|
+| `User.notification_preferences` | `identity/models.py` | JSON column: `{email_enabled: bool, email_events: {event: bool}}` |
+
+### Ephemeral
 
 | Component | Location | Description |
 |---|---|---|
@@ -60,7 +67,7 @@ No persistent model. The module holds only in-memory state (active WebSocket con
 
 The module **consumes** events from Redis pub/sub. It does not publish any events.
 
-### Events forwarded to WebSocket clients
+### Events forwarded to WebSocket clients (13)
 
 | Event Type | Label shown in UI | Source Module |
 |---|---|---|
@@ -72,19 +79,74 @@ The module **consumes** events from Redis pub/sub. It does not publish any event
 | `QuoteRejected` | Cotización rechazada | Sales / Portal |
 | `SalesOrderCreated` | Nueva orden de venta | Sales |
 | `CustomerActionPerformed` | Acción del cliente | CRM |
-| `OpportunityWon` | Deal ganado | CRM |
+| `OpportunityWon` | Deal ganado 🎉 | CRM |
 | `OpportunityLost` | Deal perdido | CRM |
+| `PortalSessionCreated` | Portal compartido con cliente | Portal |
+| `InvoiceCreated` | Factura generada | Accounting |
+| `InvoicePaid` | Factura pagada 💰 | Accounting |
 
-All other event types published to the Redis channel are silently dropped by the filter in `router.py`.
+### Events that trigger email notifications (4)
+
+| Event Type | Condition |
+|---|---|
+| `QuoteAccepted` | User has `email_enabled: true` and event not disabled |
+| `SalesOrderCreated` | Same |
+| `WorkflowFailed` | Same |
+| `InventoryLowThresholdDetected` | Same |
 
 ### Delivery path
 
 ```
 Domain module → events.bus.publish()
-  → Redis XADD  cbos:events              (stream — consumed by Workflows worker)
-  → Redis PUBLISH cbos:notifications:{wid} (pub/sub — consumed by WS router)
-      → WebSocket clients (filtered by NOTIFY_EVENTS)
+  → Redis XADD  cbos:events              (stream — consumed by Workflows + Invoice consumers)
+  → Redis PUBLISH cbos:notifications:{wid} (pub/sub)
+      → WebSocket clients (filtered by NOTIFY_EVENTS, 13 types)
+      → Email notifier (filtered by EMAIL_NOTIFY_EVENTS, 4 types, respects user preferences)
 ```
+
+---
+
+## Email Preference API
+
+### GET /api/v1/notifications/preferences
+
+Returns the current user's email notification preferences.
+
+```json
+{
+  "email_enabled": true,
+  "email_events": {
+    "InventoryLowThresholdDetected": true,
+    "QuoteAccepted": true,
+    "SalesOrderCreated": true,
+    "WorkflowFailed": true
+  }
+}
+```
+
+### PUT /api/v1/notifications/preferences
+
+Partial update. Only provided fields are changed; others are preserved.
+
+```json
+{
+  "email_enabled": false,
+  "email_events": {
+    "WorkflowFailed": false
+  }
+}
+```
+
+---
+
+## WebSocket Reconnection Behavior
+
+The frontend hook `useNotifications.ts` implements:
+
+- **Auto-reconnect:** 3-second delay after disconnect via `setTimeout(connect, 3_000)`
+- **Cleanup:** Reconnect timer and WebSocket reference cleared on component unmount
+- **Max notifications:** 50 in-memory notifications (newest first)
+- **Missed events:** Not recovered — Redis pub/sub is ephemeral. Events published while the client is disconnected are permanently lost. This is a known and accepted limitation for MVP.
 
 ---
 
@@ -92,36 +154,17 @@ Domain module → events.bus.publish()
 
 | File | Tests | Coverage |
 |---|---|---|
-| `tests/test_notifications_contract.py` | 🔴 Missing | — |
-| `tests/test_notifications.py` | 🔴 Missing | — |
+| `tests/test_notifications.py` | 32 | WebSocket auth, manager, event filtering, message shape, labels |
+| `tests/test_notification_preferences.py` | 10 | GET/PUT preferences, persistence, validation, partial updates |
+| `tests/test_e2e_notifications_pipeline.py` | 17 | Full event bus → Redis → WS delivery chain (5 layers) |
+| `tests/test_e2e_portal_ws_notification.py` | 11 | Portal → event → WS notification (5 layers) |
 
-No automated tests exist for this module. WebSocket delivery has been verified manually in production. The absence of tests is the primary blocker for promotion to active Tier 2.
-
----
-
-## Known Gaps
-
-Derived from scorecard score **2/6** (Events 🟢, Production 🟡; all other dimensions 🔴):
-
-1. **No contract tests** — WebSocket auth rejection, workspace isolation, event filtering, and reconnection behavior are untested
-2. **No integration tests** — end-to-end path from `bus.publish()` through Redis pub/sub to WS client is not covered
-3. **No capability spec** — addressed by this document
-4. **Frontend partial** — notification bell/tray exists but delivery reliability under reconnection is unverified (scorecard 🟡)
-5. **Email delivery undefined** — `app/core/email.py` contains a working SMTP sender and a quote portal template, but no email notifications are wired to the `NOTIFY_EVENTS` set; the delivery policy (which events trigger email, when, to whom) is not defined
-6. **No persistence** — events missed during a client disconnect are permanently lost; no notification history or read/unread state
-7. **No delivery acknowledgement** — the WebSocket is one-directional; the server cannot confirm a notification was seen
+**Total: 70 tests** covering the Notifications module.
 
 ---
 
-## Promotion Criteria (to active Tier 2)
+## Known Gaps (Accepted for MVP)
 
-Based on the scorecard Action Register (Q2 target) and general promotion criteria:
-
-| Criterion | Current | Required |
-|---|---|---|
-| Contract tests | 🔴 Missing | 🟢 Cover: auth rejection (4001, 4003), workspace isolation, event type filtering, clean disconnect |
-| Integration tests | 🔴 Missing | 🟢 Cover: full path from `bus.publish()` → Redis → WS client in a test environment |
-| WebSocket + email delivery policy | 🔴 Undefined | 🟢 ADR or spec section defining which events trigger email, recipient resolution, and opt-out |
-| Frontend alignment | 🟡 Partial | 🟢 Reconnection and missed-event handling confirmed in frontend |
-| Capability spec | 🔴 Missing | 🟢 This document (now present — update scorecard) |
-| Production stability | 🟡 Manual verified | 🟢 Confirmed stable with automated regression coverage |
+1. **No persistence** — events missed during a client disconnect are permanently lost; no notification history or read/unread state stored server-side
+2. **No delivery acknowledgement** — the WebSocket is one-directional; the server cannot confirm a notification was seen
+3. **Email sent to workspace owners only** — multi-user email targeting requires role-based recipient resolution (future)

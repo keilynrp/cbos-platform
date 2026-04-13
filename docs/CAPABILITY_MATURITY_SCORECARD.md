@@ -1,6 +1,6 @@
 # Capability Maturity Scorecard
 
-> Updated 2026-04-11 (post Q3 ADRs 0009–0010). Previous assessment: 2026-04-11 (post Q2 sprint).
+> Updated 2026-04-12 (post Q3 close — ADRs 0009–0012). Previous assessment: 2026-04-11 (post ADRs 0009–0010).
 
 ## Scoring Dimensions
 
@@ -30,24 +30,24 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 | **Workflows** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 | **Discovery** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 | **Accounting** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
+| **Portal** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
+| **Notifications** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 
 > Identity: `UserRegistered` + `WorkspaceCreated` events added Q2.
 > Inventory: All stock-change events confirmed implemented (StockMovementRecorded, InventoryReserved, InventoryReleased, InventoryLowThresholdDetected).
 > Workflows: Dedicated `test_workflows_contract.py` added (23 tests). DLQ monitoring endpoint added Q2. Route ordering bug fixed (DLQ routes now correctly precede `/{workflow_id}`).
 > Discovery: Promoted Tier 2 → Tier 1 (ADR 0009, 2026-04-11). E2E: `test_e2e_discovery_blueprint.py` (3 tests). Known gap: `apply_blueprint` provisioning stub pending Phase 6.
-> Accounting: Promoted Tier 2 → Tier 1 (ADR 0010, 2026-04-11). E2E: `test_e2e_sales_accounting.py` (SalesOrder→Invoice→Payment). Known gap: event constants not yet in `app/events/types.py`; auto-invoice-on-fulfillment deferred.
+> Accounting: Promoted Tier 2 → Tier 1 (ADR 0010, 2026-04-11). E2E: `test_e2e_sales_accounting.py` (SalesOrder→Invoice→Payment). Auto-invoice consumer implemented Q3.
+> Portal: Promoted Tier 2 → Tier 1 (ADR 0011, 2026-04-12). 18 contract + 5 integration tests. E2E: `test_e2e_portal_accounting.py`.
+> Notifications: Promoted Tier 2 → Tier 1 (ADR 0012, 2026-04-12). 70 tests across 4 files. Email preferences UI + API. Frontend 🟢 — Notifications tab in Settings with granular email toggles.
 
 ### Tier 2 — Wedge Support
 
-> 2 modules as of 2026-04-11 (post ADR 0009–0010). Discovery and Accounting promoted to Tier 1.
+> 0 modules as of 2026-04-12. All 9 modules promoted to Tier 1.
 
 | Module | Contract Tests | Integration Tests | Events | Frontend | Spec | Production | Score |
 |--------|:-:|:-:|:-:|:-:|:-:|:-:|-------|
-| **Portal** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
-| **Notifications** | 🟢 | 🟢 | 🟢 | 🟡 | 🟢 | 🟢 | **5/6** |
-
-> Portal: 18 contract + 5 integration tests. Capability spec added. PortalSessionCreated now emitted consistently post-commit (fixed Q3). Score: 6/6. Promoted to active Tier 2 (ADR 0006).
-> Notifications: 32 unit tests added Q2 (WebSocket + ConnectionManager). Capability spec added. Email notifier connected to event bus — QuoteAccepted, SalesOrderCreated, WorkflowFailed, LowStock now trigger emails automatically. Frontend 🟡 — WebSocket delivery works; email UI not yet surfaced.
+| — | — | — | — | — | — | — | — |
 
 ### Tier 3 — Controlled Expansion
 
@@ -70,6 +70,10 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 | `test_e2e_discovery_blueprint.py` | Discovery (Session → Chat → Blueprint → Apply → WorkspaceActivated) | 🟢 Passing (3 tests) |
 | `test_e2e_notifications_pipeline.py` | Notifications (event bus → Redis → WebSocket delivery chain) | 🟢 Passing (17 tests, 5 layers) |
 | `test_e2e_portal_accounting.py` | Portal → Sales → Accounting (Quote accept via token → SalesOrder → Invoice → Payment) | 🟢 Passing (2 tests) |
+| `test_e2e_portal_ws_notification.py` | Portal → Notifications (session creation → WS notification) | 🟢 Passing (11 tests) |
+| `test_wedge_smoke.py::full_wedge` | CRM → Inventory → Sales → Portal → Accounting (7-module funnel) | 🟢 Passing |
+| `test_invoice_consumer.py` | Sales → Accounting (auto-invoice on SalesOrderFulfilled) | 🟢 Passing (16 tests) |
+| `test_notification_preferences.py` | Notifications (email preferences CRUD) | 🟢 Passing (10 tests) |
 
 ---
 
@@ -99,7 +103,9 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Portal | Write capability spec + integration tests | ✅ Done Q2 |
 | Portal | Emit `PortalSessionCreated` consistently; add contract test | ✅ Done Q3 |
 | Notifications | Add contract tests; connect email to event bus | ✅ Done Q2 |
-| Notifications | Frontend email status surface | 🔴 Q3 Pending (backlog 2.3) |
+| Notifications | Frontend email status surface | ✅ Done Q3 (Notifications tab + preferences API) |
+| Notifications | Promote to Tier 1 | ✅ Done Q3 (ADR 0012) |
+| Portal | Promote to Tier 1 | ✅ Done Q3 (ADR 0011) |
 | Discovery | Write capability spec; add integration tests | ✅ Done Q2 |
 | Discovery | Promote to Tier 2 | ✅ Done Q2 (ADR 0008) |
 | Discovery | E2E scenario for Tier 1 promotion | ✅ Done Q3 (`test_e2e_discovery_blueprint.py`) |
@@ -108,7 +114,7 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Accounting | Promote to Tier 2 | ✅ Done Q2 (ADR 0008) |
 | Accounting | E2E scenario for Tier 1 promotion | ✅ Done Q3 (`test_e2e_sales_accounting.py`) |
 | Accounting | Promote to Tier 1 | ✅ Done Q3 (ADR 0010) |
-| Accounting | Consolidate event constants to `app/events/types.py` | 🔴 Q3 Pending (backlog 4.2) |
+| Accounting | Consolidate event constants to `app/events/types.py` | ✅ Done Q3 (backlog 4.2) |
 | Sales→Inventory | Resolve direct-invocation coupling in quote acceptance | ✅ Done Q2 (ADR 0007, Gateway pattern) |
 
 ---
@@ -117,10 +123,10 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 
 | Tier | Modules | Avg Score | vs. Q2 post-ADR 0008 |
 |------|---------|-----------|----------------------|
-| Tier 1 | **7 modules** | **6.0 / 6** | ↑ from 5 (Discovery + Accounting promoted) |
-| Tier 2 | **2 modules** | **5.5 / 6** | ↓ from 4 (Discovery + Accounting promoted out) |
+| Tier 1 | **9 modules** | **6.0 / 6** | ↑ from 5 (Discovery, Accounting, Portal, Notifications promoted) |
+| Tier 2 | **0 modules** | — | All promoted to Tier 1 |
 | Tier 3 | 0 modules | — | Unchanged — Tier 3 remains clear |
 
-**Tier 1 now covers the full wedge funnel:** Discovery → Identity → CRM → Sales → Inventory → Workflows → Accounting (7 modules, all 6/6).
-**Tier 2:** Portal (6/6) + Notifications (5/6, Frontend gap). Notifications frontend email surface is the only remaining hardening gap on the active platform.
-**Next priority:** ADRs closed. Remaining Q3 open items: Notifications frontend (2.3), E2E Portal→WS pipeline (3.2), E2E Quote→Invoice auto-creation (3.3), event constants consolidation (4.2).
+**All 9 modules are Tier 1 — Wedge-Critical, all scoring 6/6.**
+Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications.
+**320 tests across 28 test files.** Q3 backlog 100% closed.
