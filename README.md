@@ -75,6 +75,7 @@ Discovery → Lead → Opportunity → Quote → Order → Inventory → Portal 
 | **Notifications** | Email transaccional + WebSocket tiempo real, preferencias por usuario | Contract + integration + e2e pipeline | 1 |
 | **Accounting** | Facturación completa: invoices, pagos parciales/totales, auto-invoice, overdue scanner | Contract + integration + e2e | 1 |
 | **Contracts** | Gestión de contratos: state machine, cláusulas, eventos de ciclo de vida | 28 contract tests | 2 |
+| **Projects**  | Gestión de proyectos: state machine, tareas, eventos de ciclo de vida | 28 contract tests | 2 |
 
 **Cross-módulo:**
 - **Analytics** — 3 endpoints de agregación (summary, revenue time-series, pipeline breakdown). 24 tests.
@@ -213,17 +214,18 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-**393 tests** en 31 archivos:
+**421 tests** en 32 archivos:
 
 | Categoría | Archivos | Cobertura |
 |-----------|----------|-----------|
-| Contract tests | 10 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation por módulo |
+| Contract tests | 11 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation por módulo |
 | Integration tests | 9 archivos (`test_*.py`) | Flows de servicio, lógica de negocio |
 | E2E cross-module | 5 archivos (`test_e2e_*.py`) | Sales→Accounting, Portal→WS, Discovery→Blueprint, Notification pipeline |
 | Consumer / scanner | 3 archivos | Workflow consumer, invoice consumer, overdue scanner |
 | Smoke | 1 archivo (`test_wedge_smoke.py`) | Funnel completo: CRM→Sales→Inventory→Portal→Accounting (7 módulos) |
 | Analytics | 1 archivo | Summary, revenue, pipeline: auth, shape, workspace isolation, empty state |
 | Contracts | 1 archivo (`test_contracts_contract.py`) | State machine, clause management, workspace isolation (28 tests) |
+| Projects  | 1 archivo (`test_projects_contract.py`) | State machine, task management, workspace isolation (28 tests) |
 
 ```bash
 # Cobertura detallada

@@ -78,6 +78,13 @@ CONTRACT_SIGNED     = "ContractSigned"
 CONTRACT_EXECUTED   = "ContractExecuted"
 CONTRACT_TERMINATED = "ContractTerminated"
 
+# ── Projects ──────────────────────────────────────────────
+PROJECT_CREATED        = "ProjectCreated"
+PROJECT_ACTIVATED      = "ProjectActivated"
+PROJECT_COMPLETED      = "ProjectCompleted"
+PROJECT_CANCELLED      = "ProjectCancelled"
+PROJECT_TASK_COMPLETED = "ProjectTaskCompleted"
+
 # ── Platform ───────────────────────────────────────────────
 USER_REGISTERED = "UserRegistered"
 WORKSPACE_CREATED = "WorkspaceCreated"

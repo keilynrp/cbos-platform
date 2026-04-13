@@ -43,6 +43,7 @@ from app.modules.discovery.models import DiscoveryMessage, DiscoverySession  # n
 from app.modules.workflows.models import Workflow, WorkflowRun  # noqa: F401
 from app.modules.accounting.models import Invoice, InvoiceLine, Payment  # noqa: F401
 from app.modules.contracts.models import Contract, ContractClause  # noqa: F401
+from app.modules.projects.models import Project, ProjectTask  # noqa: F401
 
 
 # ── Session-scoped event loop — shared by all async fixtures and tests ────────

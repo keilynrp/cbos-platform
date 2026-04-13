@@ -23,6 +23,7 @@ from app.modules.notifications.router import router as notifications_router
 from app.modules.accounting.router import router as accounting_router
 from app.modules.analytics.router import router as analytics_router
 from app.modules.contracts.router import router as contracts_router
+from app.modules.projects.router import router as projects_router
 
 
 @asynccontextmanager
@@ -73,6 +74,7 @@ app.include_router(notifications_router, prefix=settings.api_prefix)
 app.include_router(accounting_router, prefix=settings.api_prefix)
 app.include_router(analytics_router, prefix=settings.api_prefix)
 app.include_router(contracts_router, prefix=settings.api_prefix)
+app.include_router(projects_router, prefix=settings.api_prefix)
 
 
 # ── Health check ───────────────────────────────────────────
