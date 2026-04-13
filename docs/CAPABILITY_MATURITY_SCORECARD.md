@@ -75,6 +75,7 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 | `test_invoice_consumer.py` | Sales → Accounting (auto-invoice on SalesOrderFulfilled) | 🟢 Passing (16 tests) |
 | `test_notification_preferences.py` | Notifications (email preferences CRUD) | 🟢 Passing (10 tests) |
 | `test_overdue_scanner.py` | Accounting (overdue invoice automation) | 🟢 Passing (15 tests) |
+| `test_analytics.py` | Analytics (cross-module aggregation — summary, revenue, pipeline) | 🟢 Passing (24 tests) |
 
 ---
 
@@ -130,4 +131,4 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 
 **All 9 modules are Tier 1 — Wedge-Critical, all scoring 6/6.**
 Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications.
-**335 tests across 29 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete.
+**359 tests across 30 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete.

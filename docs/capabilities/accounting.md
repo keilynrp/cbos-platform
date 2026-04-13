@@ -3,7 +3,7 @@
 **Module:** `backend/app/modules/accounting/`
 **Tier:** 1 — Wedge-Critical (promoted Q3, ADR 0010)
 **Owner:** Platform team
-**Status:** Full invoice lifecycle, auto-invoice consumer, overdue scanner, payment recording, email notifications; 335+ tests platform-wide
+**Status:** Full invoice lifecycle, auto-invoice consumer, overdue scanner, payment recording, email notifications; 359+ tests platform-wide
 
 ---
 

@@ -32,6 +32,7 @@ fpdf2==2.8.2
 # Utils
 python-dotenv==1.0.1
 email-validator==2.2.0
+python-dateutil==2.9.0
 
 # Dev
 pytest==8.3.4

@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
@@ -13,10 +12,9 @@ import {
   Area, AreaChart, Bar, BarChart, ResponsiveContainer,
   XAxis, YAxis, Tooltip, CartesianGrid, Cell,
 } from "recharts";
-import { salesService } from "@/services/sales";
-import { crmService } from "@/services/crm";
+import { analyticsService } from "@/services/analytics";
 import { inventoryService } from "@/services/inventory";
-import { workflowsService } from "@/services/workflows";
+import { crmService } from "@/services/crm";
 import { useAuth } from "@/lib/auth";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -27,19 +25,14 @@ function fmtCurrency(n: number) {
   return `$${n.toFixed(0)}`;
 }
 
-const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function last8Months() {
-  const now = new Date();
-  return Array.from({ length: 8 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 7 + i, 1);
-    return { key: `${d.getFullYear()}-${d.getMonth()}`, label: MONTH_LABELS[d.getMonth()] };
-  });
+/** "2026-04" → short label "Apr" */
+function monthLabel(ym: string) {
+  const m = parseInt(ym.split("-")[1], 10);
+  return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m - 1];
 }
 
-const PIPELINE_COLORS: Record<string, string> = {
-  lead:        "hsl(262,80%,62%)",
+const STAGE_COLORS: Record<string, string> = {
+  new:         "hsl(262,80%,62%)",
   qualified:   "hsl(262,80%,52%)",
   proposal:    "hsl(220,80%,58%)",
   negotiation: "hsl(220,80%,48%)",
@@ -48,9 +41,9 @@ const PIPELINE_COLORS: Record<string, string> = {
 };
 
 const AI_INSIGHTS = [
-  { agent: "Sales Assistant", text: "Review your open quotes — some may be near expiry.", icon: Sparkles },
-  { agent: "Inventory Agent", text: "Check low-stock items before placing new orders.", icon: TrendingUp },
-  { agent: "Workflow Engine", text: "Automate repetitive follow-ups with a triggered workflow.", icon: Bot },
+  { agent: "Sales Assistant", text: "Revisa tus cotizaciones abiertas — algunas pueden estar próximas a vencer.", icon: Sparkles },
+  { agent: "Inventory Agent", text: "Verifica los artículos con stock bajo antes de hacer nuevos pedidos.", icon: TrendingUp },
+  { agent: "Workflow Engine", text: "Automatiza seguimientos repetitivos con un workflow disparado por eventos.", icon: Bot },
 ];
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -60,81 +53,53 @@ const Index = () => {
 
   const results = useQueries({
     queries: [
-      { queryKey: ["sales-orders"],       queryFn: salesService.getOrders,       staleTime: 30_000 },
-      { queryKey: ["crm-opportunities"],  queryFn: crmService.getOpportunities,  staleTime: 30_000 },
-      { queryKey: ["inventory-items"],    queryFn: inventoryService.getItems,    staleTime: 30_000 },
-      { queryKey: ["workflows"],          queryFn: workflowsService.getAll,      staleTime: 30_000 },
-      { queryKey: ["crm-activities"],     queryFn: crmService.getActivities,     staleTime: 30_000 },
+      { queryKey: ["analytics-summary"],    queryFn: analyticsService.getSummary,      staleTime: 60_000 },
+      { queryKey: ["analytics-revenue", 8], queryFn: () => analyticsService.getRevenue(8), staleTime: 60_000 },
+      { queryKey: ["analytics-pipeline"],   queryFn: analyticsService.getPipeline,     staleTime: 60_000 },
+      { queryKey: ["inventory-items"],      queryFn: inventoryService.getItems,         staleTime: 30_000 },
+      { queryKey: ["crm-activities"],       queryFn: crmService.getActivities,          staleTime: 30_000 },
     ],
   });
 
-  const [ordersQ, oppsQ, inventoryQ, workflowsQ, activitiesQ] = results;
+  const [summaryQ, revenueQ, pipelineQ, inventoryQ, activitiesQ] = results;
   const loading = results.some((r) => r.isLoading);
 
-  const orders     = ordersQ.data     ?? [];
-  const opps       = oppsQ.data       ?? [];
-  const items      = inventoryQ.data  ?? [];
-  const workflows  = workflowsQ.data  ?? [];
+  const summary   = summaryQ.data;
+  const items     = inventoryQ.data  ?? [];
   const activities = activitiesQ.data ?? [];
 
-  // ── KPIs ──────────────────────────────────────────────────────────────────
-  const kpis = useMemo(() => {
-    const revenue = orders
-      .filter((o) => o.status !== "cancelled")
-      .reduce((s, o) => s + o.total, 0);
+  // ── KPIs from analytics summary ───────────────────────────────────────────
+  const kpis = {
+    invoiced:         summary?.revenue.total_invoiced       ?? 0,
+    openDeals:        summary?.pipeline.open_opportunities  ?? 0,
+    pipelineValue:    summary?.pipeline.pipeline_value      ?? 0,
+    activeWorkflows:  summary?.operations.active_workflow_runs ?? 0,
+    ordersPending:    summary?.operations.orders_pending    ?? 0,
+    lowStock:         summary?.operations.low_stock_items   ?? 0,
+  };
 
-    const openDeals = opps.filter(
-      (o) => o.stage !== "won" && o.stage !== "lost"
-    ).length;
+  // ── Revenue chart from analytics revenue ──────────────────────────────────
+  const revenueData = (revenueQ.data?.series ?? []).map((s) => ({
+    month: monthLabel(s.month),
+    revenue: s.invoiced,
+  }));
 
-    const lowStock = items.filter(
-      (i) => i.status === "low_stock" || i.status === "out_of_stock"
-    ).length;
+  // ── Pipeline chart from analytics pipeline ────────────────────────────────
+  const pipelineData = (pipelineQ.data?.stages ?? []).map((s) => ({
+    stage: s.stage.charAt(0).toUpperCase() + s.stage.slice(1),
+    count: s.count,
+    fill: STAGE_COLORS[s.stage] ?? "hsl(240,5%,55%)",
+  }));
 
-    const activeWorkflows = workflows.filter((w) => w.is_active).length;
-
-    return { revenue, openDeals, lowStock, activeWorkflows };
-  }, [orders, opps, items, workflows]);
-
-  // ── Revenue chart (last 8 months) ─────────────────────────────────────────
-  const revenueData = useMemo(() => {
-    const months = last8Months();
-    const totals: Record<string, number> = {};
-    months.forEach((m) => { totals[m.key] = 0; });
-    orders
-      .filter((o) => o.status !== "cancelled")
-      .forEach((o) => {
-        const d = new Date(o.created_at);
-        const key = `${d.getFullYear()}-${d.getMonth()}`;
-        if (key in totals) totals[key] += o.total;
-      });
-    return months.map((m) => ({ month: m.label, revenue: totals[m.key] }));
-  }, [orders]);
-
-  // ── Pipeline chart ─────────────────────────────────────────────────────────
-  const pipelineData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    opps.forEach((o) => { counts[o.stage] = (counts[o.stage] ?? 0) + 1; });
-    return Object.entries(counts).map(([stage, count]) => ({
-      stage: stage.charAt(0).toUpperCase() + stage.slice(1),
-      count,
-      fill: PIPELINE_COLORS[stage] ?? "hsl(240,5%,55%)",
-    }));
-  }, [opps]);
-
-  // ── Low-stock alerts ───────────────────────────────────────────────────────
-  const lowStockItems = useMemo(
-    () => items.filter((i) => i.status === "low_stock" || i.status === "out_of_stock").slice(0, 5),
-    [items]
-  );
+  // ── Low-stock alerts from inventory ───────────────────────────────────────
+  const lowStockItems = items
+    .filter((i) => i.status === "low_stock" || i.status === "out_of_stock")
+    .slice(0, 5);
 
   // ── Recent activities ─────────────────────────────────────────────────────
-  const recentActivities = useMemo(
-    () => [...activities].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    ).slice(0, 5),
-    [activities]
-  );
+  const recentActivities = [...activities]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5);
 
   const greeting = user?.full_name ? `Hola, ${user.full_name.split(" ")[0]}` : "Dashboard";
 
@@ -149,22 +114,44 @@ const Index = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="shadow-sm"><CardContent className="p-5"><Skeleton className="h-16 w-full" /></CardContent></Card>
+            <Card key={i} className="shadow-sm">
+              <CardContent className="p-5"><Skeleton className="h-16 w-full" /></CardContent>
+            </Card>
           ))
         ) : (
           <>
-            <KpiCard label="Revenue total" value={fmtCurrency(kpis.revenue)}
-              icon={DollarSign} color="bg-primary/10 text-primary"
-              sub={`${orders.filter(o => o.status !== "cancelled").length} órdenes`} up />
-            <KpiCard label="Deals abiertos" value={String(kpis.openDeals)}
-              icon={Handshake} color="bg-blue-100 text-blue-600"
-              sub={`de ${opps.length} oportunidades`} up={kpis.openDeals > 0} />
-            <KpiCard label="Workflows activos" value={String(kpis.activeWorkflows)}
-              icon={Zap} color="bg-violet-100 text-violet-600"
-              sub={`de ${workflows.length} workflows`} up={kpis.activeWorkflows > 0} />
-            <KpiCard label="Alertas de stock" value={String(kpis.lowStock)}
-              icon={PackageSearch} color="bg-orange-100 text-orange-600"
-              sub={`de ${items.length} SKUs`} up={kpis.lowStock === 0} />
+            <KpiCard
+              label="Total facturado"
+              value={fmtCurrency(kpis.invoiced)}
+              icon={DollarSign}
+              color="bg-primary/10 text-primary"
+              sub="ingresos acumulados"
+              up
+            />
+            <KpiCard
+              label="Deals abiertos"
+              value={String(kpis.openDeals)}
+              icon={Handshake}
+              color="bg-blue-100 text-blue-600"
+              sub={`valor: ${fmtCurrency(kpis.pipelineValue)}`}
+              up={kpis.openDeals > 0}
+            />
+            <KpiCard
+              label="Órdenes pendientes"
+              value={String(kpis.ordersPending)}
+              icon={Zap}
+              color="bg-violet-100 text-violet-600"
+              sub={`${kpis.activeWorkflows} workflows activos`}
+              up={kpis.ordersPending > 0}
+            />
+            <KpiCard
+              label="Alertas de stock"
+              value={String(kpis.lowStock)}
+              icon={PackageSearch}
+              color="bg-orange-100 text-orange-600"
+              sub="ítems bajo mínimo"
+              up={kpis.lowStock === 0}
+            />
           </>
         )}
       </div>
@@ -173,7 +160,7 @@ const Index = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Revenue — últimos 8 meses</CardTitle>
+            <CardTitle className="text-sm font-semibold">Facturación — últimos 8 meses</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? <Skeleton className="h-[260px] w-full" /> : (
@@ -187,11 +174,19 @@ const Index = () => {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(240,6%,90%)" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(240,4%,46%)" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="hsl(240,4%,46%)"
-                    tickFormatter={(v) => v === 0 ? "$0" : fmtCurrency(v)} />
-                  <Tooltip formatter={(v: number) => [fmtCurrency(v), "Revenue"]} />
-                  <Area type="monotone" dataKey="revenue" stroke="hsl(262,80%,55%)"
-                    fill="url(#revGrad)" strokeWidth={2} />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="hsl(240,4%,46%)"
+                    tickFormatter={(v) => v === 0 ? "$0" : fmtCurrency(v)}
+                  />
+                  <Tooltip formatter={(v: number) => [fmtCurrency(v), "Facturado"]} />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="hsl(262,80%,55%)"
+                    fill="url(#revGrad)"
+                    strokeWidth={2}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -212,8 +207,13 @@ const Index = () => {
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={pipelineData} layout="vertical">
                   <XAxis type="number" tick={{ fontSize: 12 }} stroke="hsl(240,4%,46%)" />
-                  <YAxis dataKey="stage" type="category" tick={{ fontSize: 11 }}
-                    stroke="hsl(240,4%,46%)" width={90} />
+                  <YAxis
+                    dataKey="stage"
+                    type="category"
+                    tick={{ fontSize: 11 }}
+                    stroke="hsl(240,4%,46%)"
+                    width={90}
+                  />
                   <Tooltip />
                   <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={18}>
                     {pipelineData.map((entry, i) => (
@@ -233,7 +233,7 @@ const Index = () => {
         <Card className="shadow-sm">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-semibold">Alertas de inventario</CardTitle>
-            <Link to="/inventory-orders" className="text-xs text-primary flex items-center gap-1 hover:underline">
+            <Link to="/inventory" className="text-xs text-primary flex items-center gap-1 hover:underline">
               Ver todo <ArrowRight className="h-3 w-3" />
             </Link>
           </CardHeader>
@@ -251,8 +251,13 @@ const Index = () => {
                       <p className="text-sm font-medium truncate">{item.product_name ?? item.sku}</p>
                       <p className="text-xs text-muted-foreground">{item.quantity_available} disponibles</p>
                     </div>
-                    <Badge className={`text-[10px] ml-2 shrink-0 ${item.status === "out_of_stock"
-                      ? "bg-red-100 text-red-800" : "bg-orange-100 text-orange-800"}`}>
+                    <Badge
+                      className={`text-[10px] ml-2 shrink-0 ${
+                        item.status === "out_of_stock"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-orange-100 text-orange-800"
+                      }`}
+                    >
                       <AlertTriangle className="h-3 w-3 mr-1" />
                       {item.status.replace("_", " ")}
                     </Badge>
@@ -298,7 +303,7 @@ const Index = () => {
           </CardContent>
         </Card>
 
-        {/* AI Insights (static — se conecta en fase D) */}
+        {/* AI Insights (static prompt cards) */}
         <Card className="shadow-sm">
           <CardHeader className="pb-3 flex flex-row items-center gap-2">
             <Bot className="h-4 w-4 text-primary" />
@@ -323,9 +328,15 @@ const Index = () => {
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, icon: Icon, color, sub, up }: {
-  label: string; value: string; icon: React.ElementType;
-  color: string; sub: string; up: boolean;
+function KpiCard({
+  label, value, icon: Icon, color, sub, up,
+}: {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  color: string;
+  sub: string;
+  up: boolean;
 }) {
   return (
     <Card className="shadow-sm">

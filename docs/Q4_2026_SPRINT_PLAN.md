@@ -120,16 +120,16 @@ _Analytics.tsx has production-grade UI with recharts but 100% mock data. The fro
 
 | # | Item | Type | Details |
 |---|------|------|---------|
-| E1.1 | Define dashboard scope: which metrics are real for wedge MVP | Design | Revenue (invoices), Pipeline (opportunities), Fulfillment (orders), Inventory (stock levels) |
-| E1.2 | Add `GET /api/v1/analytics/summary` endpoint | Code | Aggregate: total revenue, open invoices, overdue count, pipeline value, low-stock items, active workflows |
-| E1.3 | Add `GET /api/v1/analytics/revenue` endpoint | Code | Time-series: invoice totals by month (last 12 months), paid vs outstanding |
-| E1.4 | Add `GET /api/v1/analytics/pipeline` endpoint | Code | Opportunity stages breakdown, conversion rates, avg deal size |
-| E1.5 | Wire `Index.tsx` (Dashboard) to real summary endpoint | Code | Replace current multi-service calls with single analytics summary |
-| E1.6 | Wire `Analytics.tsx` Revenue tab to real revenue endpoint | Code | Replace mock `revenueData` with real invoice time-series |
-| E1.7 | Wire `Analytics.tsx` Pipeline tab to real pipeline endpoint | Code | Replace mock data with CRM opportunity aggregation |
-| E1.8 | Remove or disable tabs with no backend (Marketing, Knowledge, AI Insights) | Code | Don't show mock data as real; can re-enable when backends exist |
-| E1.9 | Analytics service file: `services/analytics.ts` | Code | TypeScript service layer for analytics API |
-| E1.10 | Tests: analytics endpoints (contract + integration) | Tests | Cover auth, workspace scoping, empty state, date range filtering |
+| E1.1 | Define dashboard scope: which metrics are real for wedge MVP | Design | ✅ Done — Revenue (invoices), Pipeline (opportunities), Fulfillment (orders), Inventory (stock levels) |
+| E1.2 | Add `GET /api/v1/analytics/summary` endpoint | Code | ✅ Done — `app/modules/analytics/router.py` + `service.py` |
+| E1.3 | Add `GET /api/v1/analytics/revenue` endpoint | Code | ✅ Done — time-series with `?months=1-24`, `relativedelta` month buckets |
+| E1.4 | Add `GET /api/v1/analytics/pipeline` endpoint | Code | ✅ Done — stage breakdown, avg deal size, won_rate_30d |
+| E1.5 | Wire `Index.tsx` (Dashboard) to real summary endpoint | Code | ✅ Done — KPI cards + charts from analytics endpoints; detail lists from module services |
+| E1.6 | Wire `Analytics.tsx` Revenue tab to real revenue endpoint | Code | ✅ Done — area chart + 4 KPI cards from real invoice data |
+| E1.7 | Wire `Analytics.tsx` Pipeline tab to real pipeline endpoint | Code | ✅ Done — new Pipeline tab with stage bar chart + won rate |
+| E1.8 | Remove or disable tabs with no backend (Marketing, Knowledge, AI Insights) | Code | ✅ Done — Marketing + Knowledge tabs disabled; AI Insights tab removed |
+| E1.9 | Analytics service file: `services/analytics.ts` | Code | ✅ Done — `getSummary()`, `getRevenue(months)`, `getPipeline()` |
+| E1.10 | Tests: analytics endpoints (contract + integration) | Tests | ✅ Done — `test_analytics.py` (24 tests: auth, workspace isolation, shape, empty state, date range) |
 
 ### Design Decisions
 
@@ -154,11 +154,11 @@ Week 3-5:  E1 — Dashboard real data (largest item, benefits from clean fronten
 
 | Metric | Q3 End | Q4 Target |
 |--------|--------|-----------|
-| Test count | 320 | ~350 (G2 tests + E1 analytics tests) |
-| Test files | 28 | ~30 |
-| ADR 0010 gaps | 1 open | 0 open |
-| Mock-only frontend pages | 28 | 0 in active routing (25 archived, Analytics wired, SalesBuilder cleaned) |
-| Dashboard data source | Mock | Real (3 tabs: Summary, Revenue, Pipeline) |
+| Test count | 320 | ✅ 359 (G2: 15 tests, E1: 24 tests) |
+| Test files | 28 | ✅ 30 (`test_overdue_scanner.py`, `test_analytics.py`) |
+| ADR 0010 gaps | 1 open | ✅ 0 open — all 4 gaps resolved |
+| Mock-only frontend pages | 28 | ✅ 0 in active routing (25 archived, Analytics wired, Index wired) |
+| Dashboard data source | Mock | ✅ Real (Summary KPIs + Revenue time-series + Pipeline breakdown) |
 
 ---
 
