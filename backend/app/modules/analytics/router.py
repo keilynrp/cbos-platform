@@ -1,10 +1,17 @@
-"""Analytics router — 3 cross-module aggregation endpoints."""
+"""Analytics router — 6 cross-module aggregation endpoints."""
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import get_current_workspace_id
-from app.modules.analytics.schemas import AnalyticsSummary, PipelineBreakdown, RevenueTimeSeries
+from app.modules.analytics.schemas import (
+    AnalyticsSummary,
+    ContractsAnalytics,
+    HRAnalytics,
+    PipelineBreakdown,
+    ProjectsAnalytics,
+    RevenueTimeSeries,
+)
 from app.modules.analytics import service
 
 router = APIRouter(tags=["Analytics"])
@@ -45,3 +52,42 @@ async def analytics_pipeline(
     Includes win rate for the last 30 days.
     """
     return await service.get_pipeline(db, workspace_id)
+
+
+@router.get("/analytics/hr", response_model=HRAnalytics)
+async def analytics_hr(
+    workspace_id: str = Depends(get_current_workspace_id),
+    db: AsyncSession = Depends(get_db),
+) -> HRAnalytics:
+    """
+    HR headcount analytics.
+    Returns employee counts by status, employment type breakdown, department
+    coverage, and this-month hiring / termination activity.
+    """
+    return await service.get_hr_analytics(db, workspace_id)
+
+
+@router.get("/analytics/projects", response_model=ProjectsAnalytics)
+async def analytics_projects(
+    workspace_id: str = Depends(get_current_workspace_id),
+    db: AsyncSession = Depends(get_db),
+) -> ProjectsAnalytics:
+    """
+    Projects analytics.
+    Returns project counts by status, active budget, task health
+    (completion rate, overdue count), and this-month activity.
+    """
+    return await service.get_projects_analytics(db, workspace_id)
+
+
+@router.get("/analytics/contracts", response_model=ContractsAnalytics)
+async def analytics_contracts(
+    workspace_id: str = Depends(get_current_workspace_id),
+    db: AsyncSession = Depends(get_db),
+) -> ContractsAnalytics:
+    """
+    Contracts analytics.
+    Returns contract counts by status, signed/executed value,
+    this-month closings, and contracts expiring within 30 days.
+    """
+    return await service.get_contracts_analytics(db, workspace_id)

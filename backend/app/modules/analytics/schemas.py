@@ -69,3 +69,74 @@ class PipelineBreakdown(BaseModel):
     total_value: float
     avg_deal_size: float
     won_rate_30d: float     # 0.0 – 1.0
+
+
+# ── HR ─────────────────────────────────────────────────────────────────────
+
+
+class HREmploymentTypeCount(BaseModel):
+    employment_type: str
+    count: int
+
+
+class HRAnalytics(BaseModel):
+    # Headcount by status
+    total_employees: int
+    active_count: int
+    on_leave_count: int
+    terminated_count: int
+    # Composition
+    by_employment_type: list[HREmploymentTypeCount]
+    # Departments
+    department_count: int
+    unassigned_employees: int   # active/on_leave with no department
+    # This month activity
+    new_hires_this_month: int
+    terminations_this_month: int
+
+
+# ── Projects ───────────────────────────────────────────────────────────────
+
+
+class ProjectStatusCount(BaseModel):
+    status: str
+    count: int
+
+
+class ProjectsAnalytics(BaseModel):
+    # By status
+    by_status: list[ProjectStatusCount]
+    total_projects: int
+    active_count: int
+    # Budget
+    total_budget_active: float      # sum of budget for active projects
+    # Task health (across all non-terminal projects)
+    total_tasks: int
+    done_tasks: int
+    overdue_tasks: int              # due_date < today, status not done/cancelled
+    task_completion_rate: float     # 0.0 – 1.0
+    # This month
+    completed_this_month: int
+    cancelled_this_month: int
+
+
+# ── Contracts ──────────────────────────────────────────────────────────────
+
+
+class ContractStatusCount(BaseModel):
+    status: str
+    count: int
+
+
+class ContractsAnalytics(BaseModel):
+    # By status
+    by_status: list[ContractStatusCount]
+    total_contracts: int
+    # Value
+    total_value_signed: float       # signed + executed
+    total_value_executed: float     # executed only
+    # This month
+    signed_this_month: int
+    executed_this_month: int
+    # Risk indicators
+    expiring_soon: int              # end_date within 30 days, status not expired/terminated

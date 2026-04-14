@@ -13,13 +13,22 @@ from app.modules.crm.models import Lead, Opportunity
 from app.modules.sales.models import SalesOrder
 from app.modules.inventory.models import InventoryItem, Product
 from app.modules.workflows.models import WorkflowRun
+from app.modules.hr.models import Department, Employee
+from app.modules.projects.models import Project, ProjectTask
+from app.modules.contracts.models import Contract
 from app.modules.analytics.schemas import (
     AnalyticsSummary,
+    ContractStatusCount,
+    ContractsAnalytics,
+    HRAnalytics,
+    HREmploymentTypeCount,
     LeadsSummary,
     OperationsSummary,
     PipelineBreakdown,
     PipelineStage,
     PipelineSummary,
+    ProjectStatusCount,
+    ProjectsAnalytics,
     RevenueMonth,
     RevenueSummary,
     RevenueTimeSeries,
@@ -287,4 +296,303 @@ async def get_pipeline(db: AsyncSession, workspace_id: str) -> PipelineBreakdown
         total_value=total_value,
         avg_deal_size=avg_deal_size,
         won_rate_30d=won_rate_30d,
+    )
+
+
+# ── HR Analytics ───────────────────────────────────────────────────────────
+
+async def get_hr_analytics(db: AsyncSession, workspace_id: str) -> HRAnalytics:
+    today = date.today()
+    month_start = datetime(today.year, today.month, 1, tzinfo=timezone.utc)
+
+    # ── Headcount by status ────────────────────────────────────────────
+    status_result = await db.execute(
+        select(Employee.status, func.count(Employee.id).label("cnt"))
+        .where(Employee.workspace_id == workspace_id)
+        .group_by(Employee.status)
+    )
+    status_map: dict[str, int] = {row.status: row.cnt for row in status_result}
+    total = sum(status_map.values())
+    active_count = status_map.get("active", 0)
+    on_leave_count = status_map.get("on_leave", 0)
+    terminated_count = status_map.get("terminated", 0)
+
+    # ── By employment type (active + on_leave only — terminated excluded) ──
+    type_result = await db.execute(
+        select(Employee.employment_type, func.count(Employee.id).label("cnt"))
+        .where(
+            and_(
+                Employee.workspace_id == workspace_id,
+                Employee.status.in_(["active", "on_leave"]),
+            )
+        )
+        .group_by(Employee.employment_type)
+        .order_by(func.count(Employee.id).desc())
+    )
+    by_employment_type = [
+        HREmploymentTypeCount(employment_type=row.employment_type, count=row.cnt)
+        for row in type_result
+    ]
+
+    # ── Departments ────────────────────────────────────────────────────
+    dept_result = await db.execute(
+        select(func.count(Department.id)).where(Department.workspace_id == workspace_id)
+    )
+    department_count = dept_result.scalar() or 0
+
+    unassigned_result = await db.execute(
+        select(func.count(Employee.id)).where(
+            and_(
+                Employee.workspace_id == workspace_id,
+                Employee.status.in_(["active", "on_leave"]),
+                Employee.department_id.is_(None),
+            )
+        )
+    )
+    unassigned_employees = unassigned_result.scalar() or 0
+
+    # ── This month activity ────────────────────────────────────────────
+    new_hires_result = await db.execute(
+        select(func.count(Employee.id)).where(
+            and_(
+                Employee.workspace_id == workspace_id,
+                Employee.start_date.isnot(None),
+                Employee.start_date >= today.replace(day=1),
+            )
+        )
+    )
+    new_hires_this_month = new_hires_result.scalar() or 0
+
+    terminations_result = await db.execute(
+        select(func.count(Employee.id)).where(
+            and_(
+                Employee.workspace_id == workspace_id,
+                Employee.terminated_at.isnot(None),
+                Employee.terminated_at >= month_start,
+            )
+        )
+    )
+    terminations_this_month = terminations_result.scalar() or 0
+
+    return HRAnalytics(
+        total_employees=total,
+        active_count=active_count,
+        on_leave_count=on_leave_count,
+        terminated_count=terminated_count,
+        by_employment_type=by_employment_type,
+        department_count=department_count,
+        unassigned_employees=unassigned_employees,
+        new_hires_this_month=new_hires_this_month,
+        terminations_this_month=terminations_this_month,
+    )
+
+
+# ── Projects Analytics ─────────────────────────────────────────────────────
+
+async def get_projects_analytics(db: AsyncSession, workspace_id: str) -> ProjectsAnalytics:
+    today = date.today()
+    month_start = datetime(today.year, today.month, 1, tzinfo=timezone.utc)
+
+    # ── By status ──────────────────────────────────────────────────────
+    status_result = await db.execute(
+        select(Project.status, func.count(Project.id).label("cnt"))
+        .where(Project.workspace_id == workspace_id)
+        .group_by(Project.status)
+    )
+    status_order = ["planning", "active", "on_hold", "completed", "cancelled"]
+    raw_map: dict[str, int] = {row.status: row.cnt for row in status_result}
+    by_status = [
+        ProjectStatusCount(status=s, count=raw_map[s])
+        for s in status_order
+        if s in raw_map
+    ]
+    # Any unlisted statuses appended at the end
+    for s, c in raw_map.items():
+        if s not in status_order:
+            by_status.append(ProjectStatusCount(status=s, count=c))
+
+    total_projects = sum(raw_map.values())
+    active_count = raw_map.get("active", 0)
+
+    # ── Budget (active projects only) ──────────────────────────────────
+    budget_result = await db.execute(
+        select(func.coalesce(func.sum(Project.budget), 0.0)).where(
+            and_(
+                Project.workspace_id == workspace_id,
+                Project.status == "active",
+                Project.budget.isnot(None),
+            )
+        )
+    )
+    total_budget_active = round(float(budget_result.scalar() or 0.0), 2)
+
+    # ── Task health (non-terminal projects) ────────────────────────────
+    # Total tasks and done tasks for active/planning/on_hold projects
+    task_result = await db.execute(
+        select(
+            func.count(ProjectTask.id).label("total"),
+            func.count(
+                case((ProjectTask.status == "done", ProjectTask.id))
+            ).label("done"),
+        )
+        .join(Project, ProjectTask.project_id == Project.id)
+        .where(
+            and_(
+                Project.workspace_id == workspace_id,
+                Project.status.notin_(["completed", "cancelled"]),
+                ProjectTask.status != "cancelled",
+            )
+        )
+    )
+    task_row = task_result.one()
+    total_tasks = int(task_row.total)
+    done_tasks = int(task_row.done)
+    task_completion_rate = round(done_tasks / total_tasks, 4) if total_tasks > 0 else 0.0
+
+    # Overdue tasks: due_date < today, status not done/cancelled
+    overdue_result = await db.execute(
+        select(func.count(ProjectTask.id))
+        .join(Project, ProjectTask.project_id == Project.id)
+        .where(
+            and_(
+                Project.workspace_id == workspace_id,
+                Project.status.notin_(["completed", "cancelled"]),
+                ProjectTask.due_date.isnot(None),
+                ProjectTask.due_date < today,
+                ProjectTask.status.notin_(["done", "cancelled"]),
+            )
+        )
+    )
+    overdue_tasks = overdue_result.scalar() or 0
+
+    # ── This month ─────────────────────────────────────────────────────
+    completed_result = await db.execute(
+        select(func.count(Project.id)).where(
+            and_(
+                Project.workspace_id == workspace_id,
+                Project.completed_at.isnot(None),
+                Project.completed_at >= month_start,
+            )
+        )
+    )
+    completed_this_month = completed_result.scalar() or 0
+
+    cancelled_result = await db.execute(
+        select(func.count(Project.id)).where(
+            and_(
+                Project.workspace_id == workspace_id,
+                Project.cancelled_at.isnot(None),
+                Project.cancelled_at >= month_start,
+            )
+        )
+    )
+    cancelled_this_month = cancelled_result.scalar() or 0
+
+    return ProjectsAnalytics(
+        by_status=by_status,
+        total_projects=total_projects,
+        active_count=active_count,
+        total_budget_active=total_budget_active,
+        total_tasks=total_tasks,
+        done_tasks=done_tasks,
+        overdue_tasks=int(overdue_tasks),
+        task_completion_rate=task_completion_rate,
+        completed_this_month=completed_this_month,
+        cancelled_this_month=cancelled_this_month,
+    )
+
+
+# ── Contracts Analytics ────────────────────────────────────────────────────
+
+async def get_contracts_analytics(db: AsyncSession, workspace_id: str) -> ContractsAnalytics:
+    today = date.today()
+    month_start = datetime(today.year, today.month, 1, tzinfo=timezone.utc)
+    thirty_days_out = today + timedelta(days=30)
+
+    # ── By status ──────────────────────────────────────────────────────
+    status_result = await db.execute(
+        select(Contract.status, func.count(Contract.id).label("cnt"))
+        .where(Contract.workspace_id == workspace_id)
+        .group_by(Contract.status)
+    )
+    status_order = ["draft", "sent", "signed", "executed", "expired", "terminated"]
+    raw_map: dict[str, int] = {row.status: row.cnt for row in status_result}
+    by_status = [
+        ContractStatusCount(status=s, count=raw_map[s])
+        for s in status_order
+        if s in raw_map
+    ]
+    for s, c in raw_map.items():
+        if s not in status_order:
+            by_status.append(ContractStatusCount(status=s, count=c))
+
+    total_contracts = sum(raw_map.values())
+
+    # ── Value ──────────────────────────────────────────────────────────
+    value_result = await db.execute(
+        select(
+            func.coalesce(
+                func.sum(
+                    case((Contract.status.in_(["signed", "executed"]), Contract.value), else_=0.0)
+                ), 0.0
+            ).label("signed_value"),
+            func.coalesce(
+                func.sum(
+                    case((Contract.status == "executed", Contract.value), else_=0.0)
+                ), 0.0
+            ).label("executed_value"),
+        ).where(
+            and_(
+                Contract.workspace_id == workspace_id,
+                Contract.value.isnot(None),
+            )
+        )
+    )
+    val = value_result.one()
+
+    # ── This month ─────────────────────────────────────────────────────
+    signed_result = await db.execute(
+        select(func.count(Contract.id)).where(
+            and_(
+                Contract.workspace_id == workspace_id,
+                Contract.signed_at.isnot(None),
+                Contract.signed_at >= month_start,
+            )
+        )
+    )
+    signed_this_month = signed_result.scalar() or 0
+
+    executed_result = await db.execute(
+        select(func.count(Contract.id)).where(
+            and_(
+                Contract.workspace_id == workspace_id,
+                Contract.executed_at.isnot(None),
+                Contract.executed_at >= month_start,
+            )
+        )
+    )
+    executed_this_month = executed_result.scalar() or 0
+
+    # ── Expiring soon: end_date within 30 days, not already expired/terminated ──
+    expiring_result = await db.execute(
+        select(func.count(Contract.id)).where(
+            and_(
+                Contract.workspace_id == workspace_id,
+                Contract.end_date.isnot(None),
+                Contract.end_date >= today,
+                Contract.end_date <= thirty_days_out,
+                Contract.status.notin_(["expired", "terminated"]),
+            )
+        )
+    )
+    expiring_soon = expiring_result.scalar() or 0
+
+    return ContractsAnalytics(
+        by_status=by_status,
+        total_contracts=total_contracts,
+        total_value_signed=round(float(val.signed_value), 2),
+        total_value_executed=round(float(val.executed_value), 2),
+        signed_this_month=signed_this_month,
+        executed_this_month=executed_this_month,
+        expiring_soon=int(expiring_soon),
     )
