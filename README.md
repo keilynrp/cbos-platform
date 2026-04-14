@@ -40,7 +40,7 @@ El sistema está construido como un **monolito modular** con límites de dominio
 Discovery → Lead → Opportunity → Quote → Order → Inventory → Portal → Invoice → Payment
 ```
 
-**360 tests** (unitarios + contrato + integración + e2e) en 30 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
+**498 tests** (contrato + integración + e2e) en 36 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
 
 ---
 
@@ -74,9 +74,9 @@ Discovery → Lead → Opportunity → Quote → Order → Inventory → Portal 
 | **Workflows** | Motor de automatización event-driven (Redis Streams), acciones condicionales, DLQ | Contract + integration + consumer | 1 |
 | **Notifications** | Email transaccional + WebSocket tiempo real, preferencias por usuario | Contract + integration + e2e pipeline | 1 |
 | **Accounting** | Facturación completa: invoices, pagos parciales/totales, auto-invoice, overdue scanner | Contract + integration + e2e | 1 |
-| **Contracts** | Gestión de contratos: state machine, cláusulas, eventos de ciclo de vida | 28 contract tests | 2 |
-| **Projects**  | Gestión de proyectos: state machine, tareas, eventos de ciclo de vida | 28 contract tests | 2 |
-| **HR/Team**   | Empleados, departamentos, state machine (activo/permiso/terminado) | 30 contract tests | 2 |
+| **Contracts** | Gestión de contratos: state machine, cláusulas, eventos de ciclo de vida | Contract + integration (41 tests) | 1 |
+| **Projects**  | Gestión de proyectos: state machine, tareas, eventos de ciclo de vida | Contract + integration (44 tests) | 1 |
+| **HR/Team**   | Empleados, departamentos, state machine (activo/permiso/terminado) | Contract + integration (48 tests) | 1 |
 
 **Cross-módulo:**
 - **Analytics** — 3 endpoints de agregación (summary, revenue time-series, pipeline breakdown). 24 tests.
@@ -106,7 +106,7 @@ cbos-platform/
 │   │   │   ├── accounting/         Facturación, pagos, overdue scanner
 │   │   │   └── analytics/          Agregación cross-módulo
 │   │   └── main.py                 Lifespan, routers, CORS, background tasks
-│   ├── tests/                      360 tests (pytest-asyncio)
+│   ├── tests/                      498 tests (pytest-asyncio)
 │   ├── alembic/                    Migraciones de base de datos
 │   └── requirements.txt
 ├── composable-os/                  React 18 + Vite frontend
@@ -215,19 +215,19 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-**451 tests** en 33 archivos:
+**498 tests** en 36 archivos:
 
 | Categoría | Archivos | Cobertura |
 |-----------|----------|-----------|
 | Contract tests | 12 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation por módulo |
-| Integration tests | 9 archivos (`test_*.py`) | Flows de servicio, lógica de negocio |
+| Integration tests | 12 archivos (`test_*.py`) | Flows de servicio, lógica de negocio |
 | E2E cross-module | 5 archivos (`test_e2e_*.py`) | Sales→Accounting, Portal→WS, Discovery→Blueprint, Notification pipeline |
 | Consumer / scanner | 3 archivos | Workflow consumer, invoice consumer, overdue scanner |
 | Smoke | 1 archivo (`test_wedge_smoke.py`) | Funnel completo: CRM→Sales→Inventory→Portal→Accounting (7 módulos) |
 | Analytics | 1 archivo | Summary, revenue, pipeline: auth, shape, workspace isolation, empty state |
-| Contracts | 1 archivo (`test_contracts_contract.py`) | State machine, clause management, workspace isolation (28 tests) |
-| Projects  | 1 archivo (`test_projects_contract.py`) | State machine, task management, workspace isolation (28 tests) |
-| HR/Team   | 1 archivo (`test_hr_contract.py`) | Auth guards, departments, employee lifecycle, state machine (30 tests) |
+| Contracts | 2 archivos (`test_contracts_contract.py` + `test_contracts.py`) | State machine, clause management, numbering, lifecycle, org filter (41 tests) |
+| Projects  | 2 archivos (`test_projects_contract.py` + `test_projects.py`) | State machine, task management, numbering, lifecycle, filters (44 tests) |
+| HR/Team   | 2 archivos (`test_hr_contract.py` + `test_hr.py`) | Employee lifecycle, departments, state machine, filters, timestamps (48 tests) |
 
 ```bash
 # Cobertura detallada

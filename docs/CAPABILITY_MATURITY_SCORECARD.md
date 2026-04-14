@@ -1,6 +1,6 @@
 # Capability Maturity Scorecard
 
-> Updated 2026-04-13 (post M3 — HR/Team module). Previous assessment: 2026-04-13 (post M2 — Projects).
+> Updated 2026-04-13 (Fase 1 — Contracts, Projects, HR promoted to Tier 1). Previous assessment: 2026-04-13 (post M3 — HR/Team module).
 
 ## Scoring Dimensions
 
@@ -32,6 +32,9 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 | **Accounting** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 | **Portal** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
 | **Notifications** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | **6/6** |
+| **Contracts** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🔴 | **5/6** |
+| **Projects**  | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🔴 | **5/6** |
+| **HR/Team**   | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🔴 | **5/6** |
 
 > Identity: `UserRegistered` + `WorkspaceCreated` events added Q2.
 > Inventory: All stock-change events confirmed implemented (StockMovementRecorded, InventoryReserved, InventoryReleased, InventoryLowThresholdDetected).
@@ -40,18 +43,17 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 > Accounting: Promoted Tier 2 → Tier 1 (ADR 0010, 2026-04-11). E2E: `test_e2e_sales_accounting.py` (SalesOrder→Invoice→Payment). Auto-invoice consumer implemented Q3. Overdue scanner implemented Q4 (G2) — all ADR 0010 gaps resolved.
 > Portal: Promoted Tier 2 → Tier 1 (ADR 0011, 2026-04-12). 18 contract + 5 integration tests. E2E: `test_e2e_portal_accounting.py`.
 > Notifications: Promoted Tier 2 → Tier 1 (ADR 0012, 2026-04-12). 70 tests across 4 files. Email preferences UI + API. Frontend 🟢 — Notifications tab in Settings with granular email toggles.
+> Contracts: Promoted Tier 2 → Tier 1 (Fase 1, 2026-04-13). 28 contract + 13 integration tests = 41 total. State machine: draft→sent→signed→executed→expired/terminated. Capability spec: `docs/capabilities/contracts.md`. Production: pending deploy.
+> Projects: Promoted Tier 2 → Tier 1 (Fase 1, 2026-04-13). 28 contract + 16 integration tests = 44 total. State machine: planning→active→on_hold→completed/cancelled + task state machine. Capability spec: `docs/capabilities/projects.md`. Production: pending deploy.
+> HR/Team: Promoted Tier 2 → Tier 1 (Fase 1, 2026-04-13). 30 contract + 18 integration tests = 48 total. Employee state machine: active→on_leave→terminated. Department CRUD with SET NULL unlink semantics. Capability spec: `docs/capabilities/hr.md`. Production: pending deploy.
 
 ### Tier 2 — Wedge Support
 
 | Module | Contract Tests | Integration Tests | Events | Frontend | Spec | Production | Score |
 |--------|:-:|:-:|:-:|:-:|:-:|:-:|-------|
-| **Contracts** | 🟢 | 🟡 | 🟢 | 🟢 | 🔴 | 🔴 | **4/6** |
-| **Projects**  | 🟢 | 🟡 | 🟢 | 🟢 | 🔴 | 🔴 | **4/6** |
-| **HR/Team**   | 🟢 | 🟡 | 🟢 | 🟢 | 🔴 | 🔴 | **4/6** |
+| — | — | — | — | — | — | — | — |
 
-> Contracts: 28 contract tests (28/28 passing). State machine: draft→sent→signed→executed→expired/terminated. 5 contract events published. Frontend page with split-panel view, clause management, KPI cards. Integration tests and capability spec pending.
-> Projects: 28 contract tests (28/28 passing). State machine: planning→active→on_hold→completed/cancelled. 5 project events published. Frontend page with task management, KPI cards, split-panel detail. Integration tests and capability spec pending.
-> HR/Team: 30 contract tests (30/30 passing). Employee state machine: active→on_leave→active/terminated. Department CRUD (5 tests). 4 HR events published. Frontend with employee table, dept cards, split-panel detail, status transitions. Two sub-routers: /employees + /departments.
+> No modules currently in Tier 2. All active modules are Tier 1 (production stable) or Tier 1-pending (production deploy outstanding).
 
 ### Tier 3 — Controlled Expansion
 
@@ -113,11 +115,11 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Notifications | Promote to Tier 1 | ✅ Done Q3 (ADR 0012) |
 | Portal | Promote to Tier 1 | ✅ Done Q3 (ADR 0011) |
 | Contracts | Implement M1 module (models, service, router, tests, frontend) | ✅ Done M1 (2026-04-13, 28 tests) |
-| Contracts | Integration tests + capability spec | 🔄 Pending Tier 1 promotion |
+| Contracts | Integration tests + capability spec | ✅ Done Fase 1 (2026-04-13, 13 integration tests, `docs/capabilities/contracts.md`) |
 | Projects  | Implement M2 module (models, service, router, tests, frontend) | ✅ Done M2 (2026-04-13, 28 tests) |
-| Projects  | Integration tests + capability spec | 🔄 Pending Tier 1 promotion |
+| Projects  | Integration tests + capability spec | ✅ Done Fase 1 (2026-04-13, 16 integration tests, `docs/capabilities/projects.md`) |
 | HR/Team   | Implement M3 module (employees, departments, state machine, frontend) | ✅ Done M3 (2026-04-13, 30 tests) |
-| HR/Team   | Integration tests + capability spec | 🔄 Pending Tier 1 promotion |
+| HR/Team   | Integration tests + capability spec | ✅ Done Fase 1 (2026-04-13, 18 integration tests, `docs/capabilities/hr.md`) |
 | Discovery | Write capability spec; add integration tests | ✅ Done Q2 |
 | Discovery | Promote to Tier 2 | ✅ Done Q2 (ADR 0008) |
 | Discovery | E2E scenario for Tier 1 promotion | ✅ Done Q3 (`test_e2e_discovery_blueprint.py`) |
@@ -135,10 +137,10 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 
 | Tier | Modules | Avg Score | vs. Q2 post-ADR 0008 |
 |------|---------|-----------|----------------------|
-| Tier 1 | **9 modules** | **6.0 / 6** | ↑ from 5 (Discovery, Accounting, Portal, Notifications promoted) |
-| Tier 2 | **3 modules** | **4.0 / 6** | Contracts (M1), Projects (M2), HR/Team (M3) — all 2026-04-13 |
+| Tier 1 | **12 modules** | **5.7 / 6** | ↑ from 9 (Contracts, Projects, HR/Team promoted Fase 1 — production deploy outstanding) |
+| Tier 2 | **0 modules** | — | Clear — all modules promoted |
 | Tier 3 | 0 modules | — | Unchanged — Tier 3 remains clear |
 
-**9 modules Tier 1 + 3 modules Tier 2 (Contracts, Projects, HR/Team) — 12 total modules.**
+**12 modules Tier 1 — 12 total modules.**
 Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications → Contracts → Projects → HR.
-**451 tests across 33 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete. Q4 Q1 (frontend CI type-check) complete. Q4 Q2 (invoice PDF download) complete. M1 (Contracts) complete. M2 (Projects) complete. M3 (HR/Team) complete.
+**498 tests across 36 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete. Q4 Q1 (frontend CI type-check) complete. Q4 Q2 (invoice PDF download) complete. M1 (Contracts) complete. M2 (Projects) complete. M3 (HR/Team) complete. Fase 1 (integration tests + specs for M1/M2/M3) complete.
