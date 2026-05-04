@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { healthService, type HealthCheck, type HealthStatus } from "@/services/health";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,6 +34,7 @@ import {
   Box,
   Layers,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 
 // --- Architecture Data ---
@@ -210,20 +214,115 @@ function ArchitectureDiagram() {
 
 // --- Service Health ---
 
-const services = [
-  { name: "API Gateway", status: "healthy", uptime: "99.98%", latency: "12ms", icon: Shield },
-  { name: "PostgreSQL", status: "healthy", uptime: "99.99%", latency: "3ms", icon: Database },
-  { name: "Graph Database", status: "healthy", uptime: "99.95%", latency: "8ms", icon: Network },
-  { name: "Vector Database", status: "healthy", uptime: "99.92%", latency: "15ms", icon: Cpu },
-  { name: "Event Bus", status: "healthy", uptime: "99.97%", latency: "2ms", icon: Radio },
-  { name: "AI Agents Service", status: "warning", uptime: "98.4%", latency: "340ms", icon: Zap },
-];
-
-const statusBadge: Record<string, string> = {
-  healthy: "bg-[hsl(var(--cbs-green))]/15 text-[hsl(var(--cbs-green))] border-[hsl(var(--cbs-green))]/20",
-  warning: "bg-[hsl(var(--cbs-amber))]/15 text-[hsl(var(--cbs-amber))] border-[hsl(var(--cbs-amber))]/20",
-  degraded: "bg-destructive/15 text-destructive border-destructive/20",
+const statusBadge: Record<HealthStatus | string, string> = {
+  healthy:   "bg-[hsl(var(--cbs-green))]/15 text-[hsl(var(--cbs-green))] border-[hsl(var(--cbs-green))]/20",
+  degraded:  "bg-[hsl(var(--cbs-amber))]/15 text-[hsl(var(--cbs-amber))] border-[hsl(var(--cbs-amber))]/20",
+  unhealthy: "bg-destructive/15 text-destructive border-destructive/20",
 };
+
+// Maps backend check name → display label + icon
+const SERVICE_META: Record<string, { label: string; icon: typeof Shield }> = {
+  api:      { label: "API Gateway", icon: Shield },
+  postgres: { label: "PostgreSQL",  icon: Database },
+};
+
+function ServiceCard({ check }: { check: HealthCheck }) {
+  const meta = SERVICE_META[check.name] ?? { label: check.name, icon: HardDrive };
+  const Icon = meta.icon;
+  return (
+    <Card className="border border-border/60">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">{meta.label}</span>
+          </div>
+          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusBadge[check.status] ?? ""}`}>
+            {check.status}
+          </Badge>
+        </div>
+        <div className="rounded-md bg-muted/50 p-2 text-center">
+          <p className="text-sm font-semibold">{check.latency_ms}ms</p>
+          <p className="text-[10px] text-muted-foreground">Latency</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SystemHealthPanel() {
+  const { data, isLoading, error, dataUpdatedAt, refetch, isFetching } = useQuery({
+    queryKey: ["system-health"],
+    queryFn: healthService.getHealth,
+    refetchInterval: 30_000,
+    retry: 1,
+  });
+
+  const secondsAgo = dataUpdatedAt
+    ? Math.floor((Date.now() - dataUpdatedAt) / 1000)
+    : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Header row */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {secondsAgo !== null
+            ? `Actualizado hace ${secondsAgo}s`
+            : "Cargando estado del sistema..."}
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 text-xs"
+          onClick={() => refetch()}
+          disabled={isFetching}
+        >
+          <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
+          Actualizar
+        </Button>
+      </div>
+
+      {/* Error state */}
+      {error && !isLoading && (
+        <div className="flex items-center gap-2 py-4 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4" />
+          No se pudo conectar con el sistema. Verifica que el backend esté activo.
+        </div>
+      )}
+
+      {/* Loading skeleton */}
+      {isLoading && (
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-24 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
+        </div>
+      )}
+
+      {/* Service cards */}
+      {data && (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            {data.checks.map((check) => (
+              <ServiceCard key={check.name} check={check} />
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Estado general:{" "}
+            <span className={
+              data.status === "healthy" ? "text-[hsl(var(--cbs-green))]" :
+              data.status === "degraded" ? "text-[hsl(var(--cbs-amber))]" :
+              "text-destructive"
+            }>
+              {data.status}
+            </span>
+            {" · "}v{data.version}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
 
 // --- Email Notification Preferences ---
 
@@ -346,36 +445,7 @@ const Settings = () => {
 
         {/* System Health Tab */}
         <TabsContent value="health" className="mt-4 space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {services.map(svc => {
-              const Icon = svc.icon;
-              return (
-                <Card key={svc.name} className="border border-border/60">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-semibold">{svc.name}</span>
-                      </div>
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusBadge[svc.status]}`}>
-                        {svc.status}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-md bg-muted/50 p-2 text-center">
-                        <p className="text-sm font-semibold">{svc.uptime}</p>
-                        <p className="text-[10px] text-muted-foreground">Uptime</p>
-                      </div>
-                      <div className="rounded-md bg-muted/50 p-2 text-center">
-                        <p className="text-sm font-semibold">{svc.latency}</p>
-                        <p className="text-[10px] text-muted-foreground">Latency</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <SystemHealthPanel />
         </TabsContent>
 
         {/* Notifications Tab */}
