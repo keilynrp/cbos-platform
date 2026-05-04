@@ -25,6 +25,7 @@ from app.modules.analytics.router import router as analytics_router
 from app.modules.contracts.router import router as contracts_router
 from app.modules.projects.router import router as projects_router
 from app.modules.hr.router import employees_router, departments_router
+from app.health import router as health_router
 
 
 @asynccontextmanager
@@ -78,16 +79,7 @@ app.include_router(contracts_router, prefix=settings.api_prefix)
 app.include_router(projects_router, prefix=settings.api_prefix)
 app.include_router(employees_router, prefix=settings.api_prefix)
 app.include_router(departments_router, prefix=settings.api_prefix)
-
-
-# ── Health check ───────────────────────────────────────────
-@app.get("/health", tags=["System"])
-async def health():
-    return {
-        "status": "ok",
-        "version": settings.app_version,
-        "environment": settings.environment,
-    }
+app.include_router(health_router)  # public, no prefix
 
 
 @app.get("/", tags=["System"])
