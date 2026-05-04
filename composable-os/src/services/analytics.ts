@@ -63,6 +63,62 @@ export interface PipelineBreakdown {
   won_rate_30d: number;
 }
 
+// ── HR ────────────────────────────────────────────────────────────────────────
+
+export interface HREmploymentTypeCount {
+  employment_type: string;
+  count: number;
+}
+
+export interface HRAnalytics {
+  total_employees: number;
+  active_count: number;
+  on_leave_count: number;
+  terminated_count: number;
+  by_employment_type: HREmploymentTypeCount[];
+  department_count: number;
+  unassigned_employees: number;
+  new_hires_this_month: number;
+  terminations_this_month: number;
+}
+
+// ── Projects ──────────────────────────────────────────────────────────────────
+
+export interface ProjectStatusCount {
+  status: string;
+  count: number;
+}
+
+export interface ProjectsAnalytics {
+  by_status: ProjectStatusCount[];
+  total_projects: number;
+  active_count: number;
+  total_budget_active: number;
+  total_tasks: number;
+  done_tasks: number;
+  overdue_tasks: number;
+  task_completion_rate: number;
+  completed_this_month: number;
+  cancelled_this_month: number;
+}
+
+// ── Contracts ─────────────────────────────────────────────────────────────────
+
+export interface ContractStatusCount {
+  status: string;
+  count: number;
+}
+
+export interface ContractsAnalytics {
+  by_status: ContractStatusCount[];
+  total_contracts: number;
+  total_value_signed: number;
+  total_value_executed: number;
+  signed_this_month: number;
+  executed_this_month: number;
+  expiring_soon: number;
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 export const analyticsService = {
@@ -74,4 +130,13 @@ export const analyticsService = {
 
   getPipeline: (): Promise<PipelineBreakdown> =>
     api.get<PipelineBreakdown>("/analytics/pipeline"),
+
+  getHR: (): Promise<HRAnalytics> =>
+    api.get<HRAnalytics>("/analytics/hr"),
+
+  getProjects: (): Promise<ProjectsAnalytics> =>
+    api.get<ProjectsAnalytics>("/analytics/projects"),
+
+  getContracts: (): Promise<ContractsAnalytics> =>
+    api.get<ContractsAnalytics>("/analytics/contracts"),
 };
