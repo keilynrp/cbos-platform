@@ -1,6 +1,9 @@
 """Integration tests for GET /health endpoint."""
 import pytest
 from httpx import AsyncClient
+from unittest.mock import AsyncMock, patch
+
+from app.health import CheckResult
 
 pytestmark = pytest.mark.asyncio
 
@@ -40,10 +43,6 @@ async def test_health_api_check_is_always_healthy(client: AsyncClient):
     assert api_check["latency_ms"] == 0  # hardcoded — api check does not measure its own latency
 
 
-from unittest.mock import AsyncMock, patch
-from app.health import CheckResult
-
-
 async def test_health_overall_status_reflects_unhealthy_postgres(client: AsyncClient):
     unhealthy_result = CheckResult(name="postgres", status="unhealthy", latency_ms=0)
     with patch("app.health._check_postgres", new=AsyncMock(return_value=unhealthy_result)):
@@ -51,3 +50,12 @@ async def test_health_overall_status_reflects_unhealthy_postgres(client: AsyncCl
     data = resp.json()
     assert data["status"] == "unhealthy"
     assert resp.status_code == 200  # still HTTP 200 even when unhealthy
+
+
+async def test_health_overall_status_reflects_degraded_postgres(client: AsyncClient):
+    degraded_result = CheckResult(name="postgres", status="degraded", latency_ms=250.0)
+    with patch("app.health._check_postgres", new=AsyncMock(return_value=degraded_result)):
+        resp = await client.get("/health")
+    data = resp.json()
+    assert data["status"] == "degraded"
+    assert resp.status_code == 200
