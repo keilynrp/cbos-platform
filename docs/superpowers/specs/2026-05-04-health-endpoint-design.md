@@ -52,6 +52,14 @@ GET /health
 - No authentication required
 - Always returns HTTP 200
 
+### Migration Note: Remove Existing Inline Handler
+
+`backend/app/main.py` already contains an inline `/health` handler (the `async def health()` function returning `{"status": "ok", ...}`). **This handler must be removed** before registering the new router. Failing to do so will cause FastAPI to silently use whichever handler was registered first.
+
+### Breaking Change Acknowledgement
+
+The existing response shape returns `status: "ok"`. The new shape uses `status: "healthy" | "degraded" | "unhealthy"`. Any external tool (Dokploy, UptimeRobot, Docker HEALTHCHECK) that checks for `status == "ok"` will need to be updated to check for `status == "healthy"` instead.
+
 ### Response Schema
 
 ```json
@@ -91,20 +99,32 @@ The root `status` field reflects the worst status among all checks.
 - If latency > 200ms → `degraded`
 - Otherwise → `healthy`
 
+The 200ms threshold is a hardcoded constant in `health.py`. Move to `settings` if it needs to be environment-configurable in the future.
+
 ### API Check
 
-- Always `healthy` with `latency_ms: 0` (self-reported; if the endpoint responds, the API is up)
+- Always `healthy` with `latency_ms: 0` (self-reported — if the endpoint responds, the API is up)
+- Known limitation: a slow event loop (e.g. 2s response time) would not be detected by this check. Acceptable for v1.
 
 ### Implementation Location
 
 ```
-backend/app/health.py       — check logic + Pydantic schemas
-backend/app/main.py         — register router at root (app.include_router)
+backend/app/health.py       — Pydantic schemas + check logic
+backend/app/main.py         — Remove inline handler; register new router at root
 ```
 
 ---
 
 ## Frontend Design
+
+### URL Construction
+
+`VITE_API_URL` in this project includes the `/api/v1` suffix (e.g. `http://localhost:8100/api/v1` or `https://cbos.inbounduxd.com/api/v1`). The health endpoint lives at the root, so the health service must strip the `/api/v1` suffix:
+
+```ts
+const API_ORIGIN = (import.meta.env.VITE_API_URL as string ?? "http://localhost:8100/api/v1")
+  .replace(/\/api\/v1$/, "");
+```
 
 ### New Service
 
@@ -112,12 +132,21 @@ backend/app/main.py         — register router at root (app.include_router)
 composable-os/src/services/health.ts
 ```
 
-Uses `fetch` directly (not the `api` wrapper that injects JWT headers) since the endpoint is public.
+Uses `fetch` directly (not the `api` wrapper that injects JWT headers) since the endpoint is public. Includes a 5-second timeout via `AbortController` to prevent indefinite hangs when the backend is slow:
 
 ```ts
 export const healthService = {
-  getHealth: (): Promise<HealthResponse> =>
-    fetch(`${import.meta.env.VITE_API_URL}/health`).then(r => r.json())
+  getHealth: async (): Promise<HealthResponse> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5_000);
+    try {
+      const res = await fetch(`${API_ORIGIN}/health`, { signal: controller.signal });
+      if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
+      return res.json();
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 }
 ```
 
@@ -129,9 +158,10 @@ export const healthService = {
   - `"api"` → display name "API Gateway", icon Shield
   - `"postgres"` → display name "PostgreSQL", icon Database
 - Show real `latency_ms` formatted as `"Xms"`
-- Add a small "Updated X seconds ago" timestamp below the panel
+- **Uptime cell**: the backend returns no uptime percentage (out of scope). Hide the uptime stat entirely — do not show "N/A" or an empty cell, as this looks like a bug. Show only Status and Latency.
+- Add a small "Actualizado hace X s" timestamp below the panel using the query's `dataUpdatedAt`
 - Loading skeleton while first fetch is in flight
-- Error state if fetch fails entirely
+- Error state (with `AlertCircle`) if the fetch fails or times out
 
 ### Status → Badge Color Mapping
 
@@ -143,13 +173,17 @@ export const healthService = {
 
 The SVG architecture diagram and all other Settings content remain unchanged.
 
+### CORS Note
+
+CORS is handled by the existing `CORSMiddleware` in `main.py`. Verify that `allowed_origins` in the production environment includes `https://cbos.inbounduxd.com`. If it does not, the browser `fetch` will fail with a CORS error. This is not a code change — it is an environment configuration check at deploy time.
+
 ---
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `backend/app/health.py` | New — health check logic + schemas |
-| `backend/app/main.py` | Register health router at app root |
-| `composable-os/src/services/health.ts` | New — fetch wrapper |
-| `composable-os/src/pages/Settings.tsx` | Replace `services[]` with real query |
+| `backend/app/health.py` | New — Pydantic schemas + health check logic |
+| `backend/app/main.py` | Remove inline `/health` handler; register new router |
+| `composable-os/src/services/health.ts` | New — fetch wrapper with timeout |
+| `composable-os/src/pages/Settings.tsx` | Replace `services[]` with real query; hide uptime cell |
