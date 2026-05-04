@@ -2,10 +2,13 @@
 Public health endpoint — no authentication required.
 Always returns HTTP 200; health state is in the JSON body.
 """
+import logging
 import time
 from typing import Literal
 
 from fastapi import APIRouter
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -50,6 +53,7 @@ async def _check_postgres() -> CheckResult:
         )
         return CheckResult(name="postgres", status=status, latency_ms=round(latency_ms, 2))
     except Exception:
+        logger.warning("postgres health check failed", exc_info=True)
         return CheckResult(name="postgres", status="unhealthy", latency_ms=0)
 
 

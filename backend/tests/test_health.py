@@ -37,4 +37,17 @@ async def test_health_api_check_is_always_healthy(client: AsyncClient):
     resp = await client.get("/health")
     api_check = next(c for c in resp.json()["checks"] if c["name"] == "api")
     assert api_check["status"] == "healthy"
-    assert api_check["latency_ms"] == 0
+    assert api_check["latency_ms"] == 0  # hardcoded — api check does not measure its own latency
+
+
+from unittest.mock import AsyncMock, patch
+from app.health import CheckResult
+
+
+async def test_health_overall_status_reflects_unhealthy_postgres(client: AsyncClient):
+    unhealthy_result = CheckResult(name="postgres", status="unhealthy", latency_ms=0)
+    with patch("app.health._check_postgres", new=AsyncMock(return_value=unhealthy_result)):
+        resp = await client.get("/health")
+    data = resp.json()
+    assert data["status"] == "unhealthy"
+    assert resp.status_code == 200  # still HTTP 200 even when unhealthy
