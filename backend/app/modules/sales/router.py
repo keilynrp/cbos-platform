@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 from app.modules.sales.pdf import generate_quote_pdf
 from app.modules.sales.schemas import (
     QuoteCreate,
+    QuoteEventRead,
     QuoteLineCreate,
+    QuoteLineUpdate,
+    QuoteLineUpsert,
     QuoteRead,
     QuoteReject,
     QuoteUpdate,
@@ -91,6 +94,39 @@ async def remove_line(
     workspace_id: str = Depends(get_current_workspace_id),
 ):
     return await service.remove_line(db, workspace_id, quote_id, line_id)
+
+
+@router.patch("/quotes/{quote_id}/lines/{line_id}", response_model=QuoteRead)
+async def update_line(
+    quote_id: str,
+    line_id: str,
+    data: QuoteLineUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+):
+    return await service.update_line(db, workspace_id, quote_id, line_id, current_user.id, data)
+
+
+@router.put("/quotes/{quote_id}/lines", response_model=QuoteRead)
+async def replace_lines(
+    quote_id: str,
+    lines: list[QuoteLineUpsert],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+):
+    return await service.replace_lines(db, workspace_id, quote_id, current_user.id, lines)
+
+
+@router.get("/quotes/{quote_id}/history", response_model=list[QuoteEventRead])
+async def get_history(
+    quote_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+):
+    return await service.get_history(db, workspace_id, quote_id)
 
 
 @router.patch("/quotes/{quote_id}/send", response_model=QuoteRead)
