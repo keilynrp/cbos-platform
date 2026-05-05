@@ -388,11 +388,17 @@ async def replace_lines(
     if quote.status != "draft":
         raise HTTPException(status_code=409, detail="Only draft quotes can be modified")
 
-    incoming_ids = {d.id for d in lines_data if d.id}
+    if not lines_data:
+        raise HTTPException(status_code=422, detail="Quote must have at least one line")
+
+    incoming_ids = [d.id for d in lines_data if d.id]
+    if len(incoming_ids) != len(set(incoming_ids)):
+        raise HTTPException(status_code=422, detail="Duplicate line IDs in payload")
+    incoming_ids_set = set(incoming_ids)
 
     # Delete lines not in payload
     for line in list(quote.lines):
-        if line.id not in incoming_ids:
+        if line.id not in incoming_ids_set:
             await db.delete(line)
 
     await db.flush()
