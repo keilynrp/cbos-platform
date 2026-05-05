@@ -23,8 +23,8 @@ class QuoteLineRead(BaseModel):
     id: str
     quote_id: str
     line_order: int
-    sku: str | None
     description: str
+    sku: str | None
     unit: str | None
     quantity: float
     unit_price: float
