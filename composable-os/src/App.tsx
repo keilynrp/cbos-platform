@@ -24,6 +24,7 @@ import Projects from "./pages/Projects";
 import HR from "./pages/HR";
 import Settings from "./pages/Settings";
 import CustomerPortal from "./pages/CustomerPortal";
+import QuoteDetail from "./pages/QuoteDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/crm" element={<CRM />} />
                 <Route path="/sales" element={<Sales />} />
+                <Route path="/sales/quotes/:id" element={<QuoteDetail />} />
                 <Route path="/inventory" element={<InventoryOrders />} />
                 <Route path="/portal-builder" element={<PortalBuilder />} />
                 <Route path="/invoicing" element={<Invoicing />} />
