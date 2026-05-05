@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { salesService, type Quote, type SalesOrder } from "@/services/sales";
+import { QuoteStatusBadge } from "@/components/sales/QuoteStatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,24 +25,7 @@ function fmtCurrency(n: number) {
 
 // ── Status badge helpers ───────────────────────────────────────────────────
 
-type QuoteStatus = Quote["status"];
 type OrderStatus = SalesOrder["status"];
-
-function QuoteStatusBadge({ status }: { status: QuoteStatus }) {
-  const map: Record<QuoteStatus, { variant: "secondary" | "default" | "destructive" | "outline"; label: string; className?: string }> = {
-    draft:    { variant: "secondary", label: "Draft" },
-    sent:     { variant: "default",   label: "Sent" },
-    accepted: { variant: "secondary", label: "Accepted", className: "bg-green-100 text-green-700 border-green-200" },
-    rejected: { variant: "destructive", label: "Rejected" },
-    expired:  { variant: "secondary", label: "Expired", className: "bg-orange-100 text-orange-700 border-orange-200" },
-  };
-  const cfg = map[status] ?? { variant: "secondary" as const, label: status };
-  return (
-    <Badge variant={cfg.variant} className={cfg.className}>
-      {cfg.label}
-    </Badge>
-  );
-}
 
 function OrderStatusBadge({ status }: { status: OrderStatus }) {
   const map: Record<OrderStatus, { variant: "secondary" | "default" | "destructive" | "outline"; label: string; className?: string }> = {
@@ -185,6 +170,7 @@ const QUOTE_FILTERS: { label: string; value: string | null }[] = [
 ];
 
 function CotizacionesTab() {
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -275,7 +261,11 @@ function CotizacionesTab() {
             </TableHeader>
             <TableBody>
               {quotes.map((quote) => (
-                <TableRow key={quote.id}>
+                <TableRow
+                  key={quote.id}
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/sales/quotes/${quote.id}`)}
+                >
                   <TableCell className="font-mono text-xs">{quote.quote_number}</TableCell>
                   <TableCell className="font-medium">{quote.title}</TableCell>
                   <TableCell><QuoteStatusBadge status={quote.status} /></TableCell>
@@ -288,7 +278,7 @@ function CotizacionesTab() {
                           variant="outline"
                           className="h-7 text-xs"
                           disabled={sendQuote.isPending}
-                          onClick={() => sendQuote.mutate(quote.id)}
+                          onClick={(e) => { e.stopPropagation(); sendQuote.mutate(quote.id); }}
                         >
                           {sendQuote.isPending && sendQuote.variables === quote.id
                             ? <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -303,7 +293,7 @@ function CotizacionesTab() {
                             variant="outline"
                             className="h-7 text-xs text-green-700 border-green-300 hover:bg-green-50"
                             disabled={acceptQuote.isPending}
-                            onClick={() => acceptQuote.mutate(quote.id)}
+                            onClick={(e) => { e.stopPropagation(); acceptQuote.mutate(quote.id); }}
                           >
                             Accept
                           </Button>
@@ -312,7 +302,7 @@ function CotizacionesTab() {
                             variant="outline"
                             className="h-7 text-xs text-red-700 border-red-300 hover:bg-red-50"
                             disabled={rejectQuote.isPending}
-                            onClick={() => handleReject(quote.id)}
+                            onClick={(e) => { e.stopPropagation(); handleReject(quote.id); }}
                           >
                             Reject
                           </Button>
@@ -322,7 +312,7 @@ function CotizacionesTab() {
                         size="sm"
                         variant="ghost"
                         className="h-7 text-xs gap-1"
-                        onClick={() => handleDownloadPdf(quote.id)}
+                        onClick={(e) => { e.stopPropagation(); handleDownloadPdf(quote.id); }}
                       >
                         <Download className="h-3 w-3" /> PDF
                       </Button>

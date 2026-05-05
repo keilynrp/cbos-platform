@@ -11,6 +11,10 @@ export interface QuoteLine {
   quantity: number;
   unit_price: number;
   discount_percent: number;
+  sku: string | null;
+  unit: string | null;
+  tax_percent: number;
+  notes: string | null;
   amount: number;
   product_id: string | null;
   created_at: string;
@@ -88,6 +92,43 @@ export interface CreateQuoteLineDto {
   product_id?: string;
 }
 
+export interface QuoteLineUpdateDto {
+  sku?: string | null;
+  description?: string;
+  unit?: string | null;
+  quantity?: number;
+  unit_price?: number;
+  discount_percent?: number;
+  tax_percent?: number;
+  notes?: string | null;
+  line_order?: number;
+  product_id?: string | null;
+}
+
+export interface QuoteLineUpsertDto {
+  id?: string;
+  sku?: string | null;
+  description: string;
+  unit?: string | null;
+  quantity: number;
+  unit_price: number;
+  discount_percent: number;
+  tax_percent: number;
+  notes?: string | null;
+  line_order: number;
+  product_id?: string | null;
+}
+
+export interface QuoteEvent {
+  id: string;
+  quote_id: string;
+  user_id: string | null;
+  event_type: string;
+  description: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
 export interface CreateQuoteDto {
   title: string;
   currency?: string;
@@ -136,6 +177,12 @@ export const salesService = {
   removeLine: (quoteId: string, lineId: string) =>
     api.delete(`/sales/quotes/${quoteId}/lines/${lineId}`),
   getQuotePdfUrl: (id: string) => `/api/v1/sales/quotes/${id}/pdf`,
+  updateLine: (quoteId: string, lineId: string, dto: QuoteLineUpdateDto) =>
+    api.patch<Quote>(`/sales/quotes/${quoteId}/lines/${lineId}`, dto),
+  replaceLines: (quoteId: string, lines: QuoteLineUpsertDto[]) =>
+    api.put<Quote>(`/sales/quotes/${quoteId}/lines`, lines),
+  getQuoteHistory: (quoteId: string) =>
+    api.get<QuoteEvent[]>(`/sales/quotes/${quoteId}/history`),
 
   // Orders
   getOrders: (params?: { status?: string }) => {
