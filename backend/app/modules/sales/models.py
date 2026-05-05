@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -63,6 +63,9 @@ class Quote(Base):
     sales_order: Mapped[Optional["SalesOrder"]] = relationship(
         "SalesOrder", back_populates="quote", uselist=False
     )
+    events: Mapped[list["QuoteEvent"]] = relationship(
+        "QuoteEvent", back_populates="quote", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "quote_number", name="uq_quote_number_workspace"),
@@ -90,6 +93,12 @@ class QuoteLine(Base):
 
     # Referencia futura a producto del inventario
     product_id: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # New fields — line-level details
+    sku: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    tax_percent: Mapped[float] = mapped_column(Float, default=0.0)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relationship
     quote: Mapped["Quote"] = relationship("Quote", back_populates="lines")
@@ -172,3 +181,24 @@ class SalesOrderLine(Base):
 
     # Relationship
     order: Mapped["SalesOrder"] = relationship("SalesOrder", back_populates="lines")
+
+
+class QuoteEvent(Base):
+    """Audit log entry for a quote — immutable once created."""
+
+    __tablename__ = "quote_events"
+
+    workspace_id: Mapped[str] = mapped_column(
+        String, ForeignKey("workspaces.id"), index=True
+    )
+    quote_id: Mapped[str] = mapped_column(
+        String, ForeignKey("quotes.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("users.id"), nullable=True
+    )
+    event_type: Mapped[str] = mapped_column(String(50))
+    description: Mapped[str] = mapped_column(Text)
+    event_metadata: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+
+    quote: Mapped["Quote"] = relationship("Quote", back_populates="events")

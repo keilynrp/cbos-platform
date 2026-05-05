@@ -11,7 +11,11 @@ class QuoteLineCreate(BaseModel):
     quantity: float = Field(default=1.0, gt=0)
     unit_price: float = Field(default=0.0, ge=0)
     discount_percent: float = Field(default=0.0, ge=0, le=100)
+    tax_percent: float = Field(default=0.0, ge=0, le=100)
     line_order: int = Field(default=1, ge=1)
+    sku: str | None = None
+    unit: str | None = None
+    notes: str | None = None
     product_id: str | None = None
 
 
@@ -19,16 +23,47 @@ class QuoteLineRead(BaseModel):
     id: str
     quote_id: str
     line_order: int
+    sku: str | None
     description: str
+    unit: str | None
     quantity: float
     unit_price: float
     discount_percent: float
+    tax_percent: float
     amount: float
+    notes: str | None
     product_id: str | None
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class QuoteLineUpdate(BaseModel):
+    sku: str | None = None
+    description: str | None = None
+    unit: str | None = None
+    quantity: float | None = Field(default=None, gt=0)
+    unit_price: float | None = Field(default=None, ge=0)
+    discount_percent: float | None = Field(default=None, ge=0, le=100)
+    tax_percent: float | None = Field(default=None, ge=0, le=100)
+    notes: str | None = None
+    line_order: int | None = Field(default=None, ge=1)
+    product_id: str | None = None
+
+
+class QuoteLineUpsert(BaseModel):
+    id: str | None = None
+    sku: str | None = None
+    description: str
+    unit: str | None = None
+    quantity: float = Field(default=1.0, gt=0)
+    unit_price: float = Field(default=0.0, ge=0)
+    discount_percent: float = Field(default=0.0, ge=0, le=100)
+    tax_percent: float = Field(default=0.0, ge=0, le=100)
+    notes: str | None = None
+    line_order: int = Field(default=1, ge=1)
+    product_id: str | None = None
 
 
 # ── Quote ────────────────────────────────────────────────────────────────────
@@ -92,6 +127,18 @@ class QuoteRead(BaseModel):
 
 class QuoteReject(BaseModel):
     reason: str | None = None
+
+
+class QuoteEventRead(BaseModel):
+    id: str
+    quote_id: str
+    user_id: str | None
+    event_type: str
+    description: str
+    event_metadata: dict | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 # ── SalesOrderLine ───────────────────────────────────────────────────────────

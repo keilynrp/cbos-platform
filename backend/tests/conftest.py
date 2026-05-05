@@ -36,7 +36,7 @@ TEST_DATABASE_URL = os.getenv(
 
 # Import all models so Base.metadata is fully populated
 from app.modules.crm.models import Activity, Lead, Opportunity  # noqa: F401
-from app.modules.sales.models import Quote, QuoteLine, SalesOrder, SalesOrderLine  # noqa: F401
+from app.modules.sales.models import Quote, QuoteLine, SalesOrder, SalesOrderLine, QuoteEvent  # noqa: F401
 from app.modules.inventory.models import InventoryItem, Product, ProductCategory, StockMovement  # noqa: F401
 from app.modules.portal.models import PortalSession  # noqa: F401
 from app.modules.discovery.models import DiscoveryMessage, DiscoverySession  # noqa: F401
