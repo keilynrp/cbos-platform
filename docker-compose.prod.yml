@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════
 # CBOS Platform — Docker Compose PRODUCCIÓN
 #
-# Arquitectura: Traefik → backend:8000 (/api/)
+# Arquitectura: Traefik → backend:8000 (/api/, /health)
 #                       → frontend:80  (todo lo demás)
 # Sin nginx intermedio — Traefik enruta directo a cada servicio.
 #
@@ -84,13 +84,13 @@ services:
       - dokploy-network
     labels:
       - "traefik.enable=true"
-      # HTTPS — /api/ → backend:8000
-      - "traefik.http.routers.cbos-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/`)"
+      # HTTPS — /api/ y /health → backend:8000
+      - "traefik.http.routers.cbos-api.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api/`) || Path(`/health`))"
       - "traefik.http.routers.cbos-api.entrypoints=websecure"
       - "traefik.http.routers.cbos-api.tls.certresolver=letsencrypt"
       - "traefik.http.services.cbos-api.loadbalancer.server.port=8000"
       # HTTP → HTTPS redirect
-      - "traefik.http.routers.cbos-api-http.rule=Host(`${DOMAIN}`) && PathPrefix(`/api/`)"
+      - "traefik.http.routers.cbos-api-http.rule=Host(`${DOMAIN}`) && (PathPrefix(`/api/`) || Path(`/health`))"
       - "traefik.http.routers.cbos-api-http.entrypoints=web"
       - "traefik.http.routers.cbos-api-http.middlewares=cbos-https-redirect@docker"
       # Define el middleware de redirect (compartido con frontend)
