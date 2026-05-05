@@ -41,13 +41,13 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(['user_id'], ['users.id']),
         sa.PrimaryKeyConstraint('id'),
     )
-    op.create_index('ix_quote_events_quote_id', 'quote_events', ['quote_id'])
-    op.create_index('ix_quote_events_workspace_id', 'quote_events', ['workspace_id'])
+    op.create_index(op.f('ix_quote_events_quote_id'), 'quote_events', ['quote_id'])
+    op.create_index(op.f('ix_quote_events_workspace_id'), 'quote_events', ['workspace_id'])
 
 
 def downgrade() -> None:
-    op.drop_index('ix_quote_events_workspace_id', table_name='quote_events')
-    op.drop_index('ix_quote_events_quote_id', table_name='quote_events')
+    op.drop_index(op.f('ix_quote_events_workspace_id'), table_name='quote_events')
+    op.drop_index(op.f('ix_quote_events_quote_id'), table_name='quote_events')
     op.drop_table('quote_events')
     op.drop_column('quote_lines', 'notes')
     op.drop_column('quote_lines', 'tax_percent')
