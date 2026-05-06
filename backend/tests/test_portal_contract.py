@@ -10,6 +10,7 @@ Covers:
 - Full accept → order flow
 - Session management helpers
 """
+import re
 import pytest
 from datetime import datetime, timedelta, timezone
 
@@ -373,8 +374,8 @@ async def test_accept_sends_seller_notification(
     # At least one email call: seller notification
     assert len(sent_calls) >= 1
     seller_call = sent_calls[0]
-    assert "@" in seller_call[0]           # valid email address
-    assert quote["quote_number"] in seller_call[1]   # subject contains quote number
+    assert re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", seller_call[0]), f"Not a valid email: {seller_call[0]}"
+    assert quote["quote_number"] in seller_call[1], f"Quote number not in subject: {seller_call[1]}"
 
 
 async def test_reject_sends_seller_notification(
@@ -401,8 +402,8 @@ async def test_reject_sends_seller_notification(
 
     assert len(sent_calls) >= 1
     seller_call = sent_calls[0]
-    assert "@" in seller_call[0]
-    assert quote["quote_number"] in seller_call[1]
+    assert re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", seller_call[0]), f"Not a valid email: {seller_call[0]}"
+    assert quote["quote_number"] in seller_call[1], f"Quote number not in subject: {seller_call[1]}"
 
 
 async def test_accept_sends_only_seller_email_when_no_client_email(
@@ -430,4 +431,4 @@ async def test_accept_sends_only_seller_email_when_no_client_email(
     assert resp.status_code == 200, resp.text
 
     # Only seller email (1 call), no client confirmation
-    assert len(sent_calls) == 1
+    assert len(sent_calls) == 1, f"Expected 1 email (seller only), got {len(sent_calls)}"
