@@ -341,3 +341,93 @@ async def test_create_session_emits_portal_session_created_event(
     portal_events = [e for e in published_events if e.event_type == "PortalSessionCreated"]
     assert len(portal_events) == 1
     assert portal_events[0].payload["quote_id"] == quote_id
+
+
+# ── Email notifications ───────────────────────────────────────────────────────
+
+async def test_accept_sends_seller_notification(
+    client: AsyncClient, auth_headers: dict
+):
+    """portal_accept calls send_email with seller notification after commit."""
+    from unittest.mock import patch
+
+    quote = await _create_quote(client, auth_headers)
+    session = await _create_session(
+        client, auth_headers, quote["id"],
+        client_email="buyer@example.com",
+    )
+    token = session["token"]
+
+    sent_calls: list[tuple] = []
+
+    async def capture(*args, **kwargs):
+        sent_calls.append(args)
+        return True
+
+    with patch("app.modules.portal.service.send_email", side_effect=capture):
+        resp = await client.post(f"{PUBLIC}/quote/{token}/accept", json={
+            "client_name": "Ana García",
+        })
+    assert resp.status_code == 200, resp.text
+
+    # At least one email call: seller notification
+    assert len(sent_calls) >= 1
+    seller_call = sent_calls[0]
+    assert "@" in seller_call[0]           # valid email address
+    assert quote["quote_number"] in seller_call[1]   # subject contains quote number
+
+
+async def test_reject_sends_seller_notification(
+    client: AsyncClient, auth_headers: dict
+):
+    """portal_reject calls send_email with seller notification after commit."""
+    from unittest.mock import patch
+
+    quote = await _create_quote(client, auth_headers)
+    session = await _create_session(client, auth_headers, quote["id"])
+    token = session["token"]
+
+    sent_calls: list[tuple] = []
+
+    async def capture(*args, **kwargs):
+        sent_calls.append(args)
+        return True
+
+    with patch("app.modules.portal.service.send_email", side_effect=capture):
+        resp = await client.post(f"{PUBLIC}/quote/{token}/reject", json={
+            "reason": "Precio muy alto",
+        })
+    assert resp.status_code == 200, resp.text
+
+    assert len(sent_calls) >= 1
+    seller_call = sent_calls[0]
+    assert "@" in seller_call[0]
+    assert quote["quote_number"] in seller_call[1]
+
+
+async def test_accept_sends_only_seller_email_when_no_client_email(
+    client: AsyncClient, auth_headers: dict
+):
+    """portal_accept skips client confirmation when session.client_email is None."""
+    from unittest.mock import patch
+
+    quote = await _create_quote(client, auth_headers)
+    # Create session with NO client email
+    resp = await client.post(f"{PORTAL}/sessions", headers=auth_headers, json={
+        "quote_id": quote["id"],
+    })
+    assert resp.status_code == 201
+    token = resp.json()["token"]
+
+    sent_calls: list[tuple] = []
+
+    async def capture(*args, **kwargs):
+        sent_calls.append(args)
+        return True
+
+    with patch("app.modules.portal.service.send_email", side_effect=capture):
+        resp = await client.post(f"{PUBLIC}/quote/{token}/accept", json={})
+    assert resp.status_code == 200, resp.text
+
+    # Only seller email (1 call), no client confirmation
+    assert len(sent_calls) == 1
