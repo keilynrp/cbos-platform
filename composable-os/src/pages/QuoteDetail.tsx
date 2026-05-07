@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -7,6 +8,7 @@ import {
   type QuoteLineUpdateDto,
   type QuoteEvent,
 } from "@/services/sales";
+import { portalService, type PortalSession } from "@/services/portal";
 import { QuoteStatusBadge } from "@/components/sales/QuoteStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,8 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Download, Loader2, Share2, Copy, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -155,6 +159,59 @@ export default function QuoteDetail() {
 
   const isDraft = quote?.status === "draft";
 
+  // ── Share portal state ─────────────────────────────────────────────────────
+
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareEmail, setShareEmail] = useState("");
+  const [shareName, setShareName] = useState("");
+  const [shareDays, setShareDays] = useState<7 | 14 | 30>(14);
+
+  const { data: sessions = [] } = useQuery({
+    queryKey: ["portal-sessions", id],
+    queryFn: () => portalService.getSessions(id!),
+    enabled: !!id,
+  });
+
+  const activeSession: PortalSession | undefined = sessions.find(
+    (s) => !s.action && new Date(s.expires_at) > new Date()
+  );
+
+  const copyLinkMutation = useMutation({
+    mutationFn: () =>
+      portalService.createSession({
+        quote_id: id!,
+        client_name: shareName || undefined,
+        client_email: shareEmail || undefined,
+        expire_hours: shareDays * 24,
+      }),
+    onSuccess: (s) => {
+      qc.invalidateQueries({ queryKey: ["portal-sessions", id] });
+      navigator.clipboard.writeText(s.portal_url).catch(() => {});
+      toast.success("Link copiado");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const sendPortalEmailMutation = useMutation({
+    mutationFn: async () => {
+      const s = await portalService.createSession({
+        quote_id: id!,
+        client_name: shareName || undefined,
+        client_email: shareEmail || undefined,
+        expire_hours: shareDays * 24,
+      });
+      qc.invalidateQueries({ queryKey: ["portal-sessions", id] });
+      return portalService.sendEmail(s.id);
+    },
+    onSuccess: () => {
+      toast.success(`Email enviado a ${shareEmail}`);
+      setShareOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const canShare = quote ? ["draft", "sent"].includes(quote.status) : false;
+
   // ── Loading / error states ─────────────────────────────────────────────────
 
   if (isLoading) {
@@ -237,8 +294,110 @@ export default function QuoteDetail() {
           >
             <Download className="h-3 w-3 mr-1" /> PDF
           </Button>
+          <Button
+            size="sm"
+            variant={canShare ? "default" : "outline"}
+            disabled={!canShare}
+            title={!canShare ? "Cotización ya procesada" : undefined}
+            onClick={() => setShareOpen(true)}
+          >
+            <Share2 className="h-3 w-3 mr-1" /> Compartir
+          </Button>
         </div>
       </div>
+
+      {/* Active portal session banner */}
+      {activeSession && (
+        <div className="flex items-center justify-between px-4 py-2.5 rounded-lg border border-emerald-300/40 bg-emerald-500/10 text-sm">
+          <span className="text-emerald-400 text-xs">
+            ✓ Link activo{activeSession.client_email ? ` — enviado a ${activeSession.client_email}` : ""} · expira {new Date(activeSession.expires_at).toLocaleDateString("es-MX")}
+          </span>
+          <button
+            className="text-blue-400 text-xs hover:underline"
+            onClick={() => setShareOpen(true)}
+          >
+            Reenviar / nuevo link
+          </button>
+        </div>
+      )}
+
+      {/* Share dialog */}
+      <Dialog open={shareOpen} onOpenChange={(o) => { setShareOpen(o); if (!o) { setShareEmail(""); setShareName(""); setShareDays(14); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Compartir cotización</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {quote.quote_number} · {quote.title} · {new Intl.NumberFormat("es-MX", { style: "currency", currency: quote.currency }).format(quote.total)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nombre del cliente</Label>
+              <Input
+                value={shareName}
+                onChange={(e) => setShareName(e.target.value)}
+                placeholder="Juan Pérez"
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">
+                Email del cliente <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                type="email"
+                value={shareEmail}
+                onChange={(e) => setShareEmail(e.target.value)}
+                placeholder="juan@empresa.com"
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Válida por</Label>
+              <div className="flex gap-2">
+                {([7, 14, 30] as const).map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setShareDays(d)}
+                    className={`flex-1 py-1.5 rounded-md text-xs border transition-colors ${
+                      shareDays === d
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs"
+                disabled={copyLinkMutation.isPending}
+                onClick={() => copyLinkMutation.mutate()}
+              >
+                {copyLinkMutation.isPending
+                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                  : <><Copy className="h-3 w-3 mr-1" /> Copiar link</>
+                }
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1 text-xs"
+                disabled={!shareEmail || sendPortalEmailMutation.isPending}
+                onClick={() => sendPortalEmailMutation.mutate()}
+              >
+                {sendPortalEmailMutation.isPending
+                  ? <Loader2 className="h-3 w-3 animate-spin" />
+                  : <><Mail className="h-3 w-3 mr-1" /> Enviar email</>
+                }
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Lines table */}
       <Card>
