@@ -173,20 +173,24 @@ export default function QuoteDetail() {
   });
 
   const activeSession: PortalSession | undefined = sessions.find(
-    (s) => !s.action && new Date(s.expires_at) > new Date()
+    (s) => s.action === null && new Date(s.expires_at) > new Date()
   );
 
   const copyLinkMutation = useMutation({
     mutationFn: () =>
-      portalService.createSession({
-        quote_id: id!,
-        client_name: shareName || undefined,
-        client_email: shareEmail || undefined,
-        expire_hours: shareDays * 24,
-      }),
+      activeSession
+        ? Promise.resolve(activeSession)
+        : portalService.createSession({
+            quote_id: id!,
+            client_name: shareName || undefined,
+            client_email: shareEmail || undefined,
+            expire_hours: shareDays * 24,
+          }),
     onSuccess: (s) => {
-      qc.invalidateQueries({ queryKey: ["portal-sessions", id] });
-      navigator.clipboard.writeText(s.portal_url).catch(() => {});
+      if (!activeSession) qc.invalidateQueries({ queryKey: ["portal-sessions", id] });
+      navigator.clipboard.writeText(s.portal_url).catch(() => {
+        toast.warning("No se pudo copiar automáticamente");
+      });
       toast.success("Link copiado");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -200,10 +204,10 @@ export default function QuoteDetail() {
         client_email: shareEmail || undefined,
         expire_hours: shareDays * 24,
       });
-      qc.invalidateQueries({ queryKey: ["portal-sessions", id] });
       return portalService.sendEmail(s.id);
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["portal-sessions", id] });
       toast.success(`Email enviado a ${shareEmail}`);
       setShareOpen(false);
     },
@@ -327,13 +331,14 @@ export default function QuoteDetail() {
           <DialogHeader>
             <DialogTitle>Compartir cotización</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              {quote.quote_number} · {quote.title} · {new Intl.NumberFormat("es-MX", { style: "currency", currency: quote.currency }).format(quote.total)}
+              {quote?.quote_number} · {quote?.title} · {quote ? new Intl.NumberFormat("es-MX", { style: "currency", currency: quote.currency }).format(quote.total) : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <Label className="text-xs">Nombre del cliente</Label>
+              <Label htmlFor="share-name" className="text-xs">Nombre del cliente</Label>
               <Input
+                id="share-name"
                 value={shareName}
                 onChange={(e) => setShareName(e.target.value)}
                 placeholder="Juan Pérez"
@@ -341,10 +346,11 @@ export default function QuoteDetail() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">
+              <Label htmlFor="share-email" className="text-xs">
                 Email del cliente <span className="text-red-400">*</span>
               </Label>
               <Input
+                id="share-email"
                 type="email"
                 value={shareEmail}
                 onChange={(e) => setShareEmail(e.target.value)}
