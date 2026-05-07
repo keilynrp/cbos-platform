@@ -3,6 +3,7 @@ Email module — sends via SMTP if configured, logs in dev mode otherwise.
 Ready to connect to any SMTP provider (SendGrid, Resend, Mailgun, etc.).
 """
 
+import html as _html
 import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -244,5 +245,98 @@ def low_stock_email(
       <p>Stock actual: <strong>{current_stock}</strong> | Mínimo requerido: <strong>{min_stock}</strong></p>
       <hr style="border:1px solid #e5e7eb"/>
       <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
+    </div>"""
+    return subject, text, html
+
+
+def seller_accept_email(
+    client_name: str,
+    workspace_name: str,
+    quote_number: str,
+    order_number: str,
+    total: float,
+    currency: str,
+) -> tuple[str, str, str]:
+    """Seller notification when a client accepts via portal."""
+    _client = _html.escape(client_name)
+    _workspace = _html.escape(workspace_name)
+    subject = f"{client_name} aceptó la propuesta {quote_number}"
+    text = (
+        f"¡Buenas noticias!\n\n"
+        f"{client_name} ha aceptado la propuesta {quote_number}.\n\n"
+        f"  Orden creada: {order_number}\n"
+        f"  Total:        {currency} {total:,.2f}\n\n"
+        f"{workspace_name} · CBOS Platform"
+    )
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#16a34a">✓ Propuesta aceptada</h2>
+      <p><strong>{_client}</strong> aceptó la propuesta <strong>{quote_number}</strong>.</p>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0">
+        <p style="margin:0 0 8px;font-size:13px;color:#166534">Orden generada</p>
+        <p style="margin:0;font-size:24px;font-weight:700;color:#15803d;font-family:monospace">{order_number}</p>
+        <p style="margin:8px 0 0;font-size:13px;color:#166534">Total: {currency} {total:,.2f}</p>
+      </div>
+      <hr style="border:1px solid #e5e7eb"/>
+      <p style="color:#6b7280;font-size:12px">{_workspace} · CBOS Platform</p>
+    </div>"""
+    return subject, text, html
+
+
+def seller_reject_email(
+    client_name: str,
+    workspace_name: str,
+    quote_number: str,
+    reason: str | None,
+) -> tuple[str, str, str]:
+    """Seller notification when a client rejects via portal."""
+    _client = _html.escape(client_name)
+    _workspace = _html.escape(workspace_name)
+    _reason = _html.escape(reason) if reason else None
+    subject = f"{client_name} rechazó la propuesta {quote_number}"
+    reason_line = f"\n  Motivo: {reason}" if reason else ""
+    text = (
+        f"{client_name} rechazó la propuesta {quote_number}.{reason_line}\n\n"
+        f"{workspace_name} · CBOS Platform"
+    )
+    reason_html = (
+        f'<p style="color:#6b7280;font-size:13px">Motivo: {_reason}</p>' if _reason else ""
+    )
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#dc2626">✗ Propuesta rechazada</h2>
+      <p><strong>{_client}</strong> rechazó la propuesta <strong>{quote_number}</strong>.</p>
+      {reason_html}
+      <hr style="border:1px solid #e5e7eb"/>
+      <p style="color:#6b7280;font-size:12px">{_workspace} · CBOS Platform</p>
+    </div>"""
+    return subject, text, html
+
+
+def client_confirmation_email(
+    workspace_name: str,
+    quote_number: str,
+    order_number: str,
+) -> tuple[str, str, str]:
+    """Confirmation email sent to client after accepting a portal quote."""
+    _workspace = _html.escape(workspace_name)
+    subject = f"Confirmación — {quote_number} aceptada"
+    text = (
+        f"Gracias por aceptar la propuesta {quote_number}.\n\n"
+        f"Tu número de orden es: {order_number}\n"
+        f"Guarda este número para consultas futuras.\n\n"
+        f"{workspace_name}"
+    )
+    html = f"""
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#2563eb">Confirmación de propuesta</h2>
+      <p>Gracias por aceptar la propuesta <strong>{quote_number}</strong>.</p>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin:16px 0;text-align:center">
+        <p style="margin:0 0 8px;font-size:13px;color:#1e40af">Tu número de orden</p>
+        <p style="margin:0;font-size:28px;font-weight:700;color:#1d4ed8;font-family:monospace">{order_number}</p>
+        <p style="margin:8px 0 0;font-size:12px;color:#1e40af">Guarda este número para consultas</p>
+      </div>
+      <hr style="border:1px solid #e5e7eb"/>
+      <p style="color:#6b7280;font-size:12px">{_workspace}</p>
     </div>"""
     return subject, text, html

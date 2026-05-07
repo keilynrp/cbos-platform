@@ -8,7 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
-from app.core.email import quote_portal_email, send_email
+from app.core.email import (
+    client_confirmation_email,
+    quote_portal_email,
+    seller_accept_email,
+    seller_reject_email,
+    send_email,
+)
 from app.events.bus import publish as publish_event
 from app.events.types import (
     CUSTOMER_ACTION_PERFORMED,
@@ -19,7 +25,7 @@ from app.events.types import (
     SALES_ORDER_CREATED,
     Event,
 )
-from app.modules.identity.models import Organization, Person, Workspace
+from app.modules.identity.models import Organization, Person, User, Workspace
 from app.modules.portal.models import PortalSession
 from app.modules.portal.schemas import (
     PortalAccept,
@@ -364,6 +370,39 @@ async def portal_accept(
 
     await db.commit()
 
+    # Email notifications — non-blocking, log on failure
+    workspace_name = await _get_workspace_name(db, session.workspace_id)
+    creator = await db.get(User, session.created_by_id)
+    seller_email = creator.email if creator else None
+
+    if seller_email:
+        subj, text, html = seller_accept_email(
+            client_name=data.client_name or session.client_name or "Cliente",
+            workspace_name=workspace_name,
+            quote_number=quote.quote_number,
+            order_number=order_number,
+            total=quote.total,
+            currency=quote.currency,
+        )
+        try:
+            await send_email(seller_email, subj, html, text)
+        except Exception as exc:
+            logger.warning("Seller accept email failed: %s", exc)
+
+    client_email_addr = (
+        str(data.client_email) if data.client_email else session.client_email
+    )
+    if client_email_addr:
+        subj, text, html = client_confirmation_email(
+            workspace_name=workspace_name,
+            quote_number=quote.quote_number,
+            order_number=order_number,
+        )
+        try:
+            await send_email(client_email_addr, subj, html, text)
+        except Exception as exc:
+            logger.warning("Client confirmation email failed: %s", exc)
+
     # Best-effort auto-reserve inventory
     lines_with_product = [l for l in quote.lines if l.product_id]
     if lines_with_product:
@@ -434,6 +473,24 @@ async def portal_reject(
     ))
 
     await db.commit()
+
+    # Seller notification — non-blocking
+    workspace_name = await _get_workspace_name(db, session.workspace_id)
+    creator = await db.get(User, session.created_by_id)
+    seller_email = creator.email if creator else None
+
+    if seller_email:
+        subj, text, html = seller_reject_email(
+            client_name=data.client_name or session.client_name or "Cliente",
+            workspace_name=workspace_name,
+            quote_number=quote.quote_number,
+            reason=data.reason,
+        )
+        try:
+            await send_email(seller_email, subj, html, text)
+        except Exception as exc:
+            logger.warning("Seller reject email failed: %s", exc)
+
     return PortalActionResult(
         success=True,
         action="rejected",
