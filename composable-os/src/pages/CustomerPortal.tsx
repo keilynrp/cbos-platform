@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -19,6 +19,7 @@ async function publicFetch<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // ── Types ──────────────────────────────────────────────────────────────────
+type Phase = "view" | "accept-form" | "reject-form" | "done-accept" | "done-reject";
 interface PortalQuoteLine {
   description: string;
   quantity: number;
@@ -123,13 +124,15 @@ function AcceptConfirmationScreen({
           <p className="text-[#6c7086] text-sm">Hemos recibido tu confirmación.</p>
         </div>
 
-        {orderNumber && (
-          <div className="bg-[#313244] rounded-xl p-5 text-center">
-            <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-2">Tu número de orden</p>
+        <div className="bg-[#313244] rounded-xl p-5 text-center">
+          <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-2">Tu número de orden</p>
+          {orderNumber ? (
             <p className="text-[#89b4fa] text-3xl font-bold font-mono">{orderNumber}</p>
-            <p className="text-[#6c7086] text-[11px] mt-2">Guarda este número para consultas</p>
-          </div>
-        )}
+          ) : (
+            <p className="text-[#6c7086] text-sm">Revisa tu email de confirmación</p>
+          )}
+          <p className="text-[#6c7086] text-[11px] mt-2">Guarda este número para consultas</p>
+        </div>
 
         <div className="bg-[#313244] rounded-xl p-4 space-y-2">
           <p className="text-[#6c7086] text-[11px] font-semibold">Próximos pasos</p>
@@ -171,7 +174,6 @@ function RejectConfirmationScreen({ workspaceName }: { workspaceName: string }) 
 export default function CustomerPortal() {
   const { token } = useParams<{ token: string }>();
 
-  type Phase = "view" | "accept-form" | "reject-form" | "done-accept" | "done-reject";
   const [phase, setPhase] = useState<Phase>("view");
   const [formName, setFormName] = useState("");
   const [formNotes, setFormNotes] = useState("");
@@ -186,14 +188,16 @@ export default function CustomerPortal() {
   });
 
   const accept = useMutation<PortalActionResult, Error, void>({
-    mutationFn: () =>
-      publicFetch(`/portal/quote/${token}/accept`, {
+    mutationFn: () => {
+      if (!token) return Promise.reject(new Error("Token missing"));
+      return publicFetch(`/portal/quote/${token}/accept`, {
         method: "POST",
         body: JSON.stringify({
           client_name: formName || undefined,
           client_notes: formNotes || undefined,
         }),
-      }),
+      });
+    },
     onSuccess: (res) => {
       setOrderNumber(res.order_number);
       setPhase("done-accept");
@@ -201,20 +205,15 @@ export default function CustomerPortal() {
   });
 
   const reject = useMutation<PortalActionResult, Error, void>({
-    mutationFn: () =>
-      publicFetch(`/portal/quote/${token}/reject`, {
+    mutationFn: () => {
+      if (!token) return Promise.reject(new Error("Token missing"));
+      return publicFetch(`/portal/quote/${token}/reject`, {
         method: "POST",
         body: JSON.stringify({ reason: formReason || undefined }),
-      }),
+      });
+    },
     onSuccess: () => setPhase("done-reject"),
   });
-
-  // Handle already-acted sessions loaded from backend
-  useEffect(() => {
-    if (!quote?.already_acted) return;
-    if (quote.status === "accepted") setPhase("done-accept");
-    else if (quote.status === "rejected") setPhase("done-reject");
-  }, [quote?.already_acted, quote?.status]);
 
   if (isLoading) return <LoadingScreen />;
 
@@ -222,6 +221,15 @@ export default function CustomerPortal() {
     const msg = ((error as Error & { status?: number })?.message ?? "").toLowerCase();
     const isExpired = msg.includes("expir") || (error as Error & { status?: number })?.status === 410;
     return <ErrorScreen isExpired={isExpired} />;
+  }
+
+  // Synchronous redirect for already-acted sessions — avoids flash of quote view
+  if (quote.already_acted) {
+    if (quote.status === "accepted")
+      return <AcceptConfirmationScreen workspaceName={quote.workspace_name} orderNumber={null} />;
+    if (quote.status === "rejected")
+      return <RejectConfirmationScreen workspaceName={quote.workspace_name} />;
+    return <ErrorScreen isExpired={false} workspaceName={quote.workspace_name} />;
   }
 
   if (phase === "done-accept") {
@@ -283,7 +291,9 @@ export default function CustomerPortal() {
           {/* Line items + breakdown */}
           <div className="bg-[#313244] rounded-xl p-3">
             <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-2">Detalle</p>
-            {quote.lines.map((line, i) => (
+            {quote.lines.length === 0 ? (
+              <p className="text-[#6c7086] text-xs">Sin líneas de detalle</p>
+            ) : quote.lines.map((line, i) => (
               <div key={i} className="flex justify-between text-xs text-[#cdd6f4] mb-1.5">
                 <span className="truncate pr-2">{line.description}</span>
                 <span className="shrink-0">{fmt(line.amount, quote.currency)}</span>
@@ -294,6 +304,12 @@ export default function CustomerPortal() {
               <span>Subtotal</span>
               <span>{fmt(quote.subtotal, quote.currency)}</span>
             </div>
+            {quote.discount_amount > 0 && (
+              <div className="flex justify-between text-[11px] text-[#6c7086] mb-1">
+                <span>Descuento</span>
+                <span>-{fmt(quote.discount_amount, quote.currency)}</span>
+              </div>
+            )}
             {quote.tax_rate > 0 && (
               <div className="flex justify-between text-[11px] text-[#6c7086] mb-2">
                 <span>IVA ({(quote.tax_rate * 100).toFixed(0)}%)</span>
@@ -310,6 +326,14 @@ export default function CustomerPortal() {
           {quote.notes && (
             <div className="bg-[#313244] rounded-xl p-3 text-[11px] text-[#6c7086] italic">
               "{quote.notes}"
+            </div>
+          )}
+
+          {/* Terms */}
+          {quote.terms && (
+            <div className="bg-[#313244] rounded-xl p-3">
+              <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-1">Términos y condiciones</p>
+              <p className="text-[#6c7086] text-[11px] leading-relaxed">{quote.terms}</p>
             </div>
           )}
 
