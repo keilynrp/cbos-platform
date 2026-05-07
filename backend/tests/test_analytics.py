@@ -12,6 +12,7 @@ Covers:
 """
 
 import pytest
+from datetime import date
 from httpx import AsyncClient
 
 pytestmark = pytest.mark.asyncio
@@ -39,8 +40,9 @@ async def _get_second_auth_headers(client: AsyncClient) -> dict:
 
 
 async def _create_invoice(client: AsyncClient, headers: dict, **overrides) -> dict:
+    today = date.today()
     payload = {
-        "issue_date": "2026-04-01",
+        "issue_date": today.strftime("%Y-%m-01"),
         "lines": [{"description": "Service", "quantity": 1.0, "unit_price": 500.0}],
         **overrides,
     }
@@ -217,14 +219,14 @@ async def test_revenue_series_ordered_oldest_to_newest(client: AsyncClient, auth
 async def test_revenue_reflects_invoice_data(client: AsyncClient, auth_headers: dict):
     """Invoices issued this month should appear in the last series bucket."""
     # Create an invoice with issue_date in the current month
-    await _create_invoice(client, auth_headers, issue_date="2026-04-01")
+    await _create_invoice(client, auth_headers)
 
     resp = await client.get(f"{BASE}/revenue?months=1", headers=auth_headers)
     assert resp.status_code == 200
     data = resp.json()
     # With months=1 we get only the current month
     current_bucket = data["series"][0]
-    assert current_bucket["month"] == "2026-04"
+    assert current_bucket["month"] == date.today().strftime("%Y-%m")
     assert current_bucket["invoiced"] >= 500.0
 
 
@@ -321,7 +323,7 @@ async def test_revenue_workspace_isolated(client: AsyncClient, auth_headers: dic
     ws2 = await _get_second_auth_headers(client)
 
     # Create invoice in WS1
-    await _create_invoice(client, auth_headers, issue_date="2026-04-01")
+    await _create_invoice(client, auth_headers)
 
     ws1_resp = (await client.get(f"{BASE}/revenue?months=1", headers=auth_headers)).json()
     ws2_resp = (await client.get(f"{BASE}/revenue?months=1", headers=ws2)).json()
