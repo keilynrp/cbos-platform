@@ -11,9 +11,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  governance:
+    name: Governance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine diff range
+        id: diff
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            echo "head_sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Enforce governance update policy
+        run: bash scripts/ci/check_governance.sh "${{ steps.diff.outputs.base_sha }}" "${{ steps.diff.outputs.head_sha }}"
+
   backend:
     name: Backend — test (359 tests)
     runs-on: ubuntu-latest
+    needs: governance
     timeout-minutes: 15
 
     services:
@@ -75,6 +100,7 @@ jobs:
   frontend:
     name: Frontend — lint & build
     runs-on: ubuntu-latest
+    needs: governance
     timeout-minutes: 10
 
     defaults:

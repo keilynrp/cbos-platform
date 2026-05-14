@@ -6,6 +6,7 @@ This document tracks alignment between the governing architecture documents and 
 
 The governing documents are:
 
+- `docs/GOVERNANCE_MODEL.md`
 - `docs/FOUNDATIONAL_ARCHITECTURE.md`
 - `docs/CAPABILITY_MATRIX_MVP.md`
 - `docs/API_CONVENTIONS.md`

@@ -1,41 +1,62 @@
 # Docs Index
 
-## Governing Documentation
+## Start Here
 
-The documents in this section are the active source of truth for architecture and implementation decisions:
+The single entry point for documentation authority is:
+
+- `GOVERNANCE_MODEL.md`
+
+Read that document first.
+It defines which documents are authoritative, which are subordinate, and how conflicts are resolved.
+
+## Level 1 — Governing Runtime Documentation
+
+These documents define the active platform model:
 
 - `FOUNDATIONAL_ARCHITECTURE.md`
-- `CAPABILITY_MATRIX_MVP.md`
+- `API_CONVENTIONS.md`
+- `EVENT_REGISTRY_V1.md`
+- `adr/`
+- `capabilities/`
+
+## Level 2 — Current-State Alignment
+
+These documents measure the current implementation against the governing model:
+
 - `IMPLEMENTATION_ALIGNMENT.md`
+- `CAPABILITY_MATURITY_SCORECARD.md`
+
+## Level 3 — Approved Slice Contracts
+
+These are bounded implementation contracts for approved delivery slices:
+
+- `PUBLIC_SITE_LEAD_INTAKE_V1.md`
+
+## Planning And Execution Documents
+
+These organize work, but do not override architecture or runtime contracts:
+
 - `TECHNICAL_BACKLOG_30_60_90.md`
 - `SPRINT_BACKLOG_8_WEEKS.md`
 - `GITHUB_PROJECT_BACKLOG.md`
 - `GITHUB_ISSUES_READY.md`
 - `PROJECT_BOARD_RECOMMENDED.md`
 - `SPRINT_1_KICKOFF_PACK.md`
-- `API_CONVENTIONS.md`
-- `EVENT_REGISTRY_V1.md`
-- `PUBLIC_SITE_LEAD_INTAKE_V1.md`
 - `SPRINT_1_API_EVENTS_AUDIT.md`
-- `EVENT_REGISTRY_V1_TEMPLATE.md`
-- `API_CONVENTIONS_TEMPLATE.md`
-- `capabilities/`
-- `adr/`
 
-## Strategic Integration Documents
+## Strategic Target-State Documents
 
-The following document is intentionally **not** a governing runtime contract:
+These describe future direction and are intentionally not active runtime truth:
 
 - `cbos_sdd_portal_integration_contract.md`
 
-Use it as target-state guidance for external brand-site integration. If it conflicts with active routes, event names, envelopes, or implemented capability behavior, the governing documentation listed above wins.
+## Templates
 
-## Rule Of Use
+- `EVENT_REGISTRY_V1_TEMPLATE.md`
+- `API_CONVENTIONS_TEMPLATE.md`
 
-- Use the governing documentation first
-- Treat `archive/` as historical reference only
-- Do not reintroduce archived architectural directions into active implementation unless promoted by ADR
+## Archive
 
-## Intent
+- `archive/`
 
-This structure exists to keep architecture, roadmap, and code aligned around the current CBOS foundation and MVP wedge.
+Historical reference only.
