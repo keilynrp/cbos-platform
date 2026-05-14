@@ -11,8 +11,6 @@ from datetime import datetime, timezone
 from app.events.types import Event
 from app.modules.notifications.router import NOTIFY_EVENTS, NOTIFY_LABELS
 
-pytestmark = pytest.mark.asyncio
-
 
 # ── Override DB fixture (no DB needed for this file) ─────────────────────────
 

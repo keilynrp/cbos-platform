@@ -10,6 +10,8 @@ identified in IMPLEMENTATION_ALIGNMENT.md.
 import pytest
 from httpx import AsyncClient
 
+from app.modules.identity.models import PublicSite
+
 pytestmark = pytest.mark.asyncio
 
 BASE = "/api/v1/crm"
@@ -41,6 +43,22 @@ async def _create_opp(
     })
     assert resp.status_code == 201, resp.text
     return resp.json()
+
+
+async def _create_public_site(session_factory, workspace_id: str, site_slug: str = "inbounduxd") -> PublicSite:
+    async with session_factory() as db:
+        site = PublicSite(
+            workspace_id=workspace_id,
+            site_slug=site_slug,
+            domain=f"{site_slug}.example.com",
+            api_key=f"{site_slug}-public-key",
+            allowed_origins=[f"https://{site_slug}.example.com"],
+            is_active=True,
+        )
+        db.add(site)
+        await db.commit()
+        await db.refresh(site)
+        return site
 
 
 async def _change_stage(
@@ -91,6 +109,108 @@ async def test_activities_list_requires_auth(client: AsyncClient):
 async def test_pipeline_summary_requires_auth(client: AsyncClient):
     resp = await client.get(f"{BASE}/pipeline/summary")
     assert resp.status_code == 401
+
+
+async def test_public_lead_create_requires_site_key(client: AsyncClient):
+    resp = await client.post(
+        f"{BASE}/public/leads",
+        headers={"Origin": "https://inbounduxd.example.com"},
+        json={"first_name": "Kei", "email": "kei@example.com"},
+    )
+    assert resp.status_code == 401
+
+
+async def test_public_lead_create_rejects_disallowed_origin(
+    client: AsyncClient, session_factory, workspace
+):
+    site = await _create_public_site(session_factory, workspace.id)
+    resp = await client.post(
+        f"{BASE}/public/leads",
+        headers={
+            "X-CBOS-Site-Key": site.api_key,
+            "Origin": "https://evil.example.com",
+        },
+        json={"first_name": "Kei", "email": "kei@example.com"},
+    )
+    assert resp.status_code == 403
+
+
+async def test_public_lead_create_creates_workspace_scoped_lead(
+    client: AsyncClient, session_factory, workspace, auth_headers: dict
+):
+    site = await _create_public_site(session_factory, workspace.id)
+    resp = await client.post(
+        f"{BASE}/public/leads",
+        headers={
+            "X-CBOS-Site-Key": site.api_key,
+            "Origin": "https://inbounduxd.example.com",
+        },
+        json={
+            "first_name": "Kei",
+            "email": "kei@example.com",
+            "company_name": "InboundUXD",
+            "form_id": "hero-form",
+            "source_page": "https://inbounduxd.example.com/ai-diagnostic",
+        },
+    )
+    assert resp.status_code == 201, resp.text
+    payload = resp.json()
+    assert payload["status"] == "new"
+    assert payload["source"] == "website:inbounduxd"
+
+    leads_resp = await client.get(f"{BASE}/leads?source=website:inbounduxd", headers=auth_headers)
+    assert leads_resp.status_code == 200
+    leads = leads_resp.json()
+    assert len(leads) == 1
+    assert leads[0]["id"] == payload["id"]
+    assert leads[0]["email"] == "kei@example.com"
+
+
+async def test_public_lead_create_idempotency_returns_same_lead(
+    client: AsyncClient, session_factory, workspace, auth_headers: dict
+):
+    site = await _create_public_site(session_factory, workspace.id)
+    headers = {
+        "X-CBOS-Site-Key": site.api_key,
+        "Origin": "https://inbounduxd.example.com",
+        "Idempotency-Key": "lead-001",
+    }
+    body = {"first_name": "Kei", "email": "kei@example.com"}
+
+    first = await client.post(f"{BASE}/public/leads", headers=headers, json=body)
+    second = await client.post(f"{BASE}/public/leads", headers=headers, json=body)
+
+    assert first.status_code == 201, first.text
+    assert second.status_code == 200, second.text
+    assert first.json()["id"] == second.json()["id"]
+
+    leads_resp = await client.get(f"{BASE}/leads?source=website:inbounduxd", headers=auth_headers)
+    assert len(leads_resp.json()) == 1
+
+
+async def test_public_lead_create_idempotency_conflicts_on_different_payload(
+    client: AsyncClient, session_factory, workspace
+):
+    site = await _create_public_site(session_factory, workspace.id)
+    headers = {
+        "X-CBOS-Site-Key": site.api_key,
+        "Origin": "https://inbounduxd.example.com",
+        "Idempotency-Key": "lead-001",
+    }
+
+    first = await client.post(
+        f"{BASE}/public/leads",
+        headers=headers,
+        json={"first_name": "Kei", "email": "kei@example.com"},
+    )
+    assert first.status_code == 201, first.text
+
+    second = await client.post(
+        f"{BASE}/public/leads",
+        headers=headers,
+        json={"first_name": "Different", "email": "different@example.com"},
+    )
+    assert second.status_code == 409, second.text
 
 
 # ── Leads — get and update by ID ─────────────────────────────────────────────

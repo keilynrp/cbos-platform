@@ -1,19 +1,24 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
+
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+    except ValueError:
+        return False
 
 
 def create_access_token(data: dict[str, Any]) -> str:
@@ -39,7 +44,29 @@ def create_refresh_token(data: dict[str, Any]) -> str:
 
 
 def decode_token(token: str) -> dict[str, Any]:
-    return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+    payload = jwt.decode(
+        token,
+        settings.secret_key,
+        algorithms=[settings.algorithm],
+        options={"verify_exp": False},
+    )
+
+    exp = payload.get("exp")
+    if exp is None:
+        raise JWTError("Missing exp claim")
+
+    if isinstance(exp, datetime):
+        expires_at = exp if exp.tzinfo else exp.replace(tzinfo=timezone.utc)
+    else:
+        try:
+            expires_at = datetime.fromtimestamp(float(exp), tz=timezone.utc)
+        except (TypeError, ValueError) as exc:
+            raise JWTError("Invalid exp claim") from exc
+
+    if expires_at <= datetime.now(timezone.utc):
+        raise JWTError("Token expired")
+
+    return payload
 
 
 def verify_token(token: str, token_type: str = "access") -> dict[str, Any] | None:

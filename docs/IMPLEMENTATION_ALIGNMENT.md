@@ -8,9 +8,13 @@ The governing documents are:
 
 - `docs/FOUNDATIONAL_ARCHITECTURE.md`
 - `docs/CAPABILITY_MATRIX_MVP.md`
+- `docs/API_CONVENTIONS.md`
+- `docs/EVENT_REGISTRY_V1.md`
 - `docs/adr/`
 
 Legacy documents are historical reference only unless explicitly promoted by ADR.
+
+---
 
 ## Current Alignment Summary
 
@@ -21,50 +25,91 @@ Legacy documents are historical reference only unless explicitly promoted by ADR
 - React plus Vite is the active frontend stack
 - PostgreSQL is the primary transactional database
 - Redis is the active event and notification backbone
-- Core backend modules exist for the main capability areas
-- CRM already emits business events from the service layer
+- Core backend modules exist for the active capability areas
+- Portal, notifications, accounting, discovery, contracts, projects, and HR have been promoted into the active Tier 1 surface
+- Public token-based external interaction already exists in production through Portal
+- Business events are emitted through the shared event envelope in `backend/app/events/types.py`
 
 ### Partially Aligned
 
-- The MVP wedge is conceptually clear, but still needs hardening end to end
-- Workflows exist, but event contracts and consumer guarantees need formalization
-- Frontend capability breadth is larger than the hardened backend wedge
-- Shared data backbone exists conceptually, but MVP entities still need explicit ownership by domain
-- API conventions are now documented, but module conformance is still uneven in pagination and list patterns
-- Event registry v1 is now documented, but publisher parity still needs explicit validation module by module
-- Test coverage has grown to 169 automated tests in 13 files covering identity, CRM, sales, inventory, portal, discovery, workflows (including consumer reliability), and a wedge smoke test (end-to-end). Coverage depth is growing but event contract tests and frontend integration tests are still missing.
-- Workflow consumer implements idempotency (Redis key dedup 24h TTL), DLQ stream, MAX_RETRIES=3 enforcement, PEL reclaim for orphaned messages, and poison pill handling. Unit tests added Sprint 5. Event governance contracts and publisher parity still need formalization.
+- The MVP wedge is implemented end to end, but some boundaries remain more coupled than the target architecture wants
+- API conventions are documented, but conformance is still uneven outside the most critical modules
+- Event Registry V1 exists, but publisher parity still needs explicit validation module by module
+- Capability specs exist for active modules, but their freshness is uneven and they need periodic maintenance
+- Strategic integration direction for external brand sites now exists in docs, and Public Site Lead Intake V1 has an initial backend implementation path alongside Portal
+- CRM now owns both authenticated internal lead creation and the first public site intake boundary, but that public path still needs runtime verification and hardening
 
 ### Misaligned Or At Risk
 
-- Historical docs still describe multiple possible stacks and target states
-- Several frontend surfaces appear ahead of validated backend capability maturity
-- Event governance is not yet formalized as a strict contract system
-- Sales currently performs inventory auto-reserve through direct module invocation in the router, increasing cross-domain coupling
+- Some active docs still contain old metrics or outdated maturity statements if they are not refreshed after each sprint
+- Public integration ambitions in `cbos_sdd_portal_integration_contract.md` are broader than the currently implemented codebase
+- Event governance is documented but not yet enforced as a strict contract workflow in CI
+- Portal acceptance still performs best-effort inventory auto-reserve through a direct integration path instead of the clearer boundary pattern documented for Sales
+
+---
+
+## Current Platform Snapshot
+
+- Active modules: identity, crm, sales, inventory, portal, discovery, workflows, notifications, accounting, analytics, contracts, projects, hr
+- Test suite: 498 automated tests across 36 files
+- Frontend active surface: API-backed pages aligned to the implemented backend wedge plus current Tier 1 modules
+- Public runtime surfaces:
+  - `GET /health`
+  - discovery catalog endpoints
+  - portal token-based quote and order flows
+
+---
 
 ## Gap Register
 
 | Area | Current State | Target State | Priority | Action |
 |---|---|---|---|---|
-| Architectural source of truth | Many overlapping docs | One governing architecture set | High | Use new docs as the default and archive legacy docs |
-| MVP scope control | Broad product surface | Wedge-driven prioritization | High | Prioritize `Lead -> Customer -> Order -> Inventory -> Sale` |
-| Event contracts | Events exist but need stricter governance | Versioned domain contracts | High | Standardize event envelope and registration |
-| Domain boundaries | Modules exist but boundaries need stronger ownership rules | Explicit ownership and dependencies | High | Add per-capability specs |
-| Frontend alignment | Many surfaces, uneven maturity | UI backed by owned capabilities | High | Mark exploratory surfaces and avoid over-promising |
-| Test coverage | 169 automated tests in 13 files across all core modules | Module and wedge-level confidence | High | Wedge-critical APIs covered. Missing: event contract tests, frontend integration tests. |
-| Data model stabilization | Shared model exists in docs | MVP entity ownership in code | Medium | Reduce to wedge-first canonical entities |
-| Future stack pressure | Docs mention many possible evolutions | Current stack frozen until justified | Medium | Route changes through ADRs |
-| Pagination consistency | CRM and Sales use `50/200`, Inventory uses `100/500`, Workflows list runs lacks `offset` | One list convention for wedge-critical APIs | Medium | Normalize pagination policy and document justified exceptions |
-| Sales to Inventory boundary | Quote acceptance currently invokes inventory reservation directly from Sales router | Cross-domain coordination through clearer contract or event-driven handoff | High | Document boundary now and refactor when wedge path is hardened |
-| Workflow resilience | Consumer parses and dispatches events, but failure handling remains basic | Retry, idempotency, and operational failure policy | Medium | Consumer reliability is implemented and tested. Remaining: event governance contracts, publisher parity validation, and DLQ monitoring endpoint. |
+| Architectural source of truth | Governing doc set exists, but some module docs lag behind code | One consistently maintained governing set | High | Refresh active docs when features or promotions land |
+| MVP scope control | Wedge is complete, but expansion pressure is growing | Wedge-first growth with explicit ADR gates | High | Keep new public integrations bounded to small validated slices |
+| Event contracts | Event registry is active, but parity checks are manual | Versioned domain contracts with explicit maintenance discipline | High | Update registry on every new event and add publisher validation over time |
+| Domain boundaries | Most module ownership is clear, but some cross-domain calls remain direct | Explicit boundaries with gateway or event-driven handoff where justified | High | Continue paying down coupling at Portal/Sales/Inventory edges |
+| Frontend alignment | Active routes are much cleaner than before, but docs still lag occasionally | UI backed by owned capabilities and current backend maturity | Medium | Refresh capability specs and route docs alongside feature delivery |
+| Test coverage narrative | Codebase has 498 tests, but some docs still report older counts | One accurate confidence narrative | High | Update score-bearing docs in the same change set as features |
+| External brand-site integration | Strategic direction documented; public lead intake v1 now exists in code but is not yet operationally proven | One validated public integration slice before SDK/builder expansion | High | Verify and harden the new CRM public intake boundary |
+| Public API boundary | Portal proves public interaction can work; CRM public intake now defines the initial site-key/origin model | Explicit public endpoint policy with origin, key, and rate-limit rules | High | Validate the CRM public intake contract before broader public API claims |
+| Future stack pressure | Strategic docs mention SDK, builder, semantic layers, and UKIP-compatible ideas | Current stack remains frozen until justified | Medium | Treat those areas as target-state only unless promoted by ADR |
+
+---
 
 ## Immediate Working Rules
 
-- The team should make architecture decisions against the new governing documents first
-- Legacy documents are reference inputs, not current commitments
-- No new module should be treated as core without ownership, contract, and wedge relevance
-- No future-stack discussion should affect implementation without a new ADR
-- Audit findings in `docs/SPRINT_1_API_EVENTS_AUDIT.md` should drive Sprint 1 API and event normalization work
+- The team should make implementation decisions against the governing docs first
+- `docs/cbos_sdd_portal_integration_contract.md` is strategic target-state guidance, not current runtime truth
+- No public brand-site integration should be implemented without:
+  - clear module ownership
+  - workspace scoping
+  - explicit authentication or site-key rules
+  - event mapping to the active PascalCase registry
+  - observability and abuse controls
+- New public endpoints should begin with the smallest viable slice that validates the business wedge
+- No Portal SDK or Portal Builder work should start before the public lead-intake slice is hardened and operationally proven
+
+---
+
+## Near-Term Alignment Priority
+
+The next recommended integration slice is:
+
+`Public Site Lead Intake v1 hardening`
+
+Why this slice first:
+
+- it validates external brand-site to CBOS connectivity without expanding the product surface too far
+- it reuses a mature CRM capability that already owns lead creation and emits `LeadCaptured`
+- it establishes the first site-key, origin validation, and idempotency boundary in code
+- it still needs runtime validation, abuse hardening, and deployment confirmation
+
+Reference documents:
+
+- `docs/adr/0013-adopt-public-site-lead-intake-v1-as-the-first-external-integration-slice.md`
+- `docs/PUBLIC_SITE_LEAD_INTAKE_V1.md`
+
+---
 
 ## Review Cadence
 
@@ -73,3 +118,4 @@ Update this document:
 - at the end of each sprint
 - whenever a major capability is promoted into core MVP scope
 - whenever an ADR changes the architecture baseline
+- whenever a new public integration surface is approved or implemented

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -16,6 +16,8 @@ from app.modules.crm.schemas import (
     OpportunityStageChange,
     OpportunityUpdate,
     PipelineSummary,
+    PublicLeadCaptureResponse,
+    PublicLeadCreate,
 )
 from app.modules.identity.models import User
 
@@ -23,6 +25,27 @@ router = APIRouter(prefix="/crm", tags=["CRM"])
 
 
 # ── Leads ────────────────────────────────────────────────────────────────────
+
+@router.post("/public/leads", response_model=PublicLeadCaptureResponse, status_code=201)
+async def create_public_lead(
+    data: PublicLeadCreate,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    site_key: str | None = Header(default=None, alias="X-CBOS-Site-Key"),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+):
+    result, created = await service.create_public_lead(
+        db=db,
+        site_key=site_key,
+        origin=request.headers.get("origin"),
+        idempotency_key=idempotency_key,
+        client_ip=request.client.host if request.client else None,
+        data=data,
+    )
+    response.status_code = 201 if created else 200
+    return result
+
 
 @router.post("/leads", response_model=LeadRead, status_code=201)
 async def create_lead(

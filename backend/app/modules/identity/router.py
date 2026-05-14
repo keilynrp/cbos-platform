@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_current_workspace_id
+from app.core.deps import get_current_admin_user, get_current_user, get_current_workspace_id
 from app.modules.identity import schemas, service
 
 router = APIRouter()
@@ -74,3 +74,64 @@ async def create_organization(
     db: AsyncSession = Depends(get_db),
 ):
     return await service.create_organization(workspace_id, data, db)
+
+
+def _public_site_response(site, include_secret: bool = False):
+    payload = {
+        "id": site.id,
+        "workspace_id": site.workspace_id,
+        "site_slug": site.site_slug,
+        "domain": site.domain,
+        "allowed_origins": site.allowed_origins,
+        "is_active": site.is_active,
+        "api_key_hint": service._api_key_hint(site.api_key),
+        "created_at": site.created_at,
+        "updated_at": site.updated_at,
+    }
+    if include_secret:
+        payload["api_key"] = site.api_key
+    return payload
+
+
+@router.get("/public-sites", response_model=list[schemas.PublicSiteRead])
+async def list_public_sites(
+    _=Depends(get_current_admin_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+    db: AsyncSession = Depends(get_db),
+):
+    sites = await service.list_public_sites(workspace_id, db)
+    return [_public_site_response(site) for site in sites]
+
+
+@router.post("/public-sites", response_model=schemas.PublicSiteSecretRead, status_code=201)
+async def create_public_site(
+    data: schemas.PublicSiteCreate,
+    _=Depends(get_current_admin_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+    db: AsyncSession = Depends(get_db),
+):
+    site = await service.create_public_site(workspace_id, data, db)
+    return _public_site_response(site, include_secret=True)
+
+
+@router.patch("/public-sites/{site_id}", response_model=schemas.PublicSiteRead)
+async def update_public_site(
+    site_id: str,
+    data: schemas.PublicSiteUpdate,
+    _=Depends(get_current_admin_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+    db: AsyncSession = Depends(get_db),
+):
+    site = await service.update_public_site(workspace_id, site_id, data, db)
+    return _public_site_response(site)
+
+
+@router.post("/public-sites/{site_id}/rotate-key", response_model=schemas.PublicSiteSecretRead)
+async def rotate_public_site_key(
+    site_id: str,
+    _=Depends(get_current_admin_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+    db: AsyncSession = Depends(get_db),
+):
+    site = await service.rotate_public_site_key(workspace_id, site_id, db)
+    return _public_site_response(site, include_secret=True)

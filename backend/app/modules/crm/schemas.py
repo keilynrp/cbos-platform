@@ -51,6 +51,43 @@ class LeadRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PublicLeadCampaign(BaseModel):
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+
+
+class PublicLeadConsent(BaseModel):
+    accepted: bool
+    accepted_at: datetime | None = None
+
+
+class PublicLeadCreate(BaseModel):
+    first_name: str
+    last_name: str | None = None
+    email: EmailStr | None = None
+    phone: str | None = None
+    company_name: str | None = None
+    notes: str | None = None
+    source_page: str | None = None
+    form_id: str | None = None
+    campaign: PublicLeadCampaign | None = None
+    consent: PublicLeadConsent | None = None
+
+    @model_validator(mode="after")
+    def email_or_phone_required(self) -> "PublicLeadCreate":
+        if not self.email and not self.phone:
+            raise ValueError("email or phone is required")
+        return self
+
+
+class PublicLeadCaptureResponse(BaseModel):
+    id: str
+    status: str
+    source: str
+    message: str
+
+
 class LeadConvert(BaseModel):
     """Payload para convertir un lead en oportunidad."""
     title: str

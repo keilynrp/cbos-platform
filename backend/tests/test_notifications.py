@@ -9,8 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.modules.notifications.router import NOTIFY_EVENTS, NOTIFY_LABELS
 
-pytestmark = pytest.mark.asyncio
-
 
 # ── Override the per-test DB autouse fixture so this unit-test file  ─────────
 # ── can run without needing the test_engine / PostgreSQL connection.  ─────────

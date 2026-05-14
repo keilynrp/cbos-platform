@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import Date, DateTime, Float, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -131,3 +131,25 @@ class Activity(Base):
 
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class PublicLeadSubmission(Base):
+    """Idempotency ledger for public site lead intake."""
+
+    __tablename__ = "public_lead_submissions"
+    __table_args__ = (
+        UniqueConstraint(
+            "workspace_id", "site_slug", "idempotency_key",
+            name="uq_public_lead_submissions_workspace_site_key",
+        ),
+    )
+
+    workspace_id: Mapped[str] = mapped_column(
+        String, ForeignKey("workspaces.id"), index=True
+    )
+    site_slug: Mapped[str] = mapped_column(String(100), index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(255), index=True)
+    request_hash: Mapped[str] = mapped_column(String(64))
+    lead_id: Mapped[str] = mapped_column(
+        String, ForeignKey("leads.id"), index=True
+    )

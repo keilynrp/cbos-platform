@@ -1,3 +1,7 @@
+import hashlib
+import json
+import time
+from collections import deque
 from datetime import datetime, timezone
 from typing import Sequence
 
@@ -5,6 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.events.bus import publish as publish_event
 from app.events.types import (
     LEAD_CAPTURED,
@@ -17,7 +22,7 @@ from app.events.types import (
     Event,
 )
 from app.core.validators import validate_workspace_ownership
-from app.modules.crm.models import Activity, Lead, Opportunity
+from app.modules.crm.models import Activity, Lead, Opportunity, PublicLeadSubmission
 from app.modules.crm.schemas import (
     ActivityCreate,
     LeadConvert,
@@ -28,9 +33,71 @@ from app.modules.crm.schemas import (
     OpportunityUpdate,
     PipelineStageCount,
     PipelineSummary,
+    PublicLeadCaptureResponse,
+    PublicLeadCreate,
     VALID_STAGES,
 )
-from app.modules.identity.models import Organization, User
+from app.modules.identity.models import Organization, PublicSite, User
+
+
+_public_rate_limit_buckets: dict[str, deque[float]] = {}
+
+
+def _normalize_origin(origin: str) -> str:
+    return origin.rstrip("/").lower()
+
+
+def _enforce_public_rate_limit(site_slug: str, client_ip: str | None) -> None:
+    key = f"{site_slug}:{client_ip or 'unknown'}"
+    now = time.monotonic()
+    window_start = now - 60
+    bucket = _public_rate_limit_buckets.setdefault(key, deque())
+
+    while bucket and bucket[0] < window_start:
+        bucket.popleft()
+
+    if len(bucket) >= settings.public_site_rate_limit_per_minute:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded for public site intake",
+        )
+
+    bucket.append(now)
+
+
+def _hash_public_payload(data: PublicLeadCreate) -> str:
+    payload = data.model_dump(mode="json", exclude_none=True)
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _compose_public_notes(
+    data: PublicLeadCreate,
+    site_slug: str,
+    origin: str | None,
+) -> str | None:
+    sections: list[str] = []
+    if data.notes:
+        sections.append(data.notes.strip())
+
+    metadata_lines = [f"[Public Intake] site={site_slug}"]
+    if origin:
+        metadata_lines.append(f"origin={origin}")
+    if data.source_page:
+        metadata_lines.append(f"source_page={data.source_page}")
+    if data.form_id:
+        metadata_lines.append(f"form_id={data.form_id}")
+    if data.campaign:
+        metadata_lines.append(
+            f"campaign={json.dumps(data.campaign.model_dump(exclude_none=True), sort_keys=True)}"
+        )
+    if data.consent:
+        metadata_lines.append(
+            f"consent={json.dumps(data.consent.model_dump(mode='json', exclude_none=True), sort_keys=True)}"
+        )
+
+    sections.append("\n".join(metadata_lines))
+    return "\n\n".join(section for section in sections if section) or None
 
 
 # ── Opportunity state machine ─────────────────────────────────────────────────
@@ -60,8 +127,9 @@ def _assert_opp_transition(current: str, target: str) -> None:
 async def create_lead(
     db: AsyncSession,
     workspace_id: str,
-    actor_id: str,
+    actor_id: str | None,
     data: LeadCreate,
+    commit: bool = True,
 ) -> Lead:
     if data.organization_id:
         await validate_workspace_ownership(db, Organization, data.organization_id, workspace_id, "organization_id")
@@ -87,9 +155,99 @@ async def create_lead(
         },
     ))
 
-    await db.commit()
-    await db.refresh(lead)
+    if commit:
+        await db.commit()
+        await db.refresh(lead)
     return lead
+
+
+async def create_public_lead(
+    db: AsyncSession,
+    site_key: str | None,
+    origin: str | None,
+    idempotency_key: str | None,
+    client_ip: str | None,
+    data: PublicLeadCreate,
+) -> tuple[PublicLeadCaptureResponse, bool]:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Missing or invalid site key",
+    )
+    if not site_key:
+        raise credentials_exception
+
+    result = await db.execute(
+        select(PublicSite).where(PublicSite.api_key == site_key)
+    )
+    site = result.scalar_one_or_none()
+    if not site:
+        raise credentials_exception
+    if not site.is_active:
+        raise HTTPException(status_code=403, detail="Public site is inactive")
+
+    normalized_origin = _normalize_origin(origin) if origin else None
+    allowed_origins = {_normalize_origin(item) for item in site.allowed_origins}
+    if allowed_origins and normalized_origin not in allowed_origins:
+        raise HTTPException(status_code=403, detail="Origin not allowed for this site")
+
+    _enforce_public_rate_limit(site.site_slug, client_ip)
+
+    request_hash = _hash_public_payload(data)
+    if idempotency_key:
+        result = await db.execute(
+            select(PublicLeadSubmission).where(
+                PublicLeadSubmission.workspace_id == site.workspace_id,
+                PublicLeadSubmission.site_slug == site.site_slug,
+                PublicLeadSubmission.idempotency_key == idempotency_key,
+            )
+        )
+        existing = result.scalar_one_or_none()
+        if existing:
+            if existing.request_hash != request_hash:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Idempotency key already used with different payload",
+                )
+            lead = await get_lead(db, site.workspace_id, existing.lead_id)
+            return PublicLeadCaptureResponse(
+                id=lead.id,
+                status=lead.status,
+                source=lead.source,
+                message="Lead already captured",
+            ), False
+
+    lead_data = LeadCreate(
+        first_name=data.first_name,
+        last_name=data.last_name,
+        email=data.email,
+        phone=data.phone,
+        company_name=data.company_name,
+        source=f"website:{site.site_slug}",
+        notes=_compose_public_notes(data, site.site_slug, origin),
+    )
+
+    if idempotency_key:
+        lead = await create_lead(
+            db, site.workspace_id, None, lead_data, commit=False
+        )
+        db.add(PublicLeadSubmission(
+            workspace_id=site.workspace_id,
+            site_slug=site.site_slug,
+            idempotency_key=idempotency_key,
+            request_hash=request_hash,
+            lead_id=lead.id,
+        ))
+        await db.commit()
+        await db.refresh(lead)
+    else:
+        lead = await create_lead(db, site.workspace_id, None, lead_data)
+
+    return PublicLeadCaptureResponse(
+        id=lead.id,
+        status=lead.status,
+        source=lead.source,
+        message="Lead captured",
+    ), True
 
 
 async def list_leads(

@@ -45,3 +45,15 @@ async def get_current_workspace_id(
     current_user=Depends(get_current_user),
 ) -> str:
     return current_user.workspace_id
+
+
+async def get_current_admin_user(
+    current_user=Depends(get_current_user),
+):
+    if current_user.is_owner or current_user.role == "admin":
+        return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin access required",
+    )

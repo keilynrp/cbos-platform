@@ -110,3 +110,34 @@ class OrganizationRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# Public Sites
+
+class PublicSiteCreate(BaseModel):
+    site_slug: str = Field(..., min_length=2, max_length=100, pattern=r"^[a-z0-9-]+$")
+    domain: str | None = Field(default=None, max_length=255)
+    allowed_origins: list[str] = Field(default_factory=list)
+    is_active: bool = True
+
+
+class PublicSiteUpdate(BaseModel):
+    domain: str | None = Field(default=None, max_length=255)
+    allowed_origins: list[str] | None = None
+    is_active: bool | None = None
+
+
+class PublicSiteRead(BaseModel):
+    id: str
+    workspace_id: str
+    site_slug: str
+    domain: str | None
+    allowed_origins: list[str]
+    is_active: bool
+    api_key_hint: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class PublicSiteSecretRead(PublicSiteRead):
+    api_key: str

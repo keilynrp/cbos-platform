@@ -1,24 +1,27 @@
 # Capability Spec: Portal
 
 **Module:** `backend/app/modules/portal/`
-**Tier:** 2 — Active (promoted Sprint 6, ADR 0006)
+**Tier:** 1 - Wedge-Critical (promoted Q3, ADR 0011)
 **Owner:** Platform team
-**Status:** API, Persisted, Tested
+**Status:** API, persisted, tested, production-aligned
 
 ---
 
 ## Purpose
 
-The Portal module gives customers a secure, time-limited view into their quotes and orders without requiring a full user account. It is the external-facing complement to the Sales module.
+The Portal module exposes customer-safe, token-gated quote and order views so external clients can review, accept, or reject a commercial proposal without needing a full CBOS user account.
+
+It is the external decision surface of the commercial wedge.
 
 ---
 
 ## Wedge Role
 
-- Activated when a SalesOrder is confirmed
-- Customer receives a token-gated URL to review their order
-- Customer can accept or reject a Quote directly from the portal
-- Accept triggers the same `quote.accept` flow as the internal UI (creates a SalesOrder)
+- Sellers create a time-limited portal session for a quote
+- Customers open a public tokenized URL to view the quote
+- Customers can accept or reject the quote through the portal
+- Acceptance creates a `SalesOrder`, emits business events, and can trigger downstream inventory/accounting flows
+- The module closes the gap between internal sales work and external customer action
 
 ---
 
@@ -26,21 +29,37 @@ The Portal module gives customers a secure, time-limited view into their quotes 
 
 | Capability | Route | Notes |
 |---|---|---|
-| Create portal session | `POST /api/v1/portal/sessions` | Internal — called by Sales on order confirmation |
-| Get session by token | `GET /api/v1/portal/sessions/{token}` | Public — validates token, returns session data |
-| Get quote via portal | `GET /api/v1/portal/quotes/{token}` | Public — customer views their quote |
-| Accept quote | `POST /api/v1/portal/quotes/{token}/accept` | Public — idempotent |
-| Reject quote | `POST /api/v1/portal/quotes/{token}/reject` | Public — idempotent |
-| Get order status | `GET /api/v1/portal/orders/{token}` | Public — customer views order status |
+| Create portal session | `POST /api/v1/portal/sessions` | Internal, JWT required, workspace-scoped |
+| Send portal email | `POST /api/v1/portal/sessions/{session_id}/send-email` | Internal, JWT required |
+| List sessions | `GET /api/v1/portal/sessions?quote_id=...` | Internal, JWT required |
+| Get quote via portal | `GET /api/v1/portal/quote/{token}` | Public, token-based |
+| Accept quote | `POST /api/v1/portal/quote/{token}/accept` | Public, idempotent |
+| Reject quote | `POST /api/v1/portal/quote/{token}/reject` | Public, idempotent |
+| Get order status | `GET /api/v1/portal/order/{token}` | Public, available after acceptance |
 
 ---
 
 ## Access Model
 
-- Portal routes under `/api/v1/portal/` are **public** (no `Authorization` header)
-- Access is controlled by a time-limited token (`portal_token`) stored in `PortalSession`
-- Tokens expire after `PORTAL_TOKEN_EXPIRE_HOURS` (default 72h, configurable)
-- All portal operations are workspace-scoped through the token
+### Internal endpoints
+
+- Require Bearer token authentication
+- Use `get_current_user` and `get_current_workspace_id`
+- Must operate only on records belonging to the caller workspace
+
+### Public endpoints
+
+- No JWT required
+- Access is controlled by the portal token stored on `PortalSession`
+- Token expiry is enforced by `expires_at`
+- Expired tokens return `410 Gone`
+- Unknown tokens return `404 Not Found`
+
+### Session validity
+
+- Default lifetime comes from `settings.portal_token_expire_hours`
+- `PortalSessionCreate.expire_hours` can override the default per session
+- The current default in schemas is 72 hours
 
 ---
 
@@ -50,21 +69,75 @@ The Portal module gives customers a secure, time-limited view into their quotes 
 
 | Field | Type | Notes |
 |---|---|---|
-| `id` | UUID | Primary key |
-| `workspace_id` | String | Workspace scope |
-| `token` | String | Unique, time-limited access token |
-| `entity_type` | String | `quote` or `order` |
-| `entity_id` | String | ID of the linked quote or order |
-| `expires_at` | DateTime | Token expiry |
-| `is_active` | Boolean | Can be revoked |
+| `id` | UUID string | Primary key |
+| `workspace_id` | UUID string | Workspace scope |
+| `quote_id` | UUID string | Linked quote |
+| `token` | string | Public access token |
+| `expires_at` | datetime | Hard expiry |
+| `accessed_at` | datetime nullable | First public access timestamp |
+| `completed_at` | datetime nullable | Accept or reject completion time |
+| `action` | string nullable | `accepted` or `rejected` |
+| `client_name` | string nullable | Optional customer display name |
+| `client_email` | string nullable | Optional customer email |
+| `client_notes` | string nullable | Optional notes captured during accept |
+| `created_by_id` | UUID string nullable | Internal user who created the session |
+| `created_at` | datetime | Audit timestamp |
+
+### Public quote view
+
+The customer-facing quote payload includes:
+
+- commercial totals (`subtotal`, `discount_amount`, `tax_rate`, `tax_amount`, `total`)
+- quote metadata (`quote_number`, `title`, `status`, `valid_until`)
+- line-level details (`description`, `quantity`, `unit_price`, `discount_percent`, `amount`)
+- display context (`workspace_name`, `org_name`, `contact_name`)
+- session state (`can_accept`, `already_acted`, `session_expires_at`)
 
 ---
 
 ## Events
 
+Portal emits both portal-native events and cross-domain commercial events.
+
 | Event | Trigger | Status |
 |---|---|---|
-| `PortalSessionCreated` | When a new portal session is created | 🟡 Partial — not consistently emitted |
+| `PortalSessionCreated` | New portal session created | Implemented |
+| `PortalSessionAccessed` | First public quote view | Implemented |
+| `CustomerActionPerformed` | Customer accepts or rejects | Implemented |
+| `QuoteAccepted` | Quote accepted via portal | Implemented |
+| `QuoteRejected` | Quote rejected via portal | Implemented |
+| `SalesOrderCreated` | Sales order created from portal acceptance | Implemented |
+
+### Event notes
+
+- Event names follow the active PascalCase registry in `docs/EVENT_REGISTRY_V1.md`
+- Event envelope follows `backend/app/events/types.py`
+- Portal acceptance currently publishes sales-domain events from the portal service because the business transition originates there
+
+---
+
+## Behavior Rules
+
+### Session creation
+
+- A session can only be created for quotes in `draft` or `sent`
+- Creating a session for an already processed quote returns `409 Conflict`
+- Session creation returns a computed `portal_url`
+
+### Quote acceptance
+
+- Accept is idempotent at the session level
+- First successful accept transitions the quote to `accepted`
+- Accept creates a confirmed `SalesOrder`
+- Seller and client email notifications are attempted after commit
+- Best-effort inventory auto-reserve runs after accept when quote lines reference products
+
+### Quote rejection
+
+- Reject is idempotent at the session level
+- First successful reject transitions the quote to `rejected`
+- Rejection reason is appended into quote notes when provided
+- Seller notification email is attempted after commit
 
 ---
 
@@ -72,20 +145,24 @@ The Portal module gives customers a secure, time-limited view into their quotes 
 
 | File | Tests | Coverage |
 |---|---|---|
-| `tests/test_portal_contract.py` | 17 | Token validation, accept/reject, idempotency, order status, expired token |
-| Integration tests | 🔴 Missing | Scheduled Q2 |
+| `tests/test_portal_contract.py` | 21 | Auth guards, token validation, idempotency, event emission, email side effects |
+| `tests/test_portal.py` | 5 | Multi-step integration flows, expiry override, internal listing, send-email validation |
+| `tests/test_e2e_portal_accounting.py` | 2 | Portal acceptance through accounting lifecycle |
+| `tests/test_e2e_portal_ws_notification.py` | 11 | Portal session event to WebSocket delivery |
+
+Portal also participates in `test_wedge_smoke.py::test_full_wedge`.
 
 ---
 
-## Known Gaps
+## Known Gaps (Accepted For MVP)
 
-- Event publishing for `PortalSessionCreated` is not consistently emitted
-- Integration test file (`test_portal.py`) does not exist — add in Q2
-- No portal analytics (session views, accept/reject rates)
+1. Tokens expire after a short window and there is no renewal or revocation UI beyond creating a new session.
+2. Public portal analytics are not modeled yet; there is no session funnel or view-rate reporting.
+3. Best-effort inventory reserve after acceptance is still a synchronous integration path and not yet refactored behind the Sales inventory gateway boundary.
 
 ---
 
 ## Promotion History
 
-- Tier 2 Conditional: ADR 0003 (initial classification)
-- Active Tier 2: ADR 0006, Sprint 6, 2026-03-29
+- Active Tier 2: ADR 0006
+- Tier 1 promotion: ADR 0011

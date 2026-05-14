@@ -1,3 +1,5 @@
+import secrets
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from fastapi import HTTPException, status
@@ -5,8 +7,40 @@ from fastapi import HTTPException, status
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, verify_token
 from app.events.bus import publish as publish_event
 from app.events.types import USER_AUTHENTICATED, USER_REGISTERED, WORKSPACE_CREATED, Event
-from app.modules.identity.models import Workspace, User, Person, Organization
-from app.modules.identity.schemas import RegisterRequest, LoginRequest, TokenResponse
+from app.modules.identity.models import Workspace, User, Person, Organization, PublicSite
+from app.modules.identity.schemas import (
+    RegisterRequest,
+    LoginRequest,
+    PublicSiteCreate,
+    PublicSiteUpdate,
+    TokenResponse,
+)
+
+
+def _normalize_origin(origin: str) -> str:
+    return origin.rstrip("/").lower()
+
+
+def _normalize_origins(origins: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for origin in origins:
+        value = _normalize_origin(origin.strip())
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        normalized.append(value)
+    return normalized
+
+
+def _build_site_key(site_slug: str) -> str:
+    return f"psk_{site_slug}_{secrets.token_urlsafe(24)}"
+
+
+def _api_key_hint(api_key: str) -> str:
+    if len(api_key) <= 8:
+        return api_key
+    return f"{api_key[:4]}...{api_key[-4:]}"
 
 
 async def register(data: RegisterRequest, db: AsyncSession) -> TokenResponse:
@@ -182,3 +216,88 @@ async def list_organizations(workspace_id: str, db: AsyncSession) -> list[Organi
         .order_by(Organization.created_at.desc())
     )
     return list(result.scalars().all())
+
+
+async def list_public_sites(workspace_id: str, db: AsyncSession) -> list[PublicSite]:
+    result = await db.execute(
+        select(PublicSite)
+        .where(PublicSite.workspace_id == workspace_id)
+        .order_by(PublicSite.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_public_site(workspace_id: str, site_id: str, db: AsyncSession) -> PublicSite:
+    result = await db.execute(
+        select(PublicSite).where(
+            PublicSite.id == site_id,
+            PublicSite.workspace_id == workspace_id,
+        )
+    )
+    site = result.scalar_one_or_none()
+    if not site:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Public site not found")
+    return site
+
+
+async def create_public_site(
+    workspace_id: str,
+    data: PublicSiteCreate,
+    db: AsyncSession,
+) -> PublicSite:
+    existing = await db.execute(
+        select(PublicSite).where(
+            PublicSite.workspace_id == workspace_id,
+            PublicSite.site_slug == data.site_slug,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Public site slug already exists",
+        )
+
+    site = PublicSite(
+        workspace_id=workspace_id,
+        site_slug=data.site_slug,
+        domain=data.domain,
+        allowed_origins=_normalize_origins(data.allowed_origins),
+        is_active=data.is_active,
+        api_key=_build_site_key(data.site_slug),
+    )
+    db.add(site)
+    await db.commit()
+    await db.refresh(site)
+    return site
+
+
+async def update_public_site(
+    workspace_id: str,
+    site_id: str,
+    data: PublicSiteUpdate,
+    db: AsyncSession,
+) -> PublicSite:
+    site = await get_public_site(workspace_id, site_id, db)
+    payload = data.model_dump(exclude_unset=True)
+
+    if "allowed_origins" in payload and payload["allowed_origins"] is not None:
+        payload["allowed_origins"] = _normalize_origins(payload["allowed_origins"])
+
+    for field, value in payload.items():
+        setattr(site, field, value)
+
+    await db.commit()
+    await db.refresh(site)
+    return site
+
+
+async def rotate_public_site_key(
+    workspace_id: str,
+    site_id: str,
+    db: AsyncSession,
+) -> PublicSite:
+    site = await get_public_site(workspace_id, site_id, db)
+    site.api_key = _build_site_key(site.site_slug)
+    await db.commit()
+    await db.refresh(site)
+    return site

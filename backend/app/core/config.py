@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # API
     api_prefix: str = "/api/v1"
     allowed_origins: list[str] = ["http://localhost:8080", "http://localhost:3000"]
+    public_site_rate_limit_per_minute: int = 30
 
     # Database
     database_url: str = "postgresql+asyncpg://cbos:cbos@localhost:5432/cbos_dev"

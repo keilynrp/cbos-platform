@@ -1,4 +1,4 @@
-from sqlalchemy import String, Boolean, Text, ForeignKey, JSON
+from sqlalchemy import String, Boolean, Text, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -20,6 +20,9 @@ class Workspace(Base):
     users: Mapped[list["User"]] = relationship("User", back_populates="workspace")
     organizations: Mapped[list["Organization"]] = relationship(
         "Organization", back_populates="workspace"
+    )
+    public_sites: Mapped[list["PublicSite"]] = relationship(
+        "PublicSite", back_populates="workspace"
     )
 
 
@@ -84,4 +87,26 @@ class Organization(Base):
     # Relationship
     workspace: Mapped["Workspace"] = relationship(
         "Workspace", back_populates="organizations"
+    )
+
+
+class PublicSite(Base):
+    """Approved external site allowed to submit public requests into CBOS."""
+
+    __tablename__ = "public_sites"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "site_slug", name="uq_public_sites_workspace_slug"),
+    )
+
+    workspace_id: Mapped[str] = mapped_column(
+        String, ForeignKey("workspaces.id"), index=True
+    )
+    site_slug: Mapped[str] = mapped_column(String(100), index=True)
+    domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    api_key: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    allowed_origins: Mapped[list[str]] = mapped_column(JSON, default=list)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    workspace: Mapped["Workspace"] = relationship(
+        "Workspace", back_populates="public_sites"
     )

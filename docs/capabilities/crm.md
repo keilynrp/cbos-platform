@@ -1,5 +1,12 @@
 # Capability Spec: CRM
 
+**Module:** `backend/app/modules/crm/`
+**Tier:** 1 - Wedge-Critical
+**Owner:** Platform team
+**Status:** API, persisted, tested, event-emitting, production-aligned
+
+---
+
 ## Purpose
 
 Manage leads, opportunities, customer-related activity, and the first stages of the commercial wedge.
@@ -25,17 +32,26 @@ CRM is the entry point of the wedge and one of the most mature implemented capab
 
 ## Exposed API Surface
 
-The module currently appears to support:
+The module currently supports:
 
-- create lead
-- list leads
-- update lead
-- convert lead
-- create opportunity
-- update opportunity
-- change opportunity stage
-- activity operations
-- pipeline summary
+- `POST /api/v1/crm/leads`
+- `POST /api/v1/crm/public/leads`
+- `GET /api/v1/crm/leads`
+- `GET /api/v1/crm/leads/{lead_id}`
+- `PATCH /api/v1/crm/leads/{lead_id}`
+- `POST /api/v1/crm/leads/{lead_id}/convert`
+- `POST /api/v1/crm/opportunities`
+- `GET /api/v1/crm/opportunities`
+- `GET /api/v1/crm/opportunities/{opp_id}`
+- `PATCH /api/v1/crm/opportunities/{opp_id}`
+- `PATCH /api/v1/crm/opportunities/{opp_id}/stage`
+- `GET /api/v1/crm/pipeline/summary`
+- `POST /api/v1/crm/activities`
+- `GET /api/v1/crm/activities`
+- `PATCH /api/v1/crm/activities/{activity_id}/complete`
+
+All current internal CRM write routes are authenticated and workspace-scoped.
+The public intake route is anonymous, workspace-resolved from a site key, and bounded by origin validation.
 
 ## Dependencies
 
@@ -47,13 +63,13 @@ The module currently appears to support:
 
 CRM should publish and maintain versioned contracts for events such as:
 
-- lead captured
-- lead converted to opportunity
-- opportunity created
-- opportunity updated
-- opportunity stage changed
-- opportunity won
-- opportunity lost
+- `LeadCaptured`
+- `LeadConvertedToOpportunity`
+- `OpportunityCreated`
+- `OpportunityUpdated`
+- `OpportunityStageChanged`
+- `OpportunityWon`
+- `OpportunityLost`
 
 ## MVP Scope
 
@@ -64,7 +80,7 @@ CRM should publish and maintain versioned contracts for events such as:
 
 ## Current Gaps
 
+- public site intake v1 now has implementation plus Docker-backed contract verification; remaining hardening is operational around origin policy, rate limiting, and secret handling
 - customer conversion boundary should be made explicit
 - ownership line between CRM and Sales needs clearer documentation
-- contract tests for CRM events and endpoints should be added
-
+- public site integration depends on `identity` administration routes for `PublicSite` bootstrap and key rotation, and should continue following ADR 0013 and `docs/PUBLIC_SITE_LEAD_INTAKE_V1.md`

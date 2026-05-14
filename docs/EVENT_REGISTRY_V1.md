@@ -74,10 +74,13 @@ That means Event Registry V1 adopts the current PascalCase names as authoritativ
 | `OpportunityLost` | `1.0` | `crm` | `opportunity` | Opportunity reaches lost state | `workflows`, `notifications` | Useful for operational follow-up |
 | `QuoteCreated` | `1.0` | `sales` | `quote` | Quote is created | `workflows`, `notifications` | Confirmed in code constants |
 | `QuoteSent` | `1.0` | `sales` | `quote` | Quote is sent | `workflows`, `notifications` | External customer touchpoint |
-| `QuoteAccepted` | `1.0` | `sales` | `quote` | Quote is accepted | `inventory`, `workflows` | Router currently attempts inventory auto-reserve after accept |
-| `QuoteRejected` | `1.0` | `sales` | `quote` | Quote is rejected | `workflows`, `notifications` | Commercial dead-end signal |
-| `SalesOrderCreated` | `1.0` | `sales` | `sales_order` | Sales order is created | `inventory`, `workflows` | Wedge bridge between quote and execution |
+| `QuoteAccepted` | `1.0` | `sales` / `portal` | `quote` | Quote is accepted | `inventory`, `workflows`, `notifications` | May originate from internal sales flow or public portal acceptance |
+| `QuoteRejected` | `1.0` | `sales` / `portal` | `quote` | Quote is rejected | `workflows`, `notifications` | Commercial dead-end signal; portal can originate the rejection |
+| `SalesOrderCreated` | `1.0` | `sales` / `portal` | `sales_order` | Sales order is created | `inventory`, `workflows`, `notifications` | Wedge bridge between quote and execution; portal acceptance creates an order directly |
 | `SalesOrderConfirmed` | `1.0` | `sales` | `sales_order` | Sales order is confirmed | `inventory`, `workflows`, `notifications` | Important fulfillment/commitment signal |
+| `PortalSessionCreated` | `1.0` | `portal` | `portal_session` | A seller creates a customer portal session for a quote | `notifications`, `workflows` | Used for share-link visibility and portal funnel tracking |
+| `PortalSessionAccessed` | `1.0` | `portal` | `portal_session` / `quote` | Customer opens the portal quote for the first time | `notifications`, `analytics`, `workflows` | Emitted only on first access |
+| `CustomerActionPerformed` | `1.0` | `portal` | `portal_session` | Customer accepts or rejects through the portal | `notifications`, `analytics`, `workflows` | Payload carries the action and commercial context |
 | `InventoryReserved` | `1.0` | `inventory` | `inventory_reservation` | Stock is reserved | `sales`, `workflows`, `notifications` | Confirmed in code constants |
 | `InventoryReleased` | `1.0` | `inventory` | `inventory_reservation` | Reserved stock is released | `sales`, `workflows` | Inventory correction signal |
 | `StockMovementRecorded` | `1.0` | `inventory` | `stock_movement` | Stock movement is created | `workflows`, `analytics` | Good operational trace event |
@@ -123,4 +126,3 @@ Starting now:
 - new events must include a version
 - event changes must update this registry and `docs/IMPLEMENTATION_ALIGNMENT.md`
 - envelope-breaking changes require ADR
-
