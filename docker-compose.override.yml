@@ -23,5 +23,20 @@ services:
   frontend:
     environment:
       VITE_API_URL: http://localhost/api/v1
+    volumes:
+      # El codigo se monta desde el host; node_modules vive en un volumen
+      # nombrado. Asi el contenedor no pisa las dependencias del entorno
+      # nativo (dev-native.sh) ni al reves, y el arranque no reinstala.
+      - ./composable-os:/app
+      - frontend_node_modules:/app/node_modules
+    # El comando base corre `npm install` en CADA arranque. Aqui solo se
+    # instala si faltan las dependencias o si package-lock.json cambio
+    # despues de la ultima instalacion — mismo criterio que dev-native.sh.
+    command: >
+      sh -c "if [ ! -d node_modules/vite ] || [ package-lock.json -nt node_modules ]; then
+               npm ci --no-audit --no-fund && touch node_modules;
+             fi;
+             npm run dev -- --host 0.0.0.0 --port 8101"
 
-volumes: {}
+volumes:
+  frontend_node_modules:
