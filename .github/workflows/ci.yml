@@ -35,6 +35,9 @@ jobs:
       - name: Enforce governance update policy
         run: bash scripts/ci/check_governance.sh "${{ steps.diff.outputs.base_sha }}" "${{ steps.diff.outputs.head_sha }}"
 
+      - name: Enforce event registry parity
+        run: python scripts/ci/check_event_registry.py
+
   backend:
     name: Backend — test (359 tests)
     runs-on: ubuntu-latest

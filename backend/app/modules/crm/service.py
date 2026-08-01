@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import time
 from collections import deque
 from datetime import datetime, timezone
@@ -40,11 +41,34 @@ from app.modules.crm.schemas import (
 from app.modules.identity.models import Organization, PublicSite, User
 
 
+logger = logging.getLogger(__name__)
 _public_rate_limit_buckets: dict[str, deque[float]] = {}
 
 
 def _normalize_origin(origin: str) -> str:
     return origin.rstrip("/").lower()
+
+
+def _audit_public_intake(
+    outcome: str,
+    *,
+    site_slug: str | None = None,
+    workspace_id: str | None = None,
+    origin: str | None = None,
+    client_ip: str | None = None,
+    lead_id: str | None = None,
+    reason: str | None = None,
+) -> None:
+    logger.info(
+        "public_lead_intake outcome=%s site_slug=%s workspace_id=%s origin=%s client_ip=%s lead_id=%s reason=%s",
+        outcome,
+        site_slug,
+        workspace_id,
+        origin,
+        client_ip,
+        lead_id,
+        reason,
+    )
 
 
 def _enforce_public_rate_limit(site_slug: str, client_ip: str | None) -> None:
@@ -60,6 +84,7 @@ def _enforce_public_rate_limit(site_slug: str, client_ip: str | None) -> None:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Rate limit exceeded for public site intake",
+            headers={"Retry-After": "60"},
         )
 
     bucket.append(now)
@@ -130,6 +155,7 @@ async def create_lead(
     actor_id: str | None,
     data: LeadCreate,
     commit: bool = True,
+    event_payload_extra: dict | None = None,
 ) -> Lead:
     if data.organization_id:
         await validate_workspace_ownership(db, Organization, data.organization_id, workspace_id, "organization_id")
@@ -140,19 +166,23 @@ async def create_lead(
     db.add(lead)
     await db.flush()
 
+    event_payload = {
+        "first_name": lead.first_name,
+        "last_name": lead.last_name,
+        "email": lead.email,
+        "source": lead.source,
+        "company_name": lead.company_name,
+    }
+    if event_payload_extra:
+        event_payload.update(event_payload_extra)
+
     await publish_event(Event(
         event_type=LEAD_CAPTURED,
         source_module="crm",
         workspace_id=workspace_id,
         actor_id=actor_id,
         entity_id=lead.id,
-        payload={
-            "first_name": lead.first_name,
-            "last_name": lead.last_name,
-            "email": lead.email,
-            "source": lead.source,
-            "company_name": lead.company_name,
-        },
+        payload=event_payload,
     ))
 
     if commit:
@@ -174,6 +204,12 @@ async def create_public_lead(
         detail="Missing or invalid site key",
     )
     if not site_key:
+        _audit_public_intake(
+            "rejected",
+            origin=origin,
+            client_ip=client_ip,
+            reason="missing_site_key",
+        )
         raise credentials_exception
 
     result = await db.execute(
@@ -181,16 +217,49 @@ async def create_public_lead(
     )
     site = result.scalar_one_or_none()
     if not site:
+        _audit_public_intake(
+            "rejected",
+            origin=origin,
+            client_ip=client_ip,
+            reason="invalid_site_key",
+        )
         raise credentials_exception
     if not site.is_active:
+        _audit_public_intake(
+            "rejected",
+            site_slug=site.site_slug,
+            workspace_id=site.workspace_id,
+            origin=origin,
+            client_ip=client_ip,
+            reason="inactive_site",
+        )
         raise HTTPException(status_code=403, detail="Public site is inactive")
 
     normalized_origin = _normalize_origin(origin) if origin else None
     allowed_origins = {_normalize_origin(item) for item in site.allowed_origins}
     if allowed_origins and normalized_origin not in allowed_origins:
+        _audit_public_intake(
+            "rejected",
+            site_slug=site.site_slug,
+            workspace_id=site.workspace_id,
+            origin=origin,
+            client_ip=client_ip,
+            reason="origin_not_allowed",
+        )
         raise HTTPException(status_code=403, detail="Origin not allowed for this site")
 
-    _enforce_public_rate_limit(site.site_slug, client_ip)
+    try:
+        _enforce_public_rate_limit(site.site_slug, client_ip)
+    except HTTPException:
+        _audit_public_intake(
+            "rejected",
+            site_slug=site.site_slug,
+            workspace_id=site.workspace_id,
+            origin=origin,
+            client_ip=client_ip,
+            reason="rate_limited",
+        )
+        raise
 
     request_hash = _hash_public_payload(data)
     if idempotency_key:
@@ -204,11 +273,27 @@ async def create_public_lead(
         existing = result.scalar_one_or_none()
         if existing:
             if existing.request_hash != request_hash:
+                _audit_public_intake(
+                    "rejected",
+                    site_slug=site.site_slug,
+                    workspace_id=site.workspace_id,
+                    origin=origin,
+                    client_ip=client_ip,
+                    reason="idempotency_conflict",
+                )
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Idempotency key already used with different payload",
                 )
             lead = await get_lead(db, site.workspace_id, existing.lead_id)
+            _audit_public_intake(
+                "duplicate",
+                site_slug=site.site_slug,
+                workspace_id=site.workspace_id,
+                origin=origin,
+                client_ip=client_ip,
+                lead_id=lead.id,
+            )
             return PublicLeadCaptureResponse(
                 id=lead.id,
                 status=lead.status,
@@ -225,10 +310,22 @@ async def create_public_lead(
         source=f"website:{site.site_slug}",
         notes=_compose_public_notes(data, site.site_slug, origin),
     )
+    event_payload_extra = {
+        "site_slug": site.site_slug,
+        "form_id": data.form_id,
+        "source_page": data.source_page,
+        "origin": origin,
+        "public_intake": True,
+    }
 
     if idempotency_key:
         lead = await create_lead(
-            db, site.workspace_id, None, lead_data, commit=False
+            db,
+            site.workspace_id,
+            None,
+            lead_data,
+            commit=False,
+            event_payload_extra=event_payload_extra,
         )
         db.add(PublicLeadSubmission(
             workspace_id=site.workspace_id,
@@ -240,7 +337,22 @@ async def create_public_lead(
         await db.commit()
         await db.refresh(lead)
     else:
-        lead = await create_lead(db, site.workspace_id, None, lead_data)
+        lead = await create_lead(
+            db,
+            site.workspace_id,
+            None,
+            lead_data,
+            event_payload_extra=event_payload_extra,
+        )
+
+    _audit_public_intake(
+        "accepted",
+        site_slug=site.site_slug,
+        workspace_id=site.workspace_id,
+        origin=origin,
+        client_ip=client_ip,
+        lead_id=lead.id,
+    )
 
     return PublicLeadCaptureResponse(
         id=lead.id,

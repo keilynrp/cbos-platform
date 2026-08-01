@@ -42,23 +42,21 @@ The module currently appears to support:
 
 ## Event Responsibilities
 
-Minimum future event candidates:
+Inventory publishes and maintains versioned contracts for:
 
-- `inventory.product_created`
-- `inventory.stock_adjusted`
-- `inventory.stock_reserved`
-- `inventory.stock_released`
-- `inventory.stock_below_threshold`
+- `InventoryReserved`
+- `InventoryReleased`
+- `StockMovementRecorded`
+- `InventoryLowThresholdDetected`
 
 ## MVP Scope
 
 - maintain product data
 - expose stock availability
 - support reservation logic from order and sale flows
+- own reservation, release, movement, and stock threshold semantics; Sales reaches these operations through `sales.inventory_gateway`
 
 ## Current Gaps
 
-- order ownership between inventory and sales needs sharper definition
-- reservation semantics should be documented as a contract
-- inventory event model should be formalized before workflow depth increases
-
+- Reservation semantics should be documented more deeply as an API contract, especially partial reservation behavior and failure reporting.
+- Inventory should not own order state; Sales owns order lifecycle and calls Inventory through the ADR 0007 gateway.

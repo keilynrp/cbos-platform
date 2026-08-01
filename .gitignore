@@ -64,3 +64,6 @@ coverage.xml
 # El frontend composable-os tiene su propio historial git
 # Se rastrea como directorio normal en este monorepo
 composable-os/.git/
+
+# Artefactos de sesiones de brainstorming (HTML, PIDs, estado)
+.superpowers/

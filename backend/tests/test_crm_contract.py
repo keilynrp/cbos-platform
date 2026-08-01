@@ -7,9 +7,13 @@ Complements test_crm.py (basic flows) with endpoint coverage gaps
 identified in IMPLEMENTATION_ALIGNMENT.md.
 """
 
+import logging
+from unittest.mock import patch
+
 import pytest
 from httpx import AsyncClient
 
+from app.modules.crm import service as crm_service
 from app.modules.identity.models import PublicSite
 
 pytestmark = pytest.mark.asyncio
@@ -166,6 +170,44 @@ async def test_public_lead_create_creates_workspace_scoped_lead(
     assert leads[0]["email"] == "kei@example.com"
 
 
+async def test_public_lead_create_emits_site_metadata_event(
+    client: AsyncClient, session_factory, workspace
+):
+    site = await _create_public_site(session_factory, workspace.id)
+    published_events = []
+
+    async def capture_event(event):
+        published_events.append(event)
+
+    with patch("app.modules.crm.service.publish_event", side_effect=capture_event):
+        resp = await client.post(
+            f"{BASE}/public/leads",
+            headers={
+                "X-CBOS-Site-Key": site.api_key,
+                "Origin": "https://inbounduxd.example.com",
+            },
+            json={
+                "first_name": "Kei",
+                "email": "kei@example.com",
+                "form_id": "hero-form",
+                "source_page": "https://inbounduxd.example.com/ai-diagnostic",
+            },
+        )
+
+    assert resp.status_code == 201, resp.text
+    lead_events = [e for e in published_events if e.event_type == "LeadCaptured"]
+    assert len(lead_events) == 1
+    event = lead_events[0]
+    assert event.source_module == "crm"
+    assert event.workspace_id == workspace.id
+    assert event.actor_id is None
+    assert event.payload["source"] == "website:inbounduxd"
+    assert event.payload["site_slug"] == "inbounduxd"
+    assert event.payload["form_id"] == "hero-form"
+    assert event.payload["source_page"] == "https://inbounduxd.example.com/ai-diagnostic"
+    assert event.payload["public_intake"] is True
+
+
 async def test_public_lead_create_idempotency_returns_same_lead(
     client: AsyncClient, session_factory, workspace, auth_headers: dict
 ):
@@ -211,6 +253,55 @@ async def test_public_lead_create_idempotency_conflicts_on_different_payload(
         json={"first_name": "Different", "email": "different@example.com"},
     )
     assert second.status_code == 409, second.text
+
+
+async def test_public_lead_create_rate_limit_returns_retry_after(
+    client: AsyncClient, session_factory, workspace, monkeypatch
+):
+    site = await _create_public_site(session_factory, workspace.id)
+    crm_service._public_rate_limit_buckets.clear()
+    monkeypatch.setattr(crm_service.settings, "public_site_rate_limit_per_minute", 1)
+    headers = {
+        "X-CBOS-Site-Key": site.api_key,
+        "Origin": "https://inbounduxd.example.com",
+    }
+
+    first = await client.post(
+        f"{BASE}/public/leads",
+        headers=headers,
+        json={"first_name": "Kei", "email": "kei@example.com"},
+    )
+    second = await client.post(
+        f"{BASE}/public/leads",
+        headers=headers,
+        json={"first_name": "Another", "email": "another@example.com"},
+    )
+
+    assert first.status_code == 201, first.text
+    assert second.status_code == 429, second.text
+    assert second.headers["retry-after"] == "60"
+    crm_service._public_rate_limit_buckets.clear()
+
+
+async def test_public_lead_create_logs_rejected_origin(
+    client: AsyncClient, session_factory, workspace, caplog
+):
+    site = await _create_public_site(session_factory, workspace.id)
+
+    with caplog.at_level(logging.INFO, logger="app.modules.crm.service"):
+        resp = await client.post(
+            f"{BASE}/public/leads",
+            headers={
+                "X-CBOS-Site-Key": site.api_key,
+                "Origin": "https://evil.example.com",
+            },
+            json={"first_name": "Kei", "email": "kei@example.com"},
+        )
+
+    assert resp.status_code == 403
+    assert "public_lead_intake outcome=rejected" in caplog.text
+    assert "site_slug=inbounduxd" in caplog.text
+    assert "reason=origin_not_allowed" in caplog.text
 
 
 # ── Leads — get and update by ID ─────────────────────────────────────────────

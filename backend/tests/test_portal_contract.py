@@ -49,6 +49,32 @@ async def _create_quote(client: AsyncClient, headers: dict, title: str = "Portal
     return resp.json()
 
 
+async def _create_product_quote(
+    client: AsyncClient,
+    headers: dict,
+    product_id: str,
+    title: str = "Portal Product Quote",
+) -> dict:
+    resp = await client.post(f"{SALES}/quotes", headers=headers, json={
+        "title": title,
+        "currency": "USD",
+        "tax_rate": 0.0,
+        "discount_amount": 0.0,
+        "lines": [
+            {
+                "description": "Inventory-backed item",
+                "quantity": 3,
+                "unit_price": 250.0,
+                "discount_percent": 0.0,
+                "line_order": 1,
+                "product_id": product_id,
+            }
+        ],
+    })
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
 async def _create_session(
     client: AsyncClient,
     headers: dict,
@@ -173,6 +199,58 @@ async def test_accept_creates_order_and_returns_order_number(
     assert data["action"] == "accepted"
     assert data["order_number"] is not None
     assert data["order_number"].startswith("SO-")
+
+
+async def test_accept_reserves_inventory_through_sales_gateway(
+    client: AsyncClient, auth_headers: dict
+):
+    from unittest.mock import patch
+
+    category_resp = await client.post(
+        "/api/v1/inventory/categories",
+        headers=auth_headers,
+        json={"name": "Portal Gateway Category", "slug": "portal-gateway-category"},
+    )
+    assert category_resp.status_code == 201, category_resp.text
+    product_resp = await client.post(
+        "/api/v1/inventory/products",
+        headers=auth_headers,
+        json={
+            "sku": "PORTAL-GW-001",
+            "name": "Portal Gateway Product",
+            "product_type": "physical",
+            "category_id": category_resp.json()["id"],
+            "track_inventory": True,
+            "price": 250.0,
+        },
+    )
+    assert product_resp.status_code == 201, product_resp.text
+    product_id = product_resp.json()["id"]
+
+    quote = await _create_product_quote(client, auth_headers, product_id)
+    session = await _create_session(client, auth_headers, quote["id"])
+    token = session["token"]
+    gateway_calls = []
+
+    async def capture_gateway(db, workspace_id, actor_id, order_id, lines):
+        gateway_calls.append({
+            "workspace_id": workspace_id,
+            "actor_id": actor_id,
+            "order_id": order_id,
+            "lines": lines,
+        })
+        return {"reserved": [product_id], "failed": [], "partial": False}
+
+    with patch(
+        "app.modules.sales.inventory_gateway.reserve_for_order",
+        side_effect=capture_gateway,
+    ):
+        resp = await client.post(f"{PUBLIC}/quote/{token}/accept", json={})
+
+    assert resp.status_code == 200, resp.text
+    assert len(gateway_calls) == 1
+    assert gateway_calls[0]["order_id"]
+    assert gateway_calls[0]["lines"] == [{"product_id": product_id, "quantity": 3.0}]
 
 
 async def test_accept_sets_already_acted_flag(
