@@ -1,0 +1,34 @@
+# El Dockerfile hace `COPY . .` — sin este archivo se hornean secretos y
+# basura local dentro de la imagen, y cada build re-sube cientos de MB.
+
+# Secretos — NUNCA dentro de la imagen
+.env
+.env.*
+!.env.example
+
+# Entornos virtuales (el runtime nativo los deja aquí)
+.venv/
+venv/
+env/
+
+# Caches de Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Cobertura y reportes
+.coverage
+htmlcov/
+coverage.xml
+
+# Git / IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Logs
+*.log
