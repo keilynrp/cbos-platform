@@ -172,34 +172,36 @@ Abrir **http://localhost** — la app está lista.
 
 ## Desarrollo sin Docker
 
-Para iterar rápido se puede levantar la infraestructura en Docker y el servicio a desarrollar localmente.
+Solo `postgres` y `redis` corren en contenedores; backend y frontend corren como
+procesos nativos. Es el mismo modelo que usa el CI, y evita los bind mounts
+Windows→WSL, que son el principal cuello de botella en máquinas modestas.
 
-### Backend
-
-```bash
-# Infraestructura
-docker compose up postgres redis -d
-
-# Python
-cd backend
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-
-# Migraciones y arranque
-alembic upgrade head
-uvicorn app.main:app --reload --port 8000
-```
-
-### Frontend
+**Recomendado** si el stack completo en Docker te resulta lento.
 
 ```bash
-cd composable-os
-npm install
-npm run dev                      # http://localhost:5173 con HMR
+cp backend/.env.example backend/.env   # config del runtime nativo
+
+./scripts/dev-native.sh deps           # postgres + redis
+./scripts/dev-native.sh backend        # migra y arranca uvicorn  :8100
+./scripts/dev-native.sh frontend       # Vite con HMR             :8101
 ```
 
-> Con el backend local, `VITE_API_URL` debe apuntar a `http://localhost/api/v1` (vía nginx) o `http://localhost:8000/api/v1` (directo).
+`backend` y `frontend` son procesos en primer plano — cada uno en su terminal.
+Para levantar todo junto en una sola: `./scripts/dev-native.sh all`.
+
+El script instala dependencias solo cuando `requirements.txt` o
+`package-lock.json` cambiaron, así que los arranques posteriores son inmediatos.
+
+| Servicio | URL |
+|----------|-----|
+| Frontend (Vite + HMR) | http://localhost:8101 |
+| Backend API | http://localhost:8100 |
+| Swagger / API Docs | http://localhost:8100/docs |
+| Health check | http://localhost:8100/health |
+
+> En este modo no hay nginx: el frontend llama al backend directamente y CORS lo
+> autoriza vía `ALLOWED_ORIGINS` en `backend/.env`. El script exporta
+> `VITE_API_URL` automáticamente.
 
 ---
 
