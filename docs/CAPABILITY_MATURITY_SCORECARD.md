@@ -1,6 +1,6 @@
 # Capability Maturity Scorecard
 
-> Updated 2026-04-13 (Fase 1 — Contracts, Projects, HR promoted to Tier 1). Previous assessment: 2026-04-13 (post M3 — HR/Team module).
+> Updated 2026-06-29 (Deploy-readiness validation for Contracts, Projects, HR). Previous assessment: 2026-04-13 (Fase 1 — Contracts, Projects, HR promoted to Tier 1).
 
 ## Scoring Dimensions
 
@@ -43,9 +43,9 @@ Each dimension scores 🟢 (done) / 🟡 (partial) / 🔴 (missing):
 > Accounting: Promoted Tier 2 → Tier 1 (ADR 0010, 2026-04-11). E2E: `test_e2e_sales_accounting.py` (SalesOrder→Invoice→Payment). Auto-invoice consumer implemented Q3. Overdue scanner implemented Q4 (G2) — all ADR 0010 gaps resolved.
 > Portal: Promoted Tier 2 → Tier 1 (ADR 0011, 2026-04-12). 18 contract + 5 integration tests. E2E: `test_e2e_portal_accounting.py`.
 > Notifications: Promoted Tier 2 → Tier 1 (ADR 0012, 2026-04-12). 70 tests across 4 files. Email preferences UI + API. Frontend 🟢 — Notifications tab in Settings with granular email toggles.
-> Contracts: Promoted Tier 2 → Tier 1 (Fase 1, 2026-04-13). 28 contract + 13 integration tests = 41 total. State machine: draft→sent→signed→executed→expired/terminated. Capability spec: `docs/capabilities/contracts.md`. Production: pending deploy.
-> Projects: Promoted Tier 2 → Tier 1 (Fase 1, 2026-04-13). 28 contract + 16 integration tests = 44 total. State machine: planning→active→on_hold→completed/cancelled + task state machine. Capability spec: `docs/capabilities/projects.md`. Production: pending deploy.
-> HR/Team: Promoted Tier 2 → Tier 1 (Fase 1, 2026-04-13). 30 contract + 18 integration tests = 48 total. Employee state machine: active→on_leave→terminated. Department CRUD with SET NULL unlink semantics. Capability spec: `docs/capabilities/hr.md`. Production: pending deploy.
+> Contracts: Promoted Tier 2 → Tier 1 (Fase 1, 2026-04-13). 28 contract + 13 integration tests = 41 total. State machine: draft→sent→signed→executed→expired/terminated. Capability spec: `docs/capabilities/contracts.md`. Deploy readiness verified locally on 2026-06-29 (`docker-compose.prod.yml config`, HTTP create/list smoke, frontend production build). Production URL confirmation remains pending.
+> Projects: Promoted Tier 2 → Tier 1 (Fase 1, 2026-04-13). 28 contract + 16 integration tests = 44 total. State machine: planning→active→on_hold→completed/cancelled + task state machine. Capability spec: `docs/capabilities/projects.md`. Deploy readiness verified locally on 2026-06-29 (`docker-compose.prod.yml config`, HTTP create/list smoke, frontend production build). Production URL confirmation remains pending.
+> HR/Team: Promoted Tier 2 → Tier 1 (Fase 1, 2026-04-13). 30 contract + 18 integration tests = 48 total. Employee state machine: active→on_leave→terminated. Department CRUD with SET NULL unlink semantics. Capability spec: `docs/capabilities/hr.md`. Deploy readiness verified locally on 2026-06-29 (`docker-compose.prod.yml config`, HTTP create/list smoke, frontend production build). Production URL confirmation remains pending.
 
 ### Tier 2 — Wedge Support
 
@@ -116,10 +116,14 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 | Portal | Promote to Tier 1 | ✅ Done Q3 (ADR 0011) |
 | Contracts | Implement M1 module (models, service, router, tests, frontend) | ✅ Done M1 (2026-04-13, 28 tests) |
 | Contracts | Integration tests + capability spec | ✅ Done Fase 1 (2026-04-13, 13 integration tests, `docs/capabilities/contracts.md`) |
+| Contracts | Deploy readiness validation | ✅ Done 2026-06-29 — prod compose config, local HTTP create/list smoke, frontend production build |
 | Projects  | Implement M2 module (models, service, router, tests, frontend) | ✅ Done M2 (2026-04-13, 28 tests) |
 | Projects  | Integration tests + capability spec | ✅ Done Fase 1 (2026-04-13, 16 integration tests, `docs/capabilities/projects.md`) |
+| Projects  | Deploy readiness validation | ✅ Done 2026-06-29 — prod compose config, local HTTP create/list smoke, frontend production build |
 | HR/Team   | Implement M3 module (employees, departments, state machine, frontend) | ✅ Done M3 (2026-04-13, 30 tests) |
 | HR/Team   | Integration tests + capability spec | ✅ Done Fase 1 (2026-04-13, 18 integration tests, `docs/capabilities/hr.md`) |
+| HR/Team   | Deploy readiness validation | ✅ Done 2026-06-29 — prod compose config, local HTTP create/list smoke, frontend production build |
+| Contracts/Projects/HR | Production URL smoke confirmation | 🟡 Pending — requires deployed domain/SHA evidence before Production can move to 🟢 |
 | Discovery | Write capability spec; add integration tests | ✅ Done Q2 |
 | Discovery | Promote to Tier 2 | ✅ Done Q2 (ADR 0008) |
 | Discovery | E2E scenario for Tier 1 promotion | ✅ Done Q3 (`test_e2e_discovery_blueprint.py`) |

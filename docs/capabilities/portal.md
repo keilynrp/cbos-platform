@@ -131,6 +131,7 @@ Portal emits both portal-native events and cross-domain commercial events.
 - Accept creates a confirmed `SalesOrder`
 - Seller and client email notifications are attempted after commit
 - Best-effort inventory auto-reserve runs after accept when quote lines reference products
+- Portal invokes inventory reservation only through the Sales-owned `sales.inventory_gateway.reserve_for_order` boundary from ADR 0007
 
 ### Quote rejection
 
@@ -157,8 +158,8 @@ Portal also participates in `test_wedge_smoke.py::test_full_wedge`.
 ## Known Gaps (Accepted For MVP)
 
 1. Tokens expire after a short window and there is no renewal or revocation UI beyond creating a new session.
-2. Public portal analytics are not modeled yet; there is no session funnel or view-rate reporting.
-3. Best-effort inventory reserve after acceptance is still a synchronous integration path and not yet refactored behind the Sales inventory gateway boundary.
+2. Public portal analytics are not modeled yet; there is no session funnel or view-rate reporting beyond first-access stamping.
+3. Partial inventory reservation outcomes are logged at the gateway boundary but are not yet surfaced to sellers in the product UI.
 
 ---
 

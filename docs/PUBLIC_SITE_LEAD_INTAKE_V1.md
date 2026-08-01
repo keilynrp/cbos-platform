@@ -48,7 +48,7 @@ The public route is intended to:
 
 What still needs hardening or verification:
 
-- role-gated production administration and audit trail for site keys
+- production audit trail persistence for site-key administration
 - production verification of origin validation for public intake
 - request-level idempotency validation under real runtime conditions beyond contract tests
 - explicit operational validation of rate limiting behavior under load
@@ -67,6 +67,9 @@ This means V1 now has:
 - internal API administration for approved public sites
 - key rotation at the API layer
 - Docker-backed contract verification for workspace scoping, origin validation, and idempotency
+- request-decision logging for accepted, rejected, duplicate, conflicted, and rate-limited submissions
+- `Retry-After: 60` on public intake rate-limit responses
+- `LeadCaptured` payload enrichment with `site_slug`, `form_id`, `source_page`, `origin`, and `public_intake`
 
 ---
 
@@ -193,6 +196,7 @@ Successful create:
 
 - `401 Unauthorized` if site key is missing or invalid
 - `403 Forbidden` if origin is not allowed or site is inactive
+- `429 Too Many Requests` if the per-site/IP rate limit is exceeded; response includes `Retry-After: 60`
 - `409 Conflict` if idempotency key resolves to an already accepted submission and V1 chooses explicit duplicate signaling
 - `422 Unprocessable Entity` for validation failures
 
@@ -242,6 +246,14 @@ V1 must reuse the active event system.
 }
 ```
 
+The current implementation emits these public-intake fields on `LeadCaptured`:
+
+- `site_slug`
+- `form_id`
+- `source_page`
+- `origin`
+- `public_intake: true`
+
 `actor_id` should be `null` for anonymous public submissions in V1.
 
 ---
@@ -284,6 +296,12 @@ Suggested logs:
 - request origin
 - decision outcome
 - lead id on success
+
+Current implementation logs public intake decisions through `app.modules.crm.service` with:
+
+- `outcome`: `accepted`, `rejected`, or `duplicate`
+- `reason`: for rejected requests, including `missing_site_key`, `invalid_site_key`, `inactive_site`, `origin_not_allowed`, `rate_limited`, and `idempotency_conflict`
+- `site_slug`, `workspace_id`, `origin`, `client_ip`, and `lead_id` where available
 
 ---
 
@@ -328,17 +346,17 @@ Suggested logs:
 3. Add `POST /api/v1/crm/public/leads`
 4. Reuse CRM lead creation service with server-side source mapping
 5. Emit `LeadCaptured` with site metadata in payload
-6. Add contract tests for auth boundary, origin validation, workspace scoping, and idempotency behavior
+6. Add contract tests for auth boundary, origin validation, workspace scoping, idempotency behavior, event metadata, rate-limit response headers, and rejection logs
 7. Validate the flow in Docker-backed tests and deployment-like runtime
 8. Document the route in `API_CONVENTIONS.md` once the runtime contract is fully verified
 
-Steps 1 through 7 now have a baseline implementation in the repository. Remaining hardening is operational, not architectural.
+Steps 1 through 6 now have a hardened implementation baseline in the repository. Remaining hardening is operational: production-like load validation, durable audit storage if needed, and deployment confirmation.
 
 ---
 
 ## Open Questions
 
 1. Site keys now live in database tables for V1. The remaining question is whether future production hardening needs hashing, vault-backed storage, or UI-only reveal semantics.
-2. Should extra public metadata be stored structurally now or only carried in event payload plus notes?
-3. Do we want strict idempotency keys in V1 or duplicate detection as an interim step?
+2. Should extra public metadata stay in event payload plus notes, or does production reporting require structured storage?
+3. Strict `Idempotency-Key` support now exists for retries. Do we also want duplicate detection for submissions without an idempotency key?
 4. Do we need separate keys for browser-submitted forms vs server-side site actions?

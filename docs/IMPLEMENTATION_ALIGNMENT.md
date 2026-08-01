@@ -28,6 +28,7 @@ Legacy documents are historical reference only unless explicitly promoted by ADR
 - Redis is the active event and notification backbone
 - Core backend modules exist for the active capability areas
 - Portal, notifications, accounting, discovery, contracts, projects, and HR have been promoted into the active Tier 1 surface
+- Contracts, Projects, and HR have deploy readiness evidence: backend routers registered, Alembic migrations present, active frontend routes/services, valid production compose config, local HTTP create/list smoke, and passing frontend production build
 - Public token-based external interaction already exists in production through Portal
 - Business events are emitted through the shared event envelope in `backend/app/events/types.py`
 
@@ -35,17 +36,18 @@ Legacy documents are historical reference only unless explicitly promoted by ADR
 
 - The MVP wedge is implemented end to end, but some boundaries remain more coupled than the target architecture wants
 - API conventions are documented, but conformance is still uneven outside the most critical modules
-- Event Registry V1 exists, but publisher parity still needs explicit validation module by module
+- Event Registry V1 exists and CI now enforces parity between event constants, registry entries, and statically detectable publishers
 - Capability specs exist for active modules, but their freshness is uneven and they need periodic maintenance
 - Strategic integration direction for external brand sites now exists in docs, and Public Site Lead Intake V1 has an initial backend implementation path alongside Portal
-- CRM now owns both authenticated internal lead creation and the first public site intake boundary, but that public path still needs runtime verification and hardening
+- CRM now owns both authenticated internal lead creation and the first public site intake boundary. The public path now has site-key resolution, origin validation, idempotency, rate-limit responses, decision logging, and enriched `LeadCaptured` metadata, but still needs production-like operational validation.
 
 ### Misaligned Or At Risk
 
 - Some active docs still contain old metrics or outdated maturity statements if they are not refreshed after each sprint
 - Public integration ambitions in `cbos_sdd_portal_integration_contract.md` are broader than the currently implemented codebase
-- Event governance is documented but not yet enforced as a strict contract workflow in CI
-- Portal acceptance still performs best-effort inventory auto-reserve through a direct integration path instead of the clearer boundary pattern documented for Sales
+- Event governance is documented and CI now enforces registry parity for event constants and statically detectable publishers
+- Partial inventory reservation behavior still needs deeper operational coverage and user-facing surfacing, even though Portal now reaches Inventory through the Sales gateway boundary
+- Contracts, Projects, and HR still need a production-domain smoke record before their scorecard Production dimension can be marked green
 
 ---
 
@@ -67,12 +69,13 @@ Legacy documents are historical reference only unless explicitly promoted by ADR
 |---|---|---|---|---|
 | Architectural source of truth | Governing doc set exists, but some module docs lag behind code | One consistently maintained governing set | High | Refresh active docs when features or promotions land |
 | MVP scope control | Wedge is complete, but expansion pressure is growing | Wedge-first growth with explicit ADR gates | High | Keep new public integrations bounded to small validated slices |
-| Event contracts | Event registry is active, but parity checks are manual | Versioned domain contracts with explicit maintenance discipline | High | Update registry on every new event and add publisher validation over time |
-| Domain boundaries | Most module ownership is clear, but some cross-domain calls remain direct | Explicit boundaries with gateway or event-driven handoff where justified | High | Continue paying down coupling at Portal/Sales/Inventory edges |
+| Event contracts | Event registry is active and parity checks run in CI for constants, registry entries, versions, naming, and statically detectable publishers | Versioned domain contracts with explicit maintenance discipline | High | Extend static detection over time for dynamic publisher expressions and keep registry updates in the same change set as event changes |
+| Domain boundaries | Portal acceptance now uses the Sales-owned Inventory gateway from ADR 0007; remaining risk is partial reservation visibility and future gateway observability | Explicit boundaries with gateway or event-driven handoff where justified | High | Add deeper tests and product surfacing for partial inventory reservation outcomes |
 | Frontend alignment | Active routes are much cleaner than before, but docs still lag occasionally | UI backed by owned capabilities and current backend maturity | Medium | Refresh capability specs and route docs alongside feature delivery |
 | Test coverage narrative | Codebase has 498 tests, but some docs still report older counts | One accurate confidence narrative | High | Update score-bearing docs in the same change set as features |
-| External brand-site integration | Strategic direction documented; public lead intake v1 now exists in code but is not yet operationally proven | One validated public integration slice before SDK/builder expansion | High | Verify and harden the new CRM public intake boundary |
-| Public API boundary | Portal proves public interaction can work; CRM public intake now defines the initial site-key/origin model | Explicit public endpoint policy with origin, key, and rate-limit rules | High | Validate the CRM public intake contract before broader public API claims |
+| Contracts/Projects/HR production confirmation | Deploy readiness is locally verified, but no production-domain smoke evidence has been recorded in governance | Production dimension marked green only after deployed route smoke passes against the production domain and matching SHA | High | Run production smoke for `/contracts`, `/projects`, `/departments`, and `/employees` after deploy |
+| External brand-site integration | Strategic direction documented; public lead intake v1 now has code, contract tests, decision logging, event metadata, and rate-limit response behavior, but is not yet operationally proven under production-like traffic | One validated public integration slice before SDK/builder expansion | High | Run deployment-like validation for CRM public intake before expanding public surfaces |
+| Public API boundary | Portal proves public interaction can work; CRM public intake now defines the initial site-key/origin/idempotency/rate-limit model | Explicit public endpoint policy with origin, key, idempotency, abuse controls, and logging rules | High | Promote the CRM public intake contract into broader public API conventions only after production validation |
 | Future stack pressure | Strategic docs mention SDK, builder, semantic layers, and UKIP-compatible ideas | Current stack remains frozen until justified | Medium | Treat those areas as target-state only unless promoted by ADR |
 
 ---
@@ -96,14 +99,14 @@ Legacy documents are historical reference only unless explicitly promoted by ADR
 
 The next recommended integration slice is:
 
-`Public Site Lead Intake v1 hardening`
+`Public Site Lead Intake v1 operational validation`
 
 Why this slice first:
 
 - it validates external brand-site to CBOS connectivity without expanding the product surface too far
 - it reuses a mature CRM capability that already owns lead creation and emits `LeadCaptured`
-- it establishes the first site-key, origin validation, and idempotency boundary in code
-- it still needs runtime validation, abuse hardening, and deployment confirmation
+- it establishes the first site-key, origin validation, idempotency, rate-limit, and decision-log boundary in code
+- it still needs production-like runtime validation, abuse-load validation, and deployment confirmation
 
 Reference documents:
 

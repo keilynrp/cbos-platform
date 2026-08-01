@@ -403,18 +403,27 @@ async def portal_accept(
         except Exception as exc:
             logger.warning("Client confirmation email failed: %s", exc)
 
-    # Best-effort auto-reserve inventory
+    # Best-effort auto-reserve through the Sales→Inventory gateway boundary.
     lines_with_product = [l for l in quote.lines if l.product_id]
     if lines_with_product:
-        try:
-            from app.modules.inventory import service as inv_service
-            from app.modules.inventory.schemas import OrderLineReserve
-            await inv_service.auto_reserve_for_order(
-                db, session.workspace_id, session.created_by_id or "", order.id,
-                [OrderLineReserve(product_id=l.product_id, quantity=l.quantity) for l in lines_with_product],
+        from app.modules.sales.inventory_gateway import reserve_for_order
+
+        result = await reserve_for_order(
+            db,
+            session.workspace_id,
+            session.created_by_id or "",
+            order.id,
+            [
+                {"product_id": line.product_id, "quantity": line.quantity}
+                for line in lines_with_product
+            ],
+        )
+        if result.get("partial"):
+            logger.warning(
+                "Portal auto-reserve partial for order %s: %s",
+                order.id,
+                result,
             )
-        except Exception as exc:
-            logger.warning("Portal auto-reserve failed for order %s: %s", order.id, exc)
 
     return PortalActionResult(
         success=True,
