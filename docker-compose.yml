@@ -30,7 +30,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    # Sin `command`: entrypoint.sh corre las migraciones y arranca uvicorn
+    # (con --reload salvo ENVIRONMENT=production o RELOAD=0). Un `command`
+    # aqui NO reemplaza al arranque — entrypoint.sh ignora "$@".
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cbos}:${POSTGRES_PASSWORD:-cbos_dev_pass}@postgres:5432/${POSTGRES_DB:-cbos_dev}
       REDIS_URL: redis://redis:6379
