@@ -154,6 +154,21 @@ docker compose exec backend alembic upgrade head
 
 Abrir **http://localhost** — la app está lista.
 
+### Hooks de git
+
+El repositorio versiona sus hooks en `.githooks/`. Git no los activa solo, así
+que hay que apuntarlo ahí **una vez por clon**:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Instala un `pre-push` que rechaza escrituras directas sobre `master`, forzando
+el flujo de rama + Pull Request. No es una medida de seguridad —se puede saltar
+con `git push --no-verify`— sino un portero contra el despiste: GitHub no ofrece
+protecciones de rama del lado del servidor en repositorios privados del plan
+gratuito.
+
 ### URLs locales
 
 | Servicio | URL |

@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# ═══════════════════════════════════════════════════════════════════════════
+# pre-push — rechaza escrituras directas sobre las ramas protegidas.
+#
+# El repositorio es privado en plan gratuito, donde GitHub no ofrece
+# protecciones de rama del lado del servidor. Este hook cubre el caso real
+# de un equipo pequeño —el despiste— forzando el flujo de rama + PR.
+#
+# NO es una medida de seguridad: se puede saltar con `git push --no-verify`
+# y es local, no del servidor. Es un portero, no un candado.
+#
+# Se activa con:  git config core.hooksPath .githooks
+# ═══════════════════════════════════════════════════════════════════════════
+set -uo pipefail
+
+PROTECTED_BRANCHES="master main"
+ZERO='0000000000000000000000000000000000000000'
+
+if [ -t 2 ]; then
+  C_ERR=$'\033[31m'; C_DIM=$'\033[2m'; C_OFF=$'\033[0m'
+else
+  C_ERR=''; C_DIM=''; C_OFF=''
+fi
+
+is_protected() {
+  local b="$1" p
+  for p in $PROTECTED_BRANCHES; do
+    [ "$b" = "$p" ] && return 0
+  done
+  return 1
+}
+
+# stdin: <local_ref> <local_sha> <remote_ref> <remote_sha>
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  [ -n "${remote_ref:-}" ] || continue
+
+  branch="${remote_ref#refs/heads/}"
+  is_protected "$branch" || continue
+
+  if [ "$local_sha" = "$ZERO" ]; then
+    action="borrar"
+  else
+    action="escribir en"
+  fi
+
+  printf '%s✗ push rechazado%s: intentas %s la rama protegida "%s".\n\n' \
+    "$C_ERR" "$C_OFF" "$action" "$branch" >&2
+  printf '  El flujo es rama + Pull Request:\n\n' >&2
+  printf '    git checkout -b <tipo>/<descripcion>\n' >&2
+  printf '    git push -u origin <tipo>/<descripcion>\n' >&2
+  printf '    gh pr create --base %s\n\n' "$branch" >&2
+  printf '%s  Si de verdad necesitas saltarlo: git push --no-verify%s\n' \
+    "$C_DIM" "$C_OFF" >&2
+  exit 1
+done
+
+exit 0
