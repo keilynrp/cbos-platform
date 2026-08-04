@@ -108,7 +108,9 @@ async def download_invoice_pdf(
 ):
     """Download a PDF rendition of an invoice."""
     inv = await service.get_invoice(db, workspace_id, invoice_id)
-    pdf_bytes = generate_invoice_pdf(inv)
+    profile = await service.get_or_create_company_profile(db, workspace_id)
+    party = await service.resolve_invoice_party(db, workspace_id, inv)
+    pdf_bytes = generate_invoice_pdf(inv, profile=profile, party=party)
     filename = f"{inv.invoice_number}.pdf"
     return Response(
         content=pdf_bytes,
