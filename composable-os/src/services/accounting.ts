@@ -117,6 +117,32 @@ export interface RecordPaymentDto {
   currency?: string;
 }
 
+export interface CompanyProfile {
+  id: string;
+  workspace_id: string;
+  legal_name: string | null;
+  tax_id: string | null;
+  tax_id_label: string;
+  address_line: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  logo_data_uri: string | null;
+  default_currency: string;
+  default_tax_rate: number;
+  invoice_footer_note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type UpdateCompanyProfileDto = Partial<
+  Omit<CompanyProfile, "id" | "workspace_id" | "created_at" | "updated_at">
+>;
+
 export const accountingService = {
   getSummary: () =>
     api.get<AccountingSummary>("/accounting/summary"),
@@ -141,4 +167,10 @@ export const accountingService = {
 
   recordPayment: (invoiceId: string, dto: RecordPaymentDto) =>
     api.post<Payment>(`/accounting/invoices/${invoiceId}/payments`, dto),
+
+  getCompanyProfile: () =>
+    api.get<CompanyProfile>("/accounting/company-profile"),
+
+  updateCompanyProfile: (dto: UpdateCompanyProfileDto) =>
+    api.put<CompanyProfile>("/accounting/company-profile", dto),
 };
