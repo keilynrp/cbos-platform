@@ -11,14 +11,20 @@ from alembic import context
 from app.core.config import settings
 from app.core.database import Base
 
-# Importar todos los modelos para que Alembic los detecte
-from app.modules.identity.models import Workspace, User, Person, Organization  # noqa: F401
-from app.modules.crm.models import Lead, Opportunity, Activity  # noqa: F401
-from app.modules.sales.models import Quote, QuoteLine, SalesOrder  # noqa: F401
+# Importar todos los modelos para que Alembic los detecte.
+# Esta lista debe mantenerse sincronizada con la de tests/conftest.py: un modelo
+# ausente no entra en Base.metadata y autogenerate lo reporta como tabla borrada.
+from app.modules.identity.models import Workspace, User, Person, Organization, PublicSite  # noqa: F401
+from app.modules.crm.models import Lead, Opportunity, Activity, PublicLeadSubmission  # noqa: F401
+from app.modules.sales.models import Quote, QuoteLine, SalesOrder, SalesOrderLine, QuoteEvent  # noqa: F401
 from app.modules.inventory.models import ProductCategory, Product, InventoryItem, StockMovement  # noqa: F401
 from app.modules.portal.models import PortalSession  # noqa: F401
 from app.modules.discovery.models import DiscoverySession, DiscoveryMessage  # noqa: F401
 from app.modules.workflows.models import Workflow, WorkflowRun  # noqa: F401
+from app.modules.accounting.models import CompanyProfile, Invoice, InvoiceLine, Payment  # noqa: F401
+from app.modules.contracts.models import Contract, ContractClause  # noqa: F401
+from app.modules.projects.models import Project, ProjectTask  # noqa: F401
+from app.modules.hr.models import Department, Employee  # noqa: F401
 
 config = context.config
 
