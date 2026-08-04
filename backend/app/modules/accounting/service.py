@@ -2,6 +2,7 @@ import base64
 import binascii
 import logging
 import re
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
 from fastapi import HTTPException
@@ -28,6 +29,7 @@ from app.modules.accounting.schemas import (
     PaymentCreate,
     PaymentRead,
 )
+from app.modules.identity.models import Organization, Person
 
 logger = logging.getLogger(__name__)
 
@@ -350,3 +352,69 @@ async def update_company_profile(
     await db.commit()
     await db.refresh(profile)
     return profile
+
+
+# ── Customer resolution ───────────────────────────────────────────────────────
+
+@dataclass
+class InvoiceParty:
+    """Customer details resolved for rendering on a document.
+
+    Not a Pydantic schema — never serialized to the API, only consumed by the
+    PDF and spreadsheet generators.
+    """
+
+    name: str | None = None
+    contact_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    country: str | None = None
+
+    @property
+    def is_empty(self) -> bool:
+        return self.name is None
+
+
+async def resolve_invoice_party(
+    db: AsyncSession, workspace_id: str, invoice: Invoice
+) -> InvoiceParty:
+    """Resolve an invoice's customer from identity records.
+
+    Never raises: a null or dangling reference yields an empty InvoiceParty so
+    that document generation always succeeds.
+    """
+    party = InvoiceParty()
+
+    person: Person | None = None
+    if invoice.contact_id:
+        result = await db.execute(
+            select(Person).where(
+                Person.id == invoice.contact_id,
+                Person.workspace_id == workspace_id,
+            )
+        )
+        person = result.scalar_one_or_none()
+
+    org: Organization | None = None
+    if invoice.organization_id:
+        result = await db.execute(
+            select(Organization).where(
+                Organization.id == invoice.organization_id,
+                Organization.workspace_id == workspace_id,
+            )
+        )
+        org = result.scalar_one_or_none()
+
+    if org is not None:
+        party.name = org.brand_name or org.legal_name
+        party.country = org.country
+        if person is not None:
+            party.contact_name = person.full_name
+    elif person is not None:
+        party.name = person.full_name
+
+    if person is not None:
+        party.email = person.email
+        party.phone = person.phone
+
+    return party

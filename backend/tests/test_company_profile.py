@@ -1,6 +1,8 @@
 """Tests for the invoice issuer profile (CompanyProfile)."""
 
 import base64
+import uuid
+from datetime import date
 
 import pytest
 from fastapi import HTTPException
@@ -9,13 +11,29 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.modules.accounting import service
-from app.modules.accounting.models import CompanyProfile
+from app.modules.accounting.models import CompanyProfile, Invoice
 from app.modules.accounting.schemas import CompanyProfileUpdate
+from app.modules.identity.models import Organization, Person, Workspace
 
 
 def _data_uri(n_bytes: int, mime: str = "image/png") -> str:
     payload = base64.b64encode(b"x" * n_bytes).decode()
     return f"data:{mime};base64,{payload}"
+
+
+async def _make_invoice(db, workspace_id, **kwargs):
+    inv = Invoice(
+        workspace_id=workspace_id,
+        invoice_number="INV-2026-0001",
+        status="draft",
+        issue_date=date(2026, 8, 3),
+        currency="USD",
+        **kwargs,
+    )
+    db.add(inv)
+    await db.commit()
+    await db.refresh(inv)
+    return inv
 
 
 class TestCompanyProfileModel:
@@ -202,3 +220,113 @@ class TestCompanyProfileEndpoints:
     async def test_requires_authentication(self, client):
         resp = await client.get("/api/v1/accounting/company-profile")
         assert resp.status_code in (401, 403)
+
+
+class TestResolveInvoiceParty:
+    @pytest.mark.asyncio
+    async def test_empty_when_no_contact_or_organization(self, db, workspace):
+        inv = await _make_invoice(db, workspace.id)
+        party = await service.resolve_invoice_party(db, workspace.id, inv)
+        assert party.is_empty
+        assert party.name is None
+
+    @pytest.mark.asyncio
+    async def test_prefers_brand_name_over_legal_name(self, db, workspace):
+        org = Organization(
+            workspace_id=workspace.id,
+            legal_name="Acme Sociedad Anonima",
+            brand_name="Acme",
+            country="Peru",
+        )
+        db.add(org)
+        await db.commit()
+
+        inv = await _make_invoice(db, workspace.id, organization_id=org.id)
+        party = await service.resolve_invoice_party(db, workspace.id, inv)
+        assert party.name == "Acme"
+        assert party.country == "Peru"
+        assert not party.is_empty
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_legal_name(self, db, workspace):
+        org = Organization(workspace_id=workspace.id, legal_name="Solo Legal S.A.")
+        db.add(org)
+        await db.commit()
+
+        inv = await _make_invoice(db, workspace.id, organization_id=org.id)
+        party = await service.resolve_invoice_party(db, workspace.id, inv)
+        assert party.name == "Solo Legal S.A."
+
+    @pytest.mark.asyncio
+    async def test_uses_person_when_no_organization(self, db, workspace):
+        person = Person(
+            workspace_id=workspace.id,
+            full_name="Maria Rodriguez",
+            email="maria@example.com",
+            phone="+51 999 888 777",
+        )
+        db.add(person)
+        await db.commit()
+
+        inv = await _make_invoice(db, workspace.id, contact_id=person.id)
+        party = await service.resolve_invoice_party(db, workspace.id, inv)
+        assert party.name == "Maria Rodriguez"
+        assert party.email == "maria@example.com"
+        assert party.phone == "+51 999 888 777"
+
+    @pytest.mark.asyncio
+    async def test_organization_wins_and_person_becomes_contact_name(self, db, workspace):
+        org = Organization(workspace_id=workspace.id, legal_name="Acme S.A.")
+        person = Person(workspace_id=workspace.id, full_name="Maria Rodriguez")
+        db.add_all([org, person])
+        await db.commit()
+
+        inv = await _make_invoice(
+            db, workspace.id, organization_id=org.id, contact_id=person.id
+        )
+        party = await service.resolve_invoice_party(db, workspace.id, inv)
+        assert party.name == "Acme S.A."
+        assert party.contact_name == "Maria Rodriguez"
+
+    @pytest.mark.asyncio
+    async def test_unresolvable_reference_does_not_raise(self, db, workspace):
+        """An id that resolves to nothing must degrade to empty, never raise.
+
+        The invoice is left unpersisted on purpose: invoices.organization_id
+        carries a real foreign key, so a dangling id cannot be inserted, and the
+        constraint's ondelete SET NULL means deleting the organization nulls the
+        column instead of leaving it dangling. resolve_invoice_party only reads
+        the two id attributes, so an in-memory Invoice exercises the same path.
+        """
+        inv = Invoice(
+            workspace_id=workspace.id,
+            invoice_number="INV-2026-0002",
+            status="draft",
+            issue_date=date(2026, 8, 3),
+            currency="USD",
+            organization_id=str(uuid.uuid4()),
+            contact_id=str(uuid.uuid4()),
+        )
+        party = await service.resolve_invoice_party(db, workspace.id, inv)
+        assert party.is_empty
+
+    @pytest.mark.asyncio
+    async def test_does_not_resolve_across_workspaces(self, db, workspace, session_factory):
+        """Cross-tenant leak guard."""
+        async with session_factory() as other_session:
+            other_ws = Workspace(name="Otra Corp", slug="otra-corp", active_modules=[])
+            other_session.add(other_ws)
+            await other_session.commit()
+            await other_session.refresh(other_ws)
+
+            foreign_org = Organization(
+                workspace_id=other_ws.id, legal_name="Empresa Ajena S.A."
+            )
+            other_session.add(foreign_org)
+            await other_session.commit()
+            await other_session.refresh(foreign_org)
+            foreign_org_id = foreign_org.id
+
+        inv = await _make_invoice(db, workspace.id, organization_id=foreign_org_id)
+        party = await service.resolve_invoice_party(db, workspace.id, inv)
+        assert party.is_empty, "An organization from another workspace must not resolve"
