@@ -251,6 +251,27 @@ cd backend && pytest --tb=short -q
 docker compose exec backend pytest --tb=short -v
 ```
 
+### Frontend
+
+```bash
+cd composable-os
+
+npm test        # unitarios con vitest (jsdom), sin dependencias externas
+npm run test:e2e  # end to end con Playwright, requiere el stack levantado
+```
+
+Los e2e no levantan la aplicación: esperan que `docker compose up -d` ya la esté
+sirviendo, porque los flujos que cubren cruzan al backend y a la base de datos.
+La primera corrida necesita el navegador (`npx playwright install chromium`) y
+crea un workspace de pruebas `e2e-company-profile` en la base de desarrollo, que
+las corridas siguientes reutilizan en lugar de acumular. Para apuntar a otro
+entorno, `E2E_BASE_URL=https://... npm run test:e2e`.
+
+Cubren lo que ninguna otra capa puede comprobar: que el validador de logo
+rechace un archivo grande **sin llegar a la red**, y que los estados de carga y
+de error se rendericen. El contenido de los PDF se afirma en el backend, que
+extrae el texto renderizado con pypdf.
+
 ---
 
 ## Migraciones de base de datos
