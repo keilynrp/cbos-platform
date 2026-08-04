@@ -155,3 +155,50 @@ class TestLogoValidation:
             service._validate_logo_data_uri(_data_uri(204_801))
         assert exc.value.status_code == 400
         assert "200" in exc.value.detail
+
+
+class TestCompanyProfileEndpoints:
+    @pytest.mark.asyncio
+    async def test_get_returns_empty_profile_not_404(self, client, auth_headers):
+        resp = await client.get("/api/v1/accounting/company-profile", headers=auth_headers)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["legal_name"] is None
+        assert body["tax_id_label"] == "RFC"
+        assert body["default_currency"] == "USD"
+
+    @pytest.mark.asyncio
+    async def test_put_then_get_round_trip(self, client, auth_headers):
+        put = await client.put(
+            "/api/v1/accounting/company-profile",
+            json={"legal_name": "Acme S.A.", "tax_id": "ABC010203XYZ", "city": "Lima"},
+            headers=auth_headers,
+        )
+        assert put.status_code == 200
+
+        get = await client.get("/api/v1/accounting/company-profile", headers=auth_headers)
+        assert get.json()["legal_name"] == "Acme S.A."
+        assert get.json()["city"] == "Lima"
+
+    @pytest.mark.asyncio
+    async def test_put_rejects_oversized_logo_with_400(self, client, auth_headers):
+        resp = await client.put(
+            "/api/v1/accounting/company-profile",
+            json={"logo_data_uri": _data_uri(204_801)},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 400
+
+    @pytest.mark.asyncio
+    async def test_put_rejects_bad_tax_rate_with_422(self, client, auth_headers):
+        resp = await client.put(
+            "/api/v1/accounting/company-profile",
+            json={"default_tax_rate": 150},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_requires_authentication(self, client):
+        resp = await client.get("/api/v1/accounting/company-profile")
+        assert resp.status_code in (401, 403)
