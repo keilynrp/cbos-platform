@@ -131,6 +131,12 @@ jobs:
       - name: Lint (non-blocking — legacy warnings in non-wedge pages)
         run: npm run lint || true
 
+      # Solo los unitarios de vitest (jsdom, sin dependencias externas). Los
+      # e2e de Playwright viven en composable-os/e2e y no corren aca: necesitan
+      # el stack levantado contra una base de datos real.
+      - name: Unit tests
+        run: npm test
+
       - name: Build
         run: npm run build
         env:
