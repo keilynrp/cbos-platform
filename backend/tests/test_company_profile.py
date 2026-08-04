@@ -330,3 +330,38 @@ class TestResolveInvoiceParty:
         inv = await _make_invoice(db, workspace.id, organization_id=foreign_org_id)
         party = await service.resolve_invoice_party(db, workspace.id, inv)
         assert party.is_empty, "An organization from another workspace must not resolve"
+
+    @pytest.mark.asyncio
+    async def test_does_not_resolve_a_contact_from_another_workspace(
+        self, db, workspace, session_factory
+    ):
+        """Cross-tenant leak guard for the contact side.
+
+        The organization query and the person query are filtered
+        independently, so covering only the former leaves the latter free to
+        leak a name, an email and a phone number into another tenant's
+        invoice.
+        """
+        async with session_factory() as other_session:
+            other_ws = Workspace(name="Otra Corp", slug="otra-corp-2", active_modules=[])
+            other_session.add(other_ws)
+            await other_session.commit()
+            await other_session.refresh(other_ws)
+
+            foreign_person = Person(
+                workspace_id=other_ws.id,
+                full_name="Persona Ajena",
+                email="ajena@example.com",
+                phone="+51 111 222 333",
+            )
+            other_session.add(foreign_person)
+            await other_session.commit()
+            await other_session.refresh(foreign_person)
+            foreign_person_id = foreign_person.id
+
+        inv = await _make_invoice(db, workspace.id, contact_id=foreign_person_id)
+        party = await service.resolve_invoice_party(db, workspace.id, inv)
+
+        assert party.is_empty, "A person from another workspace must not resolve"
+        assert party.email is None, "A foreign email must never reach the document"
+        assert party.phone is None, "A foreign phone must never reach the document"

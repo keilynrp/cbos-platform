@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Building2, Upload, Trash2, Loader2, Save } from "lucide-react";
+import { Building2, Upload, Trash2, Loader2, Save, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,7 +35,7 @@ export default function CompanyProfileSettings() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["company-profile"],
     queryFn: () => accountingService.getCompanyProfile(),
   });
@@ -98,6 +98,28 @@ export default function CompanyProfileSettings() {
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-64 w-full" />
       </div>
+    );
+  }
+
+  // Without this the form would render empty on a failed load, which reads as
+  // "nothing is configured yet" rather than "we could not read your data".
+  if (isError) {
+    return (
+      <Card className="max-w-3xl">
+        <CardContent className="py-10 flex flex-col items-center text-center gap-3">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+          <div>
+            <p className="font-medium">No se pudieron cargar los datos de facturación</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {error instanceof Error ? error.message : "Error desconocido"}
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            {isFetching && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Reintentar
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
