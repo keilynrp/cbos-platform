@@ -101,7 +101,7 @@ jobs:
         run: pytest --tb=short -q
 
   frontend:
-    name: Frontend — lint & build
+    name: Frontend — check, test & build
     runs-on: ubuntu-latest
     needs: governance
     timeout-minutes: 10
