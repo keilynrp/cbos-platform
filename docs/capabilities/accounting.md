@@ -36,6 +36,9 @@ The Accounting module manages the full invoice lifecycle for a workspace: creati
 | Delete invoice | `DELETE /api/v1/accounting/invoices/{invoice_id}` | Only allowed for `draft`, `void`, or `cancelled` |
 | List payments | `GET /api/v1/accounting/invoices/{invoice_id}/payments` | Payments for a specific invoice |
 | Record payment | `POST /api/v1/accounting/invoices/{invoice_id}/payments` | Overpayment rejected; auto-transitions to `partial` or `paid` |
+| Download invoice PDF | `GET /api/v1/accounting/invoices/{invoice_id}/pdf` | Renders the workspace issuer profile and the resolved customer; falls back to `"CBOS"` when no profile is configured |
+| Read issuer profile | `GET /api/v1/accounting/company-profile` | Creates an empty profile on the fly — never returns 404 |
+| Upsert issuer profile | `PUT /api/v1/accounting/company-profile` | Partial payload; omitted fields keep their value, explicit `null` clears. Logo must be a PNG/JPEG base64 data URI ≤ 200 KB (`400` otherwise); `default_tax_rate` outside 0–100 is `422` |
 
 ---
 
@@ -113,6 +116,46 @@ The Accounting module manages the full invoice lifecycle for a workspace: creati
 | `payment_date` | Date | Required |
 | `recorded_by_id` | String | FK → users |
 
+### CompanyProfile
+
+Issuer identity printed on generated documents. One row per workspace, enforced
+by a unique index on `workspace_id`. Every field is optional: a workspace that
+configures nothing keeps the previous document, with `"CBOS"` as the issuer.
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | UUID | Primary key |
+| `workspace_id` | String | FK → workspaces, unique |
+| `legal_name` | String(255) | Replaces `"CBOS"` in the document header when set |
+| `tax_id` / `tax_id_label` | String(50) / String(20) | Label defaults to `RFC`; rendered as `LABEL: value` |
+| `address_line`, `city`, `state`, `postal_code`, `country` | String | Empty parts are skipped, not printed blank |
+| `email`, `phone`, `website` | String | Joined into a single contact line |
+| `logo_data_uri` | Text | PNG/JPEG base64 data URI, ≤ 200 KB decoded. Stored inline because the codebase has no file-storage subsystem |
+| `default_currency` | String(10) | Default `USD` |
+| `default_tax_rate` | Float | 0–100 |
+| `invoice_footer_note` | Text | Prepended to the document footer |
+
+---
+
+## Document Rendering
+
+`generate_invoice_pdf(invoice, profile=None, party=None)` takes both extras as
+optional. Called with neither, its output matches the original
+hardcoded-issuer rendition — a backwards-compatibility requirement with
+dedicated regression tests.
+
+- **Issuer** comes from `CompanyProfile`; a stored logo that fails to decode is
+  skipped rather than breaking generation.
+- **Customer** comes from `resolve_invoice_party`, which resolves the invoice's
+  `organization_id` and `contact_id` **filtering by `workspace_id` on both
+  queries**. A reference that does not resolve degrades to an empty block
+  instead of raising, so document generation always succeeds.
+- **Fonts**: a Unicode TTF (DejaVu, installed via `fonts-dejavu-core`) is
+  registered when available, with fallback to Helvetica. This matters for
+  characters outside latin-1 — currency symbols such as `₡` and `₲`, and
+  typographic quotes — which the built-in core fonts cannot encode. Spanish
+  accents and eñes are latin-1 safe and render correctly either way.
+
 ---
 
 ## Events
@@ -139,8 +182,14 @@ All events are emitted via `app.events.bus.publish` with `source_module="account
 | `tests/test_overdue_scanner.py` | 15 | Overdue scanner: transition logic, due date logic, event emission, edge cases |
 | `tests/test_e2e_sales_accounting.py` | 1 | Cross-module: SalesOrder → Invoice → Payment |
 | `tests/test_e2e_portal_accounting.py` | 2 | Portal accept → SalesOrder → Invoice → Payment |
+| `tests/test_company_profile.py` | 31 | Model, schemas, upsert service, logo validation, endpoints, customer resolution including the cross-workspace guard for both organization and contact |
+| `tests/test_invoice_pdf_rendering.py` | 21 | Font registration and fallback, issuer/logo/customer rendering, the `"CBOS"` backwards-compatibility guard, and endpoint round trip. Asserts on text extracted with `pypdf`, since an embedded font subset encodes glyphs rather than literal strings |
 
-**Total: 60 tests** covering the Accounting module.
+**Total: 112 tests** covering the Accounting module.
+
+The frontend settings page has its own end-to-end suite in
+`composable-os/e2e/company-profile.spec.ts` (8 cases, `npm run test:e2e`). It
+requires the stack running and is not part of CI.
 
 ---
 
@@ -149,3 +198,6 @@ All events are emitted via `app.events.bus.publish` with `source_module="account
 1. **No credit notes or refunds** — only positive payments are supported; refund workflows require a separate module or manual void + re-invoice
 2. **No multi-currency** — all amounts are stored in a single currency per invoice; no exchange rate management
 3. **No recurring invoices** — subscription billing requires a scheduler and template system not yet built
+4. **No customer fiscal data on documents** — the customer block prints name, contact, email, phone and country only. `Organization` has no `tax_id` or address columns, so a fully compliant recipient block needs an identity-module change that touches CRM, sales and portal
+5. **Not a fiscally valid document** — this produces a readable commercial PDF, not a CFDI or any stamped invoice. No tax-authority integration, digital signature, or folio/serie control
+6. **One issuer per workspace** — a workspace operating several legal entities cannot pick an issuer per invoice

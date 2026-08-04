@@ -6,7 +6,7 @@ import {
   ChevronRight, Loader2, Bot, User, Rocket, X, Building2,
   Users, BarChart3, ArrowRight,
 } from "lucide-react";
-import type { ApplyResult } from "@/services/discovery";
+import type { ApplyResult, BlueprintResponse } from "@/services/discovery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,7 +76,7 @@ export default function Discovery() {
   const [inputText, setInputText] = useState("");
   const [newSessionOpen, setNewSessionOpen] = useState(false);
   const [newForm, setNewForm] = useState({ business_description: "", industry: "", company_size: "" });
-  const [blueprintData, setBlueprintData] = useState<ReturnType<typeof discoveryService.generateBlueprint> extends Promise<infer T> ? T : never | null>(null as unknown);
+  const [blueprintData, setBlueprintData] = useState<BlueprintResponse | null>(null);
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -152,7 +152,7 @@ export default function Discovery() {
   const generateBlueprint = useMutation({
     mutationFn: () => discoveryService.generateBlueprint(selectedSession!.id),
     onSuccess: (data) => {
-      setBlueprintData(data as unknown);
+      setBlueprintData(data);
       setSelectedSession((s) => s ? { ...s, status: "completed", recommended_package: data.recommended_package } : s);
       qc.invalidateQueries({ queryKey: ["discovery-sessions"] });
       toast({ title: "Blueprint generado", description: `Paquete recomendado: ${data.recommended_package}` });

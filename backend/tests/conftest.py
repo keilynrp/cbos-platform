@@ -42,7 +42,7 @@ from app.modules.inventory.models import InventoryItem, Product, ProductCategory
 from app.modules.portal.models import PortalSession  # noqa: F401
 from app.modules.discovery.models import DiscoveryMessage, DiscoverySession  # noqa: F401
 from app.modules.workflows.models import Workflow, WorkflowRun  # noqa: F401
-from app.modules.accounting.models import Invoice, InvoiceLine, Payment  # noqa: F401
+from app.modules.accounting.models import CompanyProfile, Invoice, InvoiceLine, Payment  # noqa: F401
 from app.modules.contracts.models import Contract, ContractClause  # noqa: F401
 from app.modules.projects.models import Project, ProjectTask  # noqa: F401
 from app.modules.hr.models import Department, Employee  # noqa: F401

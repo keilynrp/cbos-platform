@@ -133,3 +133,47 @@ class AccountingSummary(BaseModel):
     draft_count: int
     sent_count: int
     paid_count: int
+
+
+# ── Company Profile ───────────────────────────────────────────────────────────
+
+class CompanyProfileRead(BaseModel):
+    id: str
+    workspace_id: str
+    legal_name: str | None
+    tax_id: str | None
+    tax_id_label: str
+    address_line: str | None
+    city: str | None
+    state: str | None
+    postal_code: str | None
+    country: str | None
+    email: str | None
+    phone: str | None
+    website: str | None
+    logo_data_uri: str | None
+    default_currency: str
+    default_tax_rate: float
+    invoice_footer_note: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class CompanyProfileUpdate(BaseModel):
+    legal_name: str | None = Field(None, max_length=255)
+    tax_id: str | None = Field(None, max_length=50)
+    tax_id_label: str | None = Field(None, max_length=20)
+    address_line: str | None = Field(None, max_length=255)
+    city: str | None = Field(None, max_length=100)
+    state: str | None = Field(None, max_length=100)
+    postal_code: str | None = Field(None, max_length=20)
+    country: str | None = Field(None, max_length=100)
+    email: str | None = Field(None, max_length=320)
+    phone: str | None = Field(None, max_length=50)
+    website: str | None = Field(None, max_length=255)
+    logo_data_uri: str | None = None
+    default_currency: str | None = Field(None, max_length=10)
+    default_tax_rate: float | None = Field(None, ge=0, le=100)
+    invoice_footer_note: str | None = None

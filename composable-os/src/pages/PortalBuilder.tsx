@@ -958,7 +958,7 @@ function PortalSessions() {
 
   const { data: quotes = [] } = useQuery({
     queryKey: ["sales-quotes"],
-    queryFn: salesService.getQuotes,
+    queryFn: () => salesService.getQuotes(),
   });
 
   const createMutation = useMutation({

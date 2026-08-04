@@ -87,3 +87,33 @@ class Payment(Base):
     recorded_by_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)
 
     invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="payments")
+
+
+class CompanyProfile(Base):
+    """Issuer identity used on invoices — one per workspace."""
+
+    __tablename__ = "company_profiles"
+
+    workspace_id: Mapped[str] = mapped_column(
+        String, ForeignKey("workspaces.id"), unique=True, index=True
+    )
+
+    legal_name:   Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tax_id:       Mapped[str | None] = mapped_column(String(50),  nullable=True)
+    tax_id_label: Mapped[str]        = mapped_column(String(20),  default="RFC")
+
+    address_line: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    city:         Mapped[str | None] = mapped_column(String(100), nullable=True)
+    state:        Mapped[str | None] = mapped_column(String(100), nullable=True)
+    postal_code:  Mapped[str | None] = mapped_column(String(20),  nullable=True)
+    country:      Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    email:   Mapped[str | None] = mapped_column(String(320), nullable=True)
+    phone:   Mapped[str | None] = mapped_column(String(50),  nullable=True)
+    website: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    logo_data_uri: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    default_currency:    Mapped[str]        = mapped_column(String(10), default="USD")
+    default_tax_rate:    Mapped[float]      = mapped_column(Float, default=0.0)
+    invoice_footer_note: Mapped[str | None] = mapped_column(Text, nullable=True)

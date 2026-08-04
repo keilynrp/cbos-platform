@@ -1,4 +1,8 @@
+import base64
+import binascii
 import logging
+import re
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
 from fastapi import HTTPException
@@ -14,9 +18,10 @@ from app.events.types import (
     INVOICE_PAID,
     PAYMENT_RECORDED,
 )
-from app.modules.accounting.models import Invoice, InvoiceLine, Payment
+from app.modules.accounting.models import CompanyProfile, Invoice, InvoiceLine, Payment
 from app.modules.accounting.schemas import (
     AccountingSummary,
+    CompanyProfileUpdate,
     InvoiceCreate,
     InvoiceListItem,
     InvoiceRead,
@@ -24,6 +29,7 @@ from app.modules.accounting.schemas import (
     PaymentCreate,
     PaymentRead,
 )
+from app.modules.identity.models import Organization, Person
 
 logger = logging.getLogger(__name__)
 
@@ -274,3 +280,141 @@ async def get_summary(db: AsyncSession, workspace_id: str) -> AccountingSummary:
         sent_count=sum(1 for i in invoices if i.status in ("sent", "partial")),
         paid_count=sum(1 for i in invoices if i.status == "paid"),
     )
+
+
+# ── Company Profile ───────────────────────────────────────────────────────────
+
+MAX_LOGO_BYTES = 204_800  # 200 KB
+_LOGO_PREFIX_RE = re.compile(r"^data:image/(png|jpeg);base64,")
+
+
+def _validate_logo_data_uri(value: str | None) -> None:
+    """Raise HTTPException(400) if the logo is not an acceptable data URI."""
+    if value is None:
+        return
+
+    match = _LOGO_PREFIX_RE.match(value)
+    if not match:
+        raise HTTPException(
+            400,
+            detail="El logo debe ser un data URI base64 de tipo image/png o image/jpeg",
+        )
+
+    payload = value[match.end():]
+    try:
+        decoded = base64.b64decode(payload, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(400, detail="El logo no es base64 valido")
+
+    if len(decoded) > MAX_LOGO_BYTES:
+        raise HTTPException(
+            400,
+            detail=(
+                f"El logo pesa {len(decoded) // 1024} KB y el maximo son 200 KB. "
+                "Reduce la imagen antes de subirla."
+            ),
+        )
+
+
+async def get_or_create_company_profile(
+    db: AsyncSession, workspace_id: str
+) -> CompanyProfile:
+    """Return the workspace profile, creating an empty one if it does not exist."""
+    result = await db.execute(
+        select(CompanyProfile).where(CompanyProfile.workspace_id == workspace_id)
+    )
+    profile = result.scalar_one_or_none()
+    if profile is not None:
+        return profile
+
+    profile = CompanyProfile(workspace_id=workspace_id)
+    db.add(profile)
+    await db.commit()
+    await db.refresh(profile)
+    return profile
+
+
+async def update_company_profile(
+    db: AsyncSession,
+    workspace_id: str,
+    data: CompanyProfileUpdate,
+) -> CompanyProfile:
+    """Upsert the workspace profile from a partial payload."""
+    fields = data.model_dump(exclude_unset=True)
+
+    if "logo_data_uri" in fields:
+        _validate_logo_data_uri(fields["logo_data_uri"])
+
+    profile = await get_or_create_company_profile(db, workspace_id)
+    for key, value in fields.items():
+        setattr(profile, key, value)
+
+    await db.commit()
+    await db.refresh(profile)
+    return profile
+
+
+# ── Customer resolution ───────────────────────────────────────────────────────
+
+@dataclass
+class InvoiceParty:
+    """Customer details resolved for rendering on a document.
+
+    Not a Pydantic schema — never serialized to the API, only consumed by the
+    PDF and spreadsheet generators.
+    """
+
+    name: str | None = None
+    contact_name: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    country: str | None = None
+
+    @property
+    def is_empty(self) -> bool:
+        return self.name is None
+
+
+async def resolve_invoice_party(
+    db: AsyncSession, workspace_id: str, invoice: Invoice
+) -> InvoiceParty:
+    """Resolve an invoice's customer from identity records.
+
+    Never raises: a null or dangling reference yields an empty InvoiceParty so
+    that document generation always succeeds.
+    """
+    party = InvoiceParty()
+
+    person: Person | None = None
+    if invoice.contact_id:
+        result = await db.execute(
+            select(Person).where(
+                Person.id == invoice.contact_id,
+                Person.workspace_id == workspace_id,
+            )
+        )
+        person = result.scalar_one_or_none()
+
+    org: Organization | None = None
+    if invoice.organization_id:
+        result = await db.execute(
+            select(Organization).where(
+                Organization.id == invoice.organization_id,
+                Organization.workspace_id == workspace_id,
+            )
+        )
+        org = result.scalar_one_or_none()
+
+    if org is not None:
+        party.name = org.brand_name or org.legal_name
+        party.country = org.country
+        if person is not None:
+            party.contact_name = person.full_name
+    elif person is not None:
+        party.name = person.full_name
+
+    if person is not None:
+        party.email = person.email
+        party.phone = person.phone
+
+    return party

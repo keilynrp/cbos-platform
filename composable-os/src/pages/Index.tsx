@@ -57,7 +57,7 @@ const Index = () => {
       { queryKey: ["analytics-revenue", 8], queryFn: () => analyticsService.getRevenue(8), staleTime: 60_000 },
       { queryKey: ["analytics-pipeline"],   queryFn: analyticsService.getPipeline,     staleTime: 60_000 },
       { queryKey: ["inventory-items"],      queryFn: inventoryService.getItems,         staleTime: 30_000 },
-      { queryKey: ["crm-activities"],       queryFn: crmService.getActivities,          staleTime: 30_000 },
+      { queryKey: ["crm-activities"],       queryFn: () => crmService.getActivities(),  staleTime: 30_000 },
     ],
   });
 
@@ -292,7 +292,7 @@ const Index = () => {
                       <div className="min-w-0">
                         <p className="text-sm leading-tight font-medium truncate">{a.title}</p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {a.type} · {ago}
+                          {a.activity_type} · {ago}
                         </p>
                       </div>
                     </div>

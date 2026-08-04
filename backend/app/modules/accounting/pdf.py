@@ -4,12 +4,24 @@ Returns the PDF as bytes — caller decides how to deliver it (StreamingResponse
 """
 from __future__ import annotations
 
+import base64
+import logging
+import re
 from datetime import date
 from io import BytesIO
+from typing import TYPE_CHECKING
 
 from fpdf import FPDF
 
-from app.modules.accounting.models import Invoice
+from app.modules.accounting.fonts import register_unicode_font
+from app.modules.accounting.models import CompanyProfile, Invoice
+
+if TYPE_CHECKING:
+    from app.modules.accounting.service import InvoiceParty
+
+logger = logging.getLogger(__name__)
+
+_DATA_URI_RE = re.compile(r"^data:image/(png|jpeg);base64,")
 
 
 # ── Colours ──────────────────────────────────────────────────────────────────
@@ -58,6 +70,69 @@ def _status_label(status: str) -> str:
     }.get(status, status.capitalize())
 
 
+def _decode_logo(profile: CompanyProfile | None) -> BytesIO | None:
+    """Decode the stored logo into a stream fpdf2 can embed.
+
+    Returns None for any problem — a bad logo must never break generation.
+    """
+    if profile is None or not profile.logo_data_uri:
+        return None
+
+    match = _DATA_URI_RE.match(profile.logo_data_uri)
+    if not match:
+        logger.warning("Stored logo is not a supported data URI; skipping")
+        return None
+
+    try:
+        return BytesIO(base64.b64decode(profile.logo_data_uri[match.end():]))
+    except Exception:
+        logger.warning("Stored logo could not be decoded; skipping")
+        return None
+
+
+def _issuer_lines(profile: CompanyProfile | None) -> list[str]:
+    """Build the issuer detail lines, skipping empty fields entirely."""
+    if profile is None:
+        return []
+
+    lines: list[str] = []
+    if profile.tax_id:
+        lines.append(f"{profile.tax_id_label or 'ID'}: {profile.tax_id}")
+
+    locality = " ".join(
+        part for part in [profile.postal_code, profile.city, profile.state] if part
+    )
+    if profile.address_line:
+        lines.append(profile.address_line)
+    if locality:
+        lines.append(locality)
+    if profile.country:
+        lines.append(profile.country)
+
+    contact = "  ".join(
+        part for part in [profile.email, profile.phone, profile.website] if part
+    )
+    if contact:
+        lines.append(contact)
+
+    return lines
+
+
+def _customer_lines(party: "InvoiceParty | None") -> list[str]:
+    if party is None or party.is_empty:
+        return []
+
+    lines = [party.name]
+    if party.contact_name:
+        lines.append(f"Atn: {party.contact_name}")
+    contact = "  ".join(part for part in [party.email, party.phone] if part)
+    if contact:
+        lines.append(contact)
+    if party.country:
+        lines.append(party.country)
+    return lines
+
+
 # ── PDF class ─────────────────────────────────────────────────────────────────
 
 class InvoicePDF(FPDF):
@@ -66,42 +141,101 @@ class InvoicePDF(FPDF):
     def __init__(self, invoice_number: str):
         super().__init__(unit="mm", format="A4")
         self._invoice_number = invoice_number
+        self._family = "Helvetica"      # replaced by register_unicode_font
+        self._footer_note: str | None = None
 
     def footer(self):
         self.set_y(-12)
-        self.set_font("Helvetica", size=8)
+        self.set_font(self._family, size=8)
         self.set_text_color(*_MUTED)
-        self.cell(0, 5, f"Factura {self._invoice_number}  |  Generado por CBOS", align="C")
+        base = f"Factura {self._invoice_number}  |  Generado por CBOS"
+        text = f"{self._footer_note}  |  {base}" if self._footer_note else base
+        self.cell(0, 5, text, align="C")
 
 
 # ── Main generator ────────────────────────────────────────────────────────────
 
-def generate_invoice_pdf(invoice: Invoice) -> bytes:
+def generate_invoice_pdf(
+    invoice: Invoice,
+    profile: CompanyProfile | None = None,
+    party: "InvoiceParty | None" = None,
+) -> bytes:
     """
     Build a PDF for the given Invoice ORM object (with .lines loaded).
     Returns raw PDF bytes.
+
+    `profile` and `party` are optional: with neither, output matches the
+    original hardcoded-issuer rendition.
     """
     pdf = InvoicePDF(invoice.invoice_number)
+    family = register_unicode_font(pdf)
+    pdf._family = family
+    if profile is not None:
+        pdf._footer_note = profile.invoice_footer_note
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.set_margins(left=15, top=15, right=15)
 
     page_w = pdf.w - 30  # usable width
 
+    issuer_name = profile.legal_name if profile and profile.legal_name else "CBOS"
+    logo = _decode_logo(profile)
+
     # ── Header bar ────────────────────────────────────────────────────────────
     pdf.set_fill_color(*_PURPLE)
     pdf.rect(15, 15, page_w, 18, style="F")
 
-    pdf.set_xy(15, 15)
-    pdf.set_font("Helvetica", style="B", size=14)
+    text_x = 15
+    if logo is not None:
+        try:
+            pdf.image(logo, x=17, y=17, h=14)
+            text_x = 17 + 16
+        except Exception:
+            logger.warning("Logo could not be embedded; rendering text only")
+
+    pdf.set_xy(text_x, 15)
+    pdf.set_font(family, style="B", size=14)
     pdf.set_text_color(255, 255, 255)
-    pdf.cell(page_w / 2, 18, "CBOS", align="L")
+    pdf.cell(page_w / 2, 18, issuer_name, align="L")
 
     pdf.set_xy(15 + page_w / 2, 15)
-    pdf.set_font("Helvetica", style="B", size=14)
+    pdf.set_font(family, style="B", size=14)
     pdf.cell(page_w / 2, 18, "FACTURA", align="R")
 
     pdf.ln(20)
+
+    # ── Issuer / customer blocks ──────────────────────────────────────────────
+    issuer = _issuer_lines(profile)
+    customer = _customer_lines(party)
+
+    if issuer or customer:
+        block_top = pdf.get_y()
+        pdf.set_font(family, size=8)
+
+        if issuer:
+            pdf.set_text_color(*_MUTED)
+            pdf.set_xy(15, block_top)
+            for text in issuer:
+                pdf.set_x(15)
+                pdf.cell(page_w / 2, 4, text)
+                pdf.ln(4)
+
+        if customer:
+            pdf.set_xy(15 + page_w / 2, block_top)
+            pdf.set_text_color(*_MUTED)
+            pdf.cell(page_w / 2, 4, "Cliente", align="R")
+            pdf.ln(4)
+            pdf.set_text_color(*_DARK)
+            for text in customer:
+                pdf.set_x(15 + page_w / 2)
+                pdf.cell(page_w / 2, 4, text, align="R")
+                pdf.ln(4)
+
+        # The customer column carries one extra row for its "Cliente" label.
+        issuer_rows = len(issuer)
+        customer_rows = len(customer) + 1 if customer else 0
+        pdf.set_y(block_top + 4 * max(issuer_rows, customer_rows))
+        pdf.ln(4)
 
     # ── Invoice meta row ──────────────────────────────────────────────────────
     pdf.set_text_color(*_DARK)
@@ -109,13 +243,13 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     # Left block: number + status
     left_x = 15
     pdf.set_xy(left_x, pdf.get_y())
-    pdf.set_font("Helvetica", style="B", size=18)
+    pdf.set_font(family, style="B", size=18)
     pdf.cell(page_w / 2, 9, invoice.invoice_number)
 
     # Status badge (right-aligned)
     status_color = _STATUS_COLORS.get(invoice.status, _MUTED)
     badge_label = _status_label(invoice.status)
-    pdf.set_font("Helvetica", style="B", size=9)
+    pdf.set_font(family, style="B", size=9)
     badge_w = pdf.get_string_width(badge_label) + 8
     badge_x = 15 + page_w - badge_w
     badge_y = pdf.get_y()
@@ -129,7 +263,7 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
 
     # ── Dates grid ────────────────────────────────────────────────────────────
     pdf.set_text_color(*_MUTED)
-    pdf.set_font("Helvetica", size=8)
+    pdf.set_font(family, size=8)
     col_w = page_w / 3
 
     labels = ["Fecha de emisión", "Fecha de vencimiento", "Moneda"]
@@ -142,7 +276,7 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
 
     pdf.ln(5)
     pdf.set_text_color(*_DARK)
-    pdf.set_font("Helvetica", style="B", size=10)
+    pdf.set_font(family, style="B", size=10)
     for i, (_, val) in enumerate(zip(labels, values)):
         x = 15 + i * col_w
         pdf.set_xy(x, pdf.get_y())
@@ -169,7 +303,7 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     pdf.rect(15, header_y, page_w, 7, style="F")
 
     pdf.set_text_color(*_MUTED)
-    pdf.set_font("Helvetica", style="B", size=8)
+    pdf.set_font(family, style="B", size=8)
     pdf.set_xy(15, header_y)
     pdf.cell(desc_w,  7, "Descripción",      align="L")
     pdf.cell(qty_w,   7, "Cant.",            align="C")
@@ -179,7 +313,7 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     pdf.ln(8)
 
     # Rows
-    pdf.set_font("Helvetica", size=9)
+    pdf.set_font(family, size=9)
     for i, line in enumerate(invoice.lines):
         row_y = pdf.get_y()
         if i % 2 == 1:
@@ -211,7 +345,7 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
 
     def _total_row(label: str, value: str, bold: bool = False, color=_DARK):
         style = "B" if bold else ""
-        pdf.set_font("Helvetica", style=style, size=9)
+        pdf.set_font(family, style=style, size=9)
         pdf.set_text_color(*_MUTED if not bold else _DARK)
         pdf.set_xy(totals_x, pdf.get_y())
         pdf.cell(label_w, 6, label, align="L")
@@ -229,7 +363,7 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
     total_row_y = pdf.get_y()
     pdf.set_fill_color(*_PURPLE)
     pdf.rect(totals_x, total_row_y, totals_w, 8, style="F")
-    pdf.set_font("Helvetica", style="B", size=10)
+    pdf.set_font(family, style="B", size=10)
     pdf.set_text_color(255, 255, 255)
     pdf.set_xy(totals_x, total_row_y)
     pdf.cell(label_w, 8, "TOTAL", align="L")
@@ -253,12 +387,12 @@ def generate_invoice_pdf(invoice: Invoice) -> bytes:
         pdf.set_draw_color(*_BORDER)
         pdf.line(15, pdf.get_y(), 15 + page_w, pdf.get_y())
         pdf.ln(4)
-        pdf.set_font("Helvetica", style="B", size=8)
+        pdf.set_font(family, style="B", size=8)
         pdf.set_text_color(*_MUTED)
         pdf.set_x(15)
         pdf.cell(0, 5, "Notas")
         pdf.ln(5)
-        pdf.set_font("Helvetica", size=8)
+        pdf.set_font(family, size=8)
         pdf.set_text_color(*_DARK)
         pdf.set_x(15)
         pdf.multi_cell(page_w, 5, invoice.notes)
