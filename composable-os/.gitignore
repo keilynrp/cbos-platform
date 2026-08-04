@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Cache incremental de TypeScript. tsconfig.json es solution-style, asi que
+# el chequeo de tipos se corre en modo build (`tsc -b`, o apuntando a
+# tsconfig.app.json) y eso deja un .tsbuildinfo por proyecto referenciado.
+*.tsbuildinfo
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
