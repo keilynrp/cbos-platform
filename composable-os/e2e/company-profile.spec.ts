@@ -150,6 +150,7 @@ test("the saved issuer reaches the downloaded PDF", async ({ page }) => {
   await expect(toast(page, "Datos guardados")).toBeVisible();
 
   // Drive the download the way the app does: same origin, same stored token.
+  // The invoice is deleted afterwards so repeated runs do not pile up drafts.
   const pdf = await page.evaluate(async () => {
     const headers = {
       "Content-Type": "application/json",
@@ -167,11 +168,18 @@ test("the saved issuer reaches the downloaded PDF", async ({ page }) => {
 
     const res = await fetch(`/api/v1/accounting/invoices/${invoice.id}/pdf`, { headers });
     const bytes = new Uint8Array(await res.arrayBuffer());
+
+    const deleted = await fetch(`/api/v1/accounting/invoices/${invoice.id}`, {
+      method: "DELETE",
+      headers,
+    });
+
     return {
       status: res.status,
       type: res.headers.get("content-type"),
       magic: String.fromCharCode(...bytes.slice(0, 4)),
       size: bytes.length,
+      cleanedUp: deleted.status === 204,
     };
   });
 
@@ -181,4 +189,5 @@ test("the saved issuer reaches the downloaded PDF", async ({ page }) => {
   // A configured issuer embeds a Unicode subset, so the file is far past the
   // ~1.7 KB a core-font-only document weighs.
   expect(pdf.size).toBeGreaterThan(5_000);
+  expect(pdf.cleanedUp, "the draft invoice should be removed after the check").toBe(true);
 });
