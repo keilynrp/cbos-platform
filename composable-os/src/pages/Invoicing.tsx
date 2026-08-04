@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import {
   FileText, Plus, DollarSign, Clock, CheckCircle2, AlertTriangle,
   TrendingUp, Send, Trash2, CreditCard, ChevronRight, Loader2,
-  MoreHorizontal, Eye, X
+  MoreHorizontal, Eye, X, Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -441,9 +442,16 @@ export default function Invoicing() {
           <h1 className="text-2xl font-bold tracking-tight">Facturación</h1>
           <p className="text-muted-foreground text-sm mt-1">Gestiona facturas, pagos y cuentas por cobrar</p>
         </div>
-        <Button onClick={() => setNewOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Nueva factura
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/settings/company">
+              <Building2 className="h-4 w-4 mr-2" /> Datos de facturación
+            </Link>
+          </Button>
+          <Button onClick={() => setNewOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Nueva factura
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
