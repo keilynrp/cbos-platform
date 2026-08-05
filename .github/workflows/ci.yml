@@ -128,8 +128,12 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      - name: Lint (non-blocking — legacy warnings in non-wedge pages)
-        run: npm run lint || true
+      # Bloqueante sobre errores. Quedan 8 warnings de
+      # react-refresh/only-export-components, inherentes al patron de shadcn
+      # de exportar variantes junto al componente: eslint sale con 0 ante
+      # warnings, asi que no frenan el pipeline.
+      - name: Lint
+        run: npm run lint
 
       # Solo los unitarios de vitest (jsdom, sin dependencias externas). Los
       # e2e de Playwright viven en composable-os/e2e y no corren aca: necesitan

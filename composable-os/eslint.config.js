@@ -5,7 +5,10 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  // `dist` es salida de build. `src/pages/_archived` son 25 paginas retiradas
+  // que nada importa y Vite no empaqueta: su codigo no se ejecuta, asi que
+  // lintearlo solo produce ruido. Misma exclusion que en tsconfig.app.json.
+  { ignores: ["dist", "src/pages/_archived"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
