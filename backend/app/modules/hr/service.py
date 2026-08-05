@@ -77,7 +77,7 @@ async def _get_employee_or_404(
     )
     emp = result.scalar_one_or_none()
     if not emp:
-        raise HTTPException(status_code=404, detail="Employee not found")
+        raise HTTPException(status_code=404, detail="Empleado no encontrado")
     return emp
 
 
@@ -91,7 +91,7 @@ async def _get_department_or_404(
     )
     dept = result.scalar_one_or_none()
     if not dept:
-        raise HTTPException(status_code=404, detail="Department not found")
+        raise HTTPException(status_code=404, detail="Departamento no encontrado")
     return dept
 
 
@@ -258,8 +258,8 @@ async def update_employee(
         if data.status not in allowed:
             raise HTTPException(
                 status_code=422,
-                detail=f"Invalid transition: {emp.status} -> {data.status}. "
-                       f"Allowed: {allowed or 'none (terminal state)'}",
+                detail=f"Transicion invalida: {emp.status} -> {data.status}. "
+                       f"Permitidas: {allowed or 'ninguna (estado final)'}",
             )
         now = datetime.now(timezone.utc)
         ts_field = _TRANSITION_TIMESTAMPS.get(data.status)
@@ -325,7 +325,7 @@ async def delete_employee(
     if emp.status == "terminated":
         raise HTTPException(
             status_code=409,
-            detail="Cannot delete a terminated employee record. Terminated employees are retained for audit trail.",
+            detail="No se puede eliminar el registro de un empleado dado de baja. Se conservan para la traza de auditoria.",
         )
     await db.delete(emp)
     await db.commit()

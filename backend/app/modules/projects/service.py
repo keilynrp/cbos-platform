@@ -105,7 +105,7 @@ async def _get_project_or_404(
     )
     project = result.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     return project
 
 
@@ -212,8 +212,8 @@ async def update_project(
         if data.status not in allowed:
             raise HTTPException(
                 status_code=422,
-                detail=f"Invalid transition: {project.status} -> {data.status}. "
-                       f"Allowed: {allowed or 'none (terminal state)'}",
+                detail=f"Transicion invalida: {project.status} -> {data.status}. "
+                       f"Permitidas: {allowed or 'ninguna (estado final)'}",
             )
         now = datetime.now(timezone.utc)
         ts_field = _PROJECT_TRANSITION_TIMESTAMPS.get(data.status)
@@ -270,8 +270,8 @@ async def delete_project(
     if project.status != "planning":
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot delete a project in '{project.status}' status. "
-                   "Only planning projects can be deleted.",
+            detail=f"No se puede eliminar un proyecto en estado '{project.status}'. "
+                   "Solo se pueden eliminar los proyectos en planificacion.",
         )
     await db.delete(project)
     await db.commit()
@@ -290,7 +290,7 @@ async def add_task(
     if project.status in _TERMINAL_PROJECT_STATUSES:
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot add tasks to a '{project.status}' project.",
+            detail=f"No se pueden anadir tareas a un proyecto en estado '{project.status}'.",
         )
 
     max_order = max((t.task_order for t in project.tasks), default=-1)
@@ -324,12 +324,12 @@ async def update_task(
     if project.status in _TERMINAL_PROJECT_STATUSES:
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot modify tasks of a '{project.status}' project.",
+            detail=f"No se pueden modificar las tareas de un proyecto en estado '{project.status}'.",
         )
 
     task = next((t for t in project.tasks if t.id == task_id), None)
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
     # Validate task status transition
     if data.status and data.status != task.status:
@@ -337,8 +337,8 @@ async def update_task(
         if data.status not in allowed:
             raise HTTPException(
                 status_code=422,
-                detail=f"Invalid task transition: {task.status} -> {data.status}. "
-                       f"Allowed: {allowed or 'none (terminal state)'}",
+                detail=f"Transicion invalida de la tarea: {task.status} -> {data.status}. "
+                       f"Permitidas: {allowed or 'ninguna (estado final)'}",
             )
         task.status = data.status
         if data.status == "done":
@@ -381,12 +381,12 @@ async def delete_task(
     if project.status in _TERMINAL_PROJECT_STATUSES:
         raise HTTPException(
             status_code=409,
-            detail=f"Cannot delete tasks from a '{project.status}' project.",
+            detail=f"No se pueden eliminar tareas de un proyecto en estado '{project.status}'.",
         )
 
     task = next((t for t in project.tasks if t.id == task_id), None)
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
     await db.delete(task)
     await db.commit()
