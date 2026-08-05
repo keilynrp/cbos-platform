@@ -30,9 +30,12 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    # Sin `command`: entrypoint.sh corre las migraciones y arranca uvicorn
-    # (con --reload salvo ENVIRONMENT=production o RELOAD=0). Un `command`
-    # aqui NO reemplaza al arranque — entrypoint.sh ignora "$@".
+    # Sin `command` a proposito: entrypoint.sh corre las migraciones y arranca
+    # uvicorn con --reload, salvo ENVIRONMENT=production o RELOAD=0. Antes habia
+    # aqui un `command` con --reload que el ENTRYPOINT descartaba en silencio, y
+    # el backend servia codigo viejo pese al bind mount. Hoy el script si honra
+    # un `command`, pero el arranque se deja en el script justamente para que no
+    # dependa de que esta linea acierte.
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-cbos}:${POSTGRES_PASSWORD:-cbos_dev_pass}@postgres:5432/${POSTGRES_DB:-cbos_dev}
       REDIS_URL: redis://redis:6379

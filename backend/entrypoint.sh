@@ -6,13 +6,13 @@ alembic upgrade head
 
 echo "Starting CBOS API server..."
 
-# Si el compose define un `command`, ese gana. docker-compose.yml pasa
-# `uvicorn ... --reload` para desarrollo y sin esta rama el ENTRYPOINT lo
-# descartaba en silencio: el codigo montado en /app se veia actualizado pero
-# uvicorn nunca lo reimportaba, asi que la app servia codigo viejo hasta
-# reiniciar el contenedor. Los tests no lo notaban porque pytest arranca
-# procesos nuevos. docker-compose.prod.yml no define `command`, de modo que
-# produccion sigue cayendo en la rama de abajo.
+# Si alguien define un `command`, ese gana: es la semantica normal de Docker
+# para ENTRYPOINT mas CMD, y sin esta rama el script lo descartaba en silencio.
+# Ninguno de los compose del repositorio lo usa hoy —el arranque vive entero
+# aqui abajo, que es lo que evita que un `command` desactualizado vuelva a
+# romper la recarga sin que nadie lo note— asi que en la practica el flujo
+# siempre continua debajo. Queda como escape hatch para arrancar la imagen con
+# otro comando sin reconstruirla.
 if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
