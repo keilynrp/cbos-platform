@@ -1,3 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any --
+ * Las props de los bloques del constructor son dinamicas por diseño: cada tipo
+ * de bloque define las suyas y se vuelcan directo a atributos de estilo y a
+ * children de JSX. Tiparlas como unknown obliga a estrechar en 46 sitios de
+ * uso, o a inventar una union que habria que ampliar con cada bloque nuevo.
+ * Se deja any acotado a este archivo en lugar de refactorizar a ciegas una
+ * pantalla que funciona; el dia que los bloques tengan un contrato explicito,
+ * este disable sobra.
+ */
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { portalService, CreateSessionDto } from "@/services/portal";

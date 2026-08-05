@@ -297,8 +297,11 @@ function EmployeeDetail({
       queryClient.invalidateQueries({ queryKey: ["employee", employeeId] });
       toast({ title: "Estado actualizado" });
     },
-    onError: (e: any) => toast({
-      title: e?.response?.data?.detail ?? "Transición no permitida",
+    // api.ts lanza Error con el detail del backend ya dentro del mensaje. Antes
+    // se leia e.response.data.detail, forma de axios que este cliente no usa:
+    // siempre daba undefined y el usuario solo veia el texto generico.
+    onError: (e: Error) => toast({
+      title: e.message || "Transición no permitida",
       variant: "destructive",
     }),
   });
