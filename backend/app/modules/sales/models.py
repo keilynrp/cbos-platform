@@ -194,8 +194,11 @@ class QuoteEvent(Base):
     quote_id: Mapped[str] = mapped_column(
         String, ForeignKey("quotes.id", ondelete="CASCADE"), index=True
     )
+    # Sin index: la unica consulta sobre esta tabla filtra por workspace_id y
+    # quote_id (get_quote_history). Un indice por user_id costaria escritura en
+    # cada evento sin que nada lo lea.
     user_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("users.id"), nullable=True, index=True
+        String, ForeignKey("users.id"), nullable=True
     )
     event_type: Mapped[str] = mapped_column(String(50))
     description: Mapped[str] = mapped_column(Text)
