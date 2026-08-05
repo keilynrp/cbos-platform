@@ -38,10 +38,10 @@ class Invoice(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Relations
-    contact_id: Mapped[str | None] = mapped_column(String, ForeignKey("persons.id"), nullable=True)
-    organization_id: Mapped[str | None] = mapped_column(String, ForeignKey("organizations.id"), nullable=True, index=True)
-    sales_order_id: Mapped[str | None] = mapped_column(String, ForeignKey("sales_orders.id"), nullable=True, index=True)
-    owner_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)
+    contact_id: Mapped[str | None] = mapped_column(String, ForeignKey("persons.id", ondelete="SET NULL"), nullable=True)
+    organization_id: Mapped[str | None] = mapped_column(String, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True)
+    sales_order_id: Mapped[str | None] = mapped_column(String, ForeignKey("sales_orders.id", ondelete="SET NULL"), nullable=True, index=True)
+    owner_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     lines: Mapped[list["InvoiceLine"]] = relationship(
         "InvoiceLine", back_populates="invoice", cascade="all, delete-orphan", order_by="InvoiceLine.line_order"
@@ -54,7 +54,7 @@ class Invoice(Base):
 class InvoiceLine(Base):
     __tablename__ = "invoice_lines"
 
-    invoice_id: Mapped[str] = mapped_column(String, ForeignKey("invoices.id"), index=True)
+    invoice_id: Mapped[str] = mapped_column(String, ForeignKey("invoices.id", ondelete="CASCADE"), index=True)
     line_order: Mapped[int] = mapped_column(Integer, default=0)
     description: Mapped[str] = mapped_column(String(500))
     quantity: Mapped[float] = mapped_column(Float, default=1.0)
@@ -62,7 +62,7 @@ class InvoiceLine(Base):
     discount_pct: Mapped[float] = mapped_column(Float, default=0.0)
     subtotal: Mapped[float] = mapped_column(Float, default=0.0)
 
-    product_id: Mapped[str | None] = mapped_column(String, ForeignKey("inventory_items.id"), nullable=True)
+    product_id: Mapped[str | None] = mapped_column(String, ForeignKey("inventory_items.id", ondelete="SET NULL"), nullable=True)
 
     invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="lines")
 
@@ -73,7 +73,7 @@ class Payment(Base):
     __tablename__ = "payments"
 
     workspace_id: Mapped[str] = mapped_column(String, ForeignKey("workspaces.id"), index=True)
-    invoice_id: Mapped[str] = mapped_column(String, ForeignKey("invoices.id"), index=True)
+    invoice_id: Mapped[str] = mapped_column(String, ForeignKey("invoices.id", ondelete="CASCADE"), index=True)
 
     amount: Mapped[float] = mapped_column(Float)
     currency: Mapped[str] = mapped_column(String(10), default="USD")
@@ -84,7 +84,7 @@ class Payment(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     payment_date: Mapped[date] = mapped_column(Date)
 
-    recorded_by_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)
+    recorded_by_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     invoice: Mapped["Invoice"] = relationship("Invoice", back_populates="payments")
 

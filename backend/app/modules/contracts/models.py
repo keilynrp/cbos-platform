@@ -57,19 +57,19 @@ class Contract(Base):
 
     # Relationships to other modules
     sales_order_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("sales_orders.id"), nullable=True, index=True
+        String, ForeignKey("sales_orders.id", ondelete="SET NULL"), nullable=True, index=True
     )
     opportunity_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("opportunities.id"), nullable=True, index=True
+        String, ForeignKey("opportunities.id", ondelete="SET NULL"), nullable=True, index=True
     )
     contact_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("persons.id"), nullable=True, index=True
+        String, ForeignKey("persons.id", ondelete="SET NULL"), nullable=True, index=True
     )
     organization_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("organizations.id"), nullable=True, index=True
+        String, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True
     )
     owner_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("users.id"), nullable=True
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
     # Ordered clauses
@@ -87,7 +87,7 @@ class ContractClause(Base):
     __tablename__ = "contract_clauses"
 
     contract_id: Mapped[str] = mapped_column(
-        String, ForeignKey("contracts.id"), index=True
+        String, ForeignKey("contracts.id", ondelete="CASCADE"), index=True
     )
     clause_order: Mapped[int] = mapped_column(Integer, default=0)
     title: Mapped[str] = mapped_column(String(255))
