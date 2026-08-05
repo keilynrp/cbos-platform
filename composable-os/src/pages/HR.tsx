@@ -101,7 +101,7 @@ function CreateEmployeeDialog({
       onOpenChange(false);
       setForm({ full_name: "", email: "", phone: "", position: "", employment_type: "full_time", department_id: "", start_date: "", salary: "", currency: "USD", notes: "" });
     },
-    onError: () => toast({ title: "Error al registrar empleado", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error al registrar empleado", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -241,7 +241,7 @@ function CreateDepartmentDialog({
       onOpenChange(false);
       setForm({ name: "", description: "" });
     },
-    onError: () => toast({ title: "Error al crear departamento", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error al crear departamento", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -544,7 +544,7 @@ export default function HR() {
       if (selectedId === id) setSelectedId(null);
       toast({ title: "Empleado eliminado" });
     },
-    onError: () => toast({ title: "No se puede eliminar este registro", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "No se puede eliminar este registro", description: e.message, variant: "destructive" }),
   });
 
   // KPIs
