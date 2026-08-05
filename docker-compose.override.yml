@@ -11,6 +11,17 @@
 
 services:
 
+  # ── Backend: watcher de --reload ────────────────────────
+  backend:
+    environment:
+      # watchfiles fuerza polling por su cuenta al ver un kernel
+      # "*-microsoft-standard-WSL2", asumiendo que el codigo llega por /mnt/c.
+      # Con el repo en ext4 dentro de la distro esa heuristica es un falso
+      # positivo que cuesta ~30% de un core en reposo: inotify funciona. Si
+      # alguna vez levantas esto desde /mnt/*, pon WATCHFILES_FORCE_POLLING=true
+      # en el .env raiz o el --reload dejara de detectar cambios.
+      WATCHFILES_FORCE_POLLING: "${WATCHFILES_FORCE_POLLING:-false}"
+
   # ── Nginx HTTP (sin SSL, no requiere certificado) ───────
   nginx:
     image: nginx:1.27-alpine
@@ -23,6 +34,11 @@ services:
   frontend:
     environment:
       VITE_API_URL: http://localhost/api/v1
+      # En ext4 (repo dentro de WSL) inotify funciona y esto sobra: dejalo en
+      # false. Solo hace falta si el repo vive en NTFS (/mnt/d, /mnt/c), donde
+      # los eventos no cruzan el bind mount y el HMR conecta pero nunca recibe
+      # updates. Se activa con VITE_USE_POLLING=true en el .env raiz.
+      VITE_USE_POLLING: "${VITE_USE_POLLING:-false}"
     volumes:
       # El codigo se monta desde el host; node_modules vive en un volumen
       # nombrado. Asi el contenedor no pisa las dependencias del entorno
