@@ -23,6 +23,7 @@ import Contracts from "./pages/Contracts";
 import Projects from "./pages/Projects";
 import HR from "./pages/HR";
 import Settings from "./pages/Settings";
+import CompanyProfileSettings from "./pages/CompanyProfileSettings";
 import CustomerPortal from "./pages/CustomerPortal";
 import QuoteDetail from "./pages/QuoteDetail";
 import NotFound from "./pages/NotFound";
@@ -81,6 +82,7 @@ const App = () => (
                 <Route path="/discovery" element={<Discovery />} />
                 <Route path="/analytics" element={<Analytics />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/settings/company" element={<CompanyProfileSettings />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
