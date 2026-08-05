@@ -95,7 +95,7 @@ function CreateProjectDialog({
       onOpenChange(false);
       setForm({ title: "", description: "", budget: "", currency: "USD", start_date: "", end_date: "", notes: "" });
     },
-    onError: () => toast({ title: "Error al crear proyecto", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error al crear proyecto", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -205,7 +205,7 @@ function AddTaskDialog({
       onOpenChange(false);
       setForm({ title: "", description: "", due_date: "" });
     },
-    onError: () => toast({ title: "Error al añadir tarea", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error al añadir tarea", description: e.message, variant: "destructive" }),
   });
 
   return (
@@ -523,7 +523,7 @@ export default function Projects() {
       if (selectedId === id) setSelectedId(null);
       toast({ title: "Proyecto eliminado" });
     },
-    onError: () => toast({ title: "No se puede eliminar este proyecto", variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "No se puede eliminar este proyecto", description: e.message, variant: "destructive" }),
   });
 
   // KPIs
