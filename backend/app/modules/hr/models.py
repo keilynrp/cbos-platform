@@ -59,7 +59,7 @@ class Employee(Base):
     position: Mapped[str | None] = mapped_column(String(255), nullable=True)  # job title
 
     department_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("departments.id"), nullable=True, index=True
+        String, ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
     # Timeline

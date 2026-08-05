@@ -61,19 +61,19 @@ class Project(Base):
 
     # Cross-module links
     contract_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("contracts.id"), nullable=True, index=True
+        String, ForeignKey("contracts.id", ondelete="SET NULL"), nullable=True, index=True
     )
     sales_order_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("sales_orders.id"), nullable=True, index=True
+        String, ForeignKey("sales_orders.id", ondelete="SET NULL"), nullable=True, index=True
     )
     contact_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("persons.id"), nullable=True, index=True
+        String, ForeignKey("persons.id", ondelete="SET NULL"), nullable=True, index=True
     )
     organization_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("organizations.id"), nullable=True, index=True
+        String, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True
     )
     owner_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("users.id"), nullable=True
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
     # Tasks
@@ -91,7 +91,7 @@ class ProjectTask(Base):
     __tablename__ = "project_tasks"
 
     project_id: Mapped[str] = mapped_column(
-        String, ForeignKey("projects.id"), index=True
+        String, ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
     task_order: Mapped[int] = mapped_column(Integer, default=0)
     title: Mapped[str] = mapped_column(String(255))
@@ -101,7 +101,7 @@ class ProjectTask(Base):
 
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     assignee_id: Mapped[str | None] = mapped_column(
-        String, ForeignKey("users.id"), nullable=True
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
     project: Mapped["Project"] = relationship("Project", back_populates="tasks")
