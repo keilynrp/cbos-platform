@@ -1,6 +1,6 @@
 # ADR 0010 — Internationalization Strategy
 
-**Status:** Proposed
+**Status:** Accepted — Option B
 **Date:** 2026-08-05
 **Deciders:** Platform team
 
@@ -97,10 +97,11 @@ generated server-side.
 
 ---
 
-## Recommendation
+## Decision
 
-**Adopt Option B now, and treat Option C as target state gated on a product
-decision.**
+**Option B is adopted.** Option C remains target state, gated on the product
+question above, which stays open: adopting B does not answer whether the
+product will serve more than one language, and deliberately does not need to.
 
 The reasoning is that Option B is the only work that is correct under *both*
 answers to the product question. A backend that returns codes instead of prose
@@ -117,7 +118,7 @@ symptom without committing to any of this.
 
 ---
 
-## Consequences if Option B is accepted
+## Consequences
 
 **Positive:**
 - The backend stops emitting user-facing prose; language becomes a frontend concern
@@ -133,7 +134,7 @@ symptom without committing to any of this.
 
 ---
 
-## Implementation sketch (only if accepted)
+## Implementation plan
 
 1. Define the code vocabulary and register it, in the spirit of
    `EVENT_REGISTRY_V1.md` — a code that is not registered should fail CI, the
