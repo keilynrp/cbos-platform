@@ -22,8 +22,9 @@ class CBOSException(HTTPException):
         code: str,
         message: str,
         detail: dict | None = None,
+        headers: dict[str, str] | None = None,
     ):
-        super().__init__(status_code=status_code, detail=message)
+        super().__init__(status_code=status_code, detail=message, headers=headers)
         self.code = code
         self.message = message
         self.extra_detail = detail
@@ -65,4 +66,11 @@ async def cbos_exception_handler(request: Request, exc: CBOSException) -> JSONRe
     body: dict = {"code": exc.code, "message": exc.message}
     if exc.extra_detail:
         body["detail"] = exc.extra_detail
-    return JSONResponse(status_code=exc.status_code, content={"error": body})
+    # exc.headers se propaga porque hay cabeceras que son parte de la respuesta
+    # y no del cuerpo: un 429 sin Retry-After deja al cliente sin saber cuando
+    # reintentar, y el cuerpo traducido no suple eso.
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": body},
+        headers=exc.headers,
+    )

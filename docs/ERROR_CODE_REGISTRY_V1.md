@@ -27,6 +27,10 @@ than to a bare identifier.
    `detail={"status": "active"}`.
 4. **`message` stays English and developer-facing.** It is the fallback and what
    shows up in logs; it is not the string the user is meant to read.
+5. **Response headers survive the migration.** `CBOSException` takes `headers`
+   and the handler propagates them. A `429` still has to send `Retry-After`: a
+   translated body does not tell an automated client when to retry, and dropping
+   the header while "only changing the error shape" is a silent regression.
 
 ---
 
@@ -53,6 +57,17 @@ than to a bare identifier.
 | `SALES_QUOTE_REJECT_INVALID_STATUS` | 409 | sales | Reject attempted from a status that does not allow it | `status` |
 | `SALES_ORDER_NOT_FOUND` | 404 | sales | The sales order does not exist in this workspace | `id` |
 | `SALES_ORDER_INVALID_TRANSITION` | 422 | sales | The requested order status is not reachable from the current one | `from`, `to`, `allowed` |
+| `CRM_LEAD_NOT_FOUND` | 404 | crm | The lead does not exist in this workspace | `id` |
+| `CRM_LEAD_ALREADY_CONVERTED` | 409 | crm | Conversion attempted on an already-converted lead | `id` |
+| `CRM_OPPORTUNITY_NOT_FOUND` | 404 | crm | The opportunity does not exist in this workspace | `id` |
+| `CRM_OPPORTUNITY_INVALID_STAGE` | 422 | crm | The stage is not one of the valid stages | `stage`, `allowed` |
+| `CRM_OPPORTUNITY_INVALID_TRANSITION` | 422 | crm | The requested stage is not reachable from the current one | `from`, `to`, `allowed` |
+| `CRM_ACTIVITY_NOT_FOUND` | 404 | crm | The activity does not exist in this workspace | `id` |
+| `CRM_PUBLIC_SITE_KEY_INVALID` | 401 | crm | Public intake called without a valid site key | — |
+| `CRM_PUBLIC_SITE_INACTIVE` | 403 | crm | Public intake called against a deactivated site | `site_slug` |
+| `CRM_PUBLIC_SITE_ORIGIN_NOT_ALLOWED` | 403 | crm | Request origin is not in the site's allowlist | `origin` |
+| `CRM_PUBLIC_INTAKE_IDEMPOTENCY_CONFLICT` | 409 | crm | Idempotency key reused with a different payload | — |
+| `CRM_PUBLIC_INTAKE_RATE_LIMITED` | 429 | crm | Public intake exceeded the per-minute limit (sends `Retry-After`) | `retry_after_seconds` |
 
 ---
 
@@ -62,9 +77,13 @@ The remaining modules still raise `HTTPException` with free-text `detail`. They
 are migrated module by module; until a module appears above, its errors reach
 the user as whatever prose the backend wrote.
 
-| Module | `raise HTTPException` remaining |
+Counts below include exceptions built once and raised later
+(`exc = HTTPException(...)` … `raise exc`), not just literal `raise
+HTTPException`. `crm` hid two error sites behind that pattern and was
+undercounted at 11 when it actually had 13.
+
+| Module | `HTTPException` sites remaining |
 |---|---|
-| crm | 11 |
 | portal | 10 |
 | accounting | 8 |
 | contracts | 8 |
@@ -74,5 +93,5 @@ the user as whatever prose the backend wrote.
 | discovery | 3 |
 | workflows | 2 |
 
-`projects` and `sales` are migrated; `projects` serves as the reference for the
-rest.
+`projects`, `sales`, and `crm` are migrated; `projects` serves as the reference
+for the rest.

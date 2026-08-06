@@ -134,6 +134,10 @@ New and touched code raises `CBOSException`. Adopted by
   the client's fallback — not the string the user is meant to read.
 - **Interpolated values go in `detail`, never baked into `message`.** The client
   needs the parts to build its own sentence.
+- **Response headers are part of the contract too.** `CBOSException` takes
+  `headers` and the handler propagates them, so a `429` still sends
+  `Retry-After`. A translated body does not tell an automated client when to
+  retry.
 
 Clients read `code` and render their own text; `composable-os/src/lib/errors.ts`
 does this for the Spanish UI. An unmapped code falls back to `message`, so a
