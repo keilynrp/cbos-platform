@@ -216,3 +216,72 @@ async def test_departments_sorted_alphabetically(client: AsyncClient, auth_heade
     resp = await client.get(DEPT_BASE, headers=auth_headers)
     names = [d["name"] for d in resp.json()]
     assert names == sorted(names)
+
+
+# ── Error envelope (ADR 0010) ────────────────────────────────────────────────
+#
+# Los cuatro mensajes de hr estaban escritos en espanol en el servidor. Ahora
+# mandan ingles y el texto lo decide errors.ts; estos tests fijan el codigo y
+# las claves de detail, que es lo que el cliente necesita.
+
+MISSING_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _error(resp) -> dict:
+    body = resp.json()
+    assert "error" in body, body
+    return body["error"]
+
+
+async def test_employee_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(f"{EMP_BASE}/{MISSING_ID}", headers=auth_headers)
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "HR_EMPLOYEE_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+    # El mensaje del servidor vuelve a ser ingles: el espanol lo pone el cliente.
+    assert error["message"] == "Employee not found."
+
+
+async def test_department_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    # No hay GET /departments/{id}; el guard se alcanza por PATCH.
+    resp = await client.patch(
+        f"{DEPT_BASE}/{MISSING_ID}", headers=auth_headers, json={"name": "Nuevo"}
+    )
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "HR_DEPARTMENT_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_employee_invalid_transition_error_shape(
+    client: AsyncClient, auth_headers: dict
+):
+    emp = await _create_emp(client, auth_headers, "Terminal Transition")
+    await _transition(client, auth_headers, emp["id"], "terminated")
+
+    resp = await client.patch(
+        f"{EMP_BASE}/{emp['id']}", headers=auth_headers, json={"status": "active"}
+    )
+
+    assert resp.status_code == 422
+    error = _error(resp)
+    assert error["code"] == "HR_EMPLOYEE_INVALID_TRANSITION"
+    # terminated es terminal: allowed vacia, y el cliente redacta el matiz.
+    assert error["detail"] == {"from": "terminated", "to": "active", "allowed": []}
+
+
+async def test_delete_terminated_employee_error_shape(
+    client: AsyncClient, auth_headers: dict
+):
+    emp = await _create_emp(client, auth_headers, "Kept For Audit")
+    await _transition(client, auth_headers, emp["id"], "terminated")
+
+    resp = await client.delete(f"{EMP_BASE}/{emp['id']}", headers=auth_headers)
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "HR_EMPLOYEE_DELETE_TERMINATED"
+    assert error["detail"]["status"] == "terminated"

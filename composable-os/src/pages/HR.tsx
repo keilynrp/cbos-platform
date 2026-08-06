@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { translateApiError } from "@/lib/errors";
 import { hrService, Employee, Department } from "@/services/hr";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -101,7 +102,7 @@ function CreateEmployeeDialog({
       onOpenChange(false);
       setForm({ full_name: "", email: "", phone: "", position: "", employment_type: "full_time", department_id: "", start_date: "", salary: "", currency: "USD", notes: "" });
     },
-    onError: (e: Error) => toast({ title: "Error al registrar empleado", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error al registrar empleado", description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
@@ -241,7 +242,7 @@ function CreateDepartmentDialog({
       onOpenChange(false);
       setForm({ name: "", description: "" });
     },
-    onError: (e: Error) => toast({ title: "Error al crear departamento", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error al crear departamento", description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
@@ -297,11 +298,11 @@ function EmployeeDetail({
       queryClient.invalidateQueries({ queryKey: ["employee", employeeId] });
       toast({ title: "Estado actualizado" });
     },
-    // api.ts lanza Error con el detail del backend ya dentro del mensaje. Antes
-    // se leia e.response.data.detail, forma de axios que este cliente no usa:
-    // siempre daba undefined y el usuario solo veia el texto generico.
+    // El texto lo decide el cliente a partir del codigo. Antes se leia
+    // e.response.data.detail, forma de axios que este cliente no usa, y luego
+    // e.message, que traia la prosa que escribiera el backend.
     onError: (e: Error) => toast({
-      title: e.message || "Transición no permitida",
+      title: translateApiError(e, "Transición no permitida"),
       variant: "destructive",
     }),
   });
@@ -544,7 +545,7 @@ export default function HR() {
       if (selectedId === id) setSelectedId(null);
       toast({ title: "Empleado eliminado" });
     },
-    onError: (e: Error) => toast({ title: "No se puede eliminar este registro", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "No se puede eliminar este registro", description: translateApiError(e), variant: "destructive" }),
   });
 
   // KPIs

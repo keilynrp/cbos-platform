@@ -162,6 +162,15 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
   INVENTORY_INSUFFICIENT_STOCK: (d) =>
     `Stock insuficiente: se piden ${str(d, "requested")} y hay ` +
     `${str(d, "available")} ${str(d, "unit")} disponibles.`,
+
+  HR_EMPLOYEE_NOT_FOUND: () => "Empleado no encontrado.",
+  HR_DEPARTMENT_NOT_FOUND: () => "Departamento no encontrado.",
+  HR_EMPLOYEE_INVALID_TRANSITION: (d) =>
+    `El empleado no puede pasar de '${str(d, "from")}' a '${str(d, "to")}'. ` +
+    `Estados permitidos: ${list(d, "allowed", "ninguno (estado final)")}.`,
+  HR_EMPLOYEE_DELETE_TERMINATED: () =>
+    "No se puede eliminar el registro de un empleado dado de baja. " +
+    "Se conservan para la traza de auditoria.",
 };
 
 /**

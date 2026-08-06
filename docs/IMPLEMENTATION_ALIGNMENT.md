@@ -36,7 +36,7 @@ Legacy documents are historical reference only unless explicitly promoted by ADR
 
 - The MVP wedge is implemented end to end, but some boundaries remain more coupled than the target architecture wants
 - API conventions are documented, but conformance is still uneven outside the most critical modules
-- Error Code Registry V1 exists and CI enforces parity between raised codes, registry entries, and the frontend translation map. `projects`, `sales`, `crm`, `portal`, `accounting`, `contracts`, `identity`, and `inventory` raise registered codes — plus `core/deps.py`, which owns the auth errors every protected route returns — and their pages render Spanish from them; the other three modules still return free-text `detail` and reach the user in English
+- Error Code Registry V1 exists and CI enforces parity between raised codes, registry entries, and the frontend translation map. `projects`, `sales`, `crm`, `portal`, `accounting`, `contracts`, `identity`, `inventory`, and `hr` raise registered codes — plus `core/deps.py`, which owns the auth errors every protected route returns — and their pages render Spanish from them; only `discovery` and `workflows` still return free-text `detail`
 - `inventory` is the exception to that last clause: it has no frontend surface that mutates stock, so its translations are prospective. Its real consumer is the Sales→Inventory gateway, which reacts to the exception type and never parsed the message
 - Event Registry V1 exists and CI now enforces parity between event constants, registry entries, and statically detectable publishers
 - Capability specs exist for active modules, but their freshness is uneven and they need periodic maintenance
