@@ -87,6 +87,21 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
     "La clave de idempotencia ya se uso con un contenido distinto.",
   CRM_PUBLIC_INTAKE_RATE_LIMITED: (d) =>
     `Demasiadas solicitudes. Reintenta en ${str(d, "retry_after_seconds", "60")} segundos.`,
+
+  PORTAL_SESSION_NOT_FOUND: () => "Sesion del portal no encontrada.",
+  PORTAL_LINK_EXPIRED: () =>
+    "Este enlace ha caducado. Pide uno nuevo a tu contacto comercial.",
+  PORTAL_QUOTE_NOT_FOUND: () => "Cotizacion no encontrada.",
+  PORTAL_ORDER_NOT_FOUND: () =>
+    "Todavia no hay una orden. Es posible que la cotizacion aun no se haya aceptado.",
+  PORTAL_QUOTE_NOT_SHAREABLE: (d) =>
+    `No se puede compartir una cotizacion en estado '${str(d, "status")}'.`,
+  PORTAL_SESSION_NO_CLIENT_EMAIL: () =>
+    "La sesion no tiene correo de contacto, no se puede enviar el enlace.",
+  PORTAL_QUOTE_ACCEPT_INVALID_STATUS: (d) =>
+    `No se puede aceptar una cotizacion en estado '${str(d, "status")}'.`,
+  PORTAL_QUOTE_REJECT_INVALID_STATUS: (d) =>
+    `No se puede rechazar una cotizacion en estado '${str(d, "status")}'.`,
 };
 
 /**

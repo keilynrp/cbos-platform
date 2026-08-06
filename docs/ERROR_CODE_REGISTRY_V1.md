@@ -31,6 +31,11 @@ than to a bare identifier.
    and the handler propagates them. A `429` still has to send `Retry-After`: a
    translated body does not tell an automated client when to retry, and dropping
    the header while "only changing the error shape" is a silent regression.
+6. **`detail` never carries a credential.** It is echoed to the client and lands
+   in logs and error traces. `PORTAL_SESSION_NOT_FOUND` ships `id` when the
+   lookup was by session id, and nothing at all when it was by token — the
+   portal token *is* the access credential. Putting a lookup key in `detail`
+   because "it helps debugging" is exactly how credentials leak.
 
 ---
 
@@ -68,6 +73,14 @@ than to a bare identifier.
 | `CRM_PUBLIC_SITE_ORIGIN_NOT_ALLOWED` | 403 | crm | Request origin is not in the site's allowlist | `origin` |
 | `CRM_PUBLIC_INTAKE_IDEMPOTENCY_CONFLICT` | 409 | crm | Idempotency key reused with a different payload | — |
 | `CRM_PUBLIC_INTAKE_RATE_LIMITED` | 429 | crm | Public intake exceeded the per-minute limit (sends `Retry-After`) | `retry_after_seconds` |
+| `PORTAL_SESSION_NOT_FOUND` | 404 | portal | The portal session does not exist | `id` — omitted on token lookup, see below |
+| `PORTAL_LINK_EXPIRED` | 410 | portal | The portal link is past its expiry | `expires_at` |
+| `PORTAL_QUOTE_NOT_FOUND` | 404 | portal | The quote behind the session or request does not exist | `id` |
+| `PORTAL_QUOTE_NOT_SHAREABLE` | 409 | portal | Session creation attempted on a quote past draft/sent | `status` |
+| `PORTAL_SESSION_NO_CLIENT_EMAIL` | 422 | portal | Link email requested for a session with no client email | `id` |
+| `PORTAL_QUOTE_ACCEPT_INVALID_STATUS` | 409 | portal | Client accept attempted from a status that does not allow it | `status` |
+| `PORTAL_QUOTE_REJECT_INVALID_STATUS` | 409 | portal | Client reject attempted from a status that does not allow it | `status` |
+| `PORTAL_ORDER_NOT_FOUND` | 404 | portal | No order exists yet for the session's quote | — |
 
 ---
 
@@ -84,7 +97,6 @@ undercounted at 11 when it actually had 13.
 
 | Module | `HTTPException` sites remaining |
 |---|---|
-| portal | 10 |
 | accounting | 8 |
 | contracts | 8 |
 | identity | 7 |
@@ -93,5 +105,5 @@ undercounted at 11 when it actually had 13.
 | discovery | 3 |
 | workflows | 2 |
 
-`projects`, `sales`, and `crm` are migrated; `projects` serves as the reference
-for the rest.
+`projects`, `sales`, `crm`, and `portal` are migrated; `projects` serves as the
+reference for the rest.

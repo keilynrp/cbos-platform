@@ -237,3 +237,109 @@ async def test_portal_send_email_requires_client_email(
         headers=auth_headers,
     )
     assert resp.status_code == 422, resp.text
+
+    error = resp.json()["error"]
+    assert error["code"] == "PORTAL_SESSION_NO_CLIENT_EMAIL"
+    assert error["detail"]["id"] == session_id
+
+
+# ── Error envelope (ADR 0010) ────────────────────────────────────────────────
+#
+# El `code` y las claves de `detail` son el contrato que consume
+# composable-os/src/lib/errors.ts, y en el portal ademas decide que pantalla ve
+# el cliente: CustomerPortal.tsx distingue el enlace caducado por codigo.
+
+MISSING_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _error(resp) -> dict:
+    body = resp.json()
+    assert "error" in body, body
+    return body["error"]
+
+
+async def test_session_not_found_by_id_error_shape(
+    client: AsyncClient, auth_headers: dict
+):
+    resp = await client.post(
+        f"{PORTAL}/sessions/{MISSING_ID}/send-email", headers=auth_headers
+    )
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "PORTAL_SESSION_NOT_FOUND"
+    # Aqui la busqueda fue por id, no por token: el id si puede viajar.
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_create_session_quote_not_found_error_shape(
+    client: AsyncClient, auth_headers: dict
+):
+    resp = await client.post(
+        f"{PORTAL}/sessions", headers=auth_headers, json={"quote_id": MISSING_ID}
+    )
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "PORTAL_QUOTE_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_create_session_quote_not_shareable_error_shape(
+    client: AsyncClient, auth_headers: dict
+):
+    quote = await _create_quote(client, auth_headers)
+    session = await _create_session(client, auth_headers, quote["id"])
+
+    # Aceptar desde el portal deja la cotizacion en 'accepted', fuera de
+    # draft/sent, que es lo unico compartible.
+    await client.post(f"{PORTAL}/quote/{session['token']}/accept", json={})
+
+    resp = await client.post(
+        f"{PORTAL}/sessions", headers=auth_headers, json={"quote_id": quote["id"]}
+    )
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "PORTAL_QUOTE_NOT_SHAREABLE"
+    assert error["detail"]["status"] == "accepted"
+
+
+async def test_portal_accept_invalid_status_error_shape(
+    client: AsyncClient, auth_headers: dict
+):
+    quote = await _create_quote(client, auth_headers)
+    # Hacen falta dos sesiones creadas antes de aceptar: reusar la misma
+    # devuelve 200 por el corto de `session.action`, y crear la segunda despues
+    # choca antes con PORTAL_QUOTE_NOT_SHAREABLE. Solo por aqui se alcanza el
+    # guard de estado de portal_accept.
+    first_session = await _create_session(client, auth_headers, quote["id"])
+    second_session = await _create_session(client, auth_headers, quote["id"])
+
+    accepted = await client.post(
+        f"{PORTAL}/quote/{first_session['token']}/accept", json={}
+    )
+    assert accepted.status_code == 200, accepted.text
+
+    resp = await client.post(
+        f"{PORTAL}/quote/{second_session['token']}/accept", json={}
+    )
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "PORTAL_QUOTE_ACCEPT_INVALID_STATUS"
+    assert error["detail"]["status"] == "accepted"
+
+
+async def test_portal_order_not_found_error_shape(
+    client: AsyncClient, auth_headers: dict
+):
+    quote = await _create_quote(client, auth_headers)
+    session = await _create_session(client, auth_headers, quote["id"])
+
+    # Sin aceptar todavia no hay orden.
+    resp = await client.get(f"{PORTAL}/order/{session['token']}")
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "PORTAL_ORDER_NOT_FOUND"

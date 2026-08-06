@@ -2,10 +2,21 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { ApiError } from "@/lib/api";
+import { translateApiError } from "@/lib/errors";
 
 // ── Public fetch (no auth header) ─────────────────────────────────────────
 const BASE_URL = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:8100/api/v1";
 
+/**
+ * El portal publico no pasa por `request` de lib/api.ts porque no manda el
+ * token de sesion, asi que interpreta el sobre de error por su cuenta.
+ *
+ * Antes leia `body.detail`, que con el shape de CBOSException ya no existe en
+ * la raiz: sin esto el cliente habria pasado a ver "Error 409" en lugar del
+ * motivo. Se lanza ApiError para que `translateApiError` pueda resolver el
+ * texto a partir del codigo, igual que en el resto de la app.
+ */
 async function publicFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -13,7 +24,11 @@ async function publicFetch<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw Object.assign(new Error(body.detail || `Error ${res.status}`), { status: res.status });
+    const message =
+      body?.error?.message ??
+      (typeof body?.detail === "string" ? body.detail : null) ??
+      `Error ${res.status}`;
+    throw new ApiError(message, body?.error?.code, body?.error?.detail, res.status);
   }
   return res.json();
 }
@@ -218,8 +233,11 @@ export default function CustomerPortal() {
   if (isLoading) return <LoadingScreen />;
 
   if (error || !quote) {
-    const msg = ((error as Error & { status?: number })?.message ?? "").toLowerCase();
-    const isExpired = msg.includes("expir") || (error as Error & { status?: number })?.status === 410;
+    // Se mira el codigo, no la prosa. El olfateo de `msg.includes("expir")`
+    // dependia de que el backend escribiera "expired" en ingles; con el enlace
+    // caducado traducido al espanol habria dejado de acertar en silencio.
+    const apiError = error as ApiError | undefined;
+    const isExpired = apiError?.code === "PORTAL_LINK_EXPIRED" || apiError?.status === 410;
     return <ErrorScreen isExpired={isExpired} />;
   }
 
@@ -401,7 +419,7 @@ export default function CustomerPortal() {
                 </button>
               </div>
               {accept.isError && (
-                <p className="text-[#f38ba8] text-xs">{(accept.error as Error).message}</p>
+                <p className="text-[#f38ba8] text-xs">{translateApiError(accept.error)}</p>
               )}
             </div>
           )}
@@ -438,7 +456,7 @@ export default function CustomerPortal() {
                 </button>
               </div>
               {reject.isError && (
-                <p className="text-[#f38ba8] text-xs">{(reject.error as Error).message}</p>
+                <p className="text-[#f38ba8] text-xs">{translateApiError(reject.error)}</p>
               )}
             </div>
           )}
