@@ -235,3 +235,88 @@ async def test_invoice_not_visible_in_second_workspace(
         f"{BASE}/invoices/{invoice['id']}", headers=ws2_headers
     )
     assert direct_resp.status_code == 404
+    assert direct_resp.json()["error"]["code"] == "ACCOUNTING_INVOICE_NOT_FOUND"
+
+
+# ── Error envelope (ADR 0010) ────────────────────────────────────────────────
+#
+# El `code` y las claves de `detail` son el contrato que consume
+# composable-os/src/lib/errors.ts. Renombrar una clave no rompe al frontend: lo
+# hace caer al mensaje en ingles del backend, en silencio.
+
+MISSING_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _error(resp) -> dict:
+    body = resp.json()
+    assert "error" in body, body
+    return body["error"]
+
+
+async def test_invoice_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(f"{BASE}/invoices/{MISSING_ID}", headers=auth_headers)
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "ACCOUNTING_INVOICE_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_payment_exceeds_due_error_shape(client: AsyncClient, auth_headers: dict):
+    invoice = await _create_invoice(client, auth_headers)  # total 200.0
+
+    resp = await client.post(
+        f"{BASE}/invoices/{invoice['id']}/payments",
+        headers=auth_headers,
+        json={"amount": 500.0, "payment_date": "2026-04-11"},
+    )
+
+    assert resp.status_code == 400
+    error = _error(resp)
+    assert error["code"] == "ACCOUNTING_PAYMENT_EXCEEDS_DUE"
+    assert error["detail"]["amount"] == 500.0
+    assert error["detail"]["amount_due"] == invoice["amount_due"]
+
+
+async def test_update_paid_invoice_error_shape(client: AsyncClient, auth_headers: dict):
+    invoice = await _create_invoice(client, auth_headers)
+    await _record_payment(client, auth_headers, invoice["id"], invoice["total"])
+
+    resp = await client.patch(
+        f"{BASE}/invoices/{invoice['id']}", headers=auth_headers, json={"status": "sent"}
+    )
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "ACCOUNTING_INVOICE_UPDATE_BLOCKED"
+    assert error["detail"]["status"] == "paid"
+
+
+async def test_delete_paid_invoice_error_shape(client: AsyncClient, auth_headers: dict):
+    invoice = await _create_invoice(client, auth_headers)
+    await _record_payment(client, auth_headers, invoice["id"], invoice["total"])
+
+    resp = await client.delete(f"{BASE}/invoices/{invoice['id']}", headers=auth_headers)
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "ACCOUNTING_INVOICE_DELETE_BLOCKED"
+    assert error["detail"]["status"] == "paid"
+
+
+async def test_logo_too_large_error_shape(client: AsyncClient, auth_headers: dict):
+    import base64
+
+    oversized = "data:image/png;base64," + base64.b64encode(b"x" * 300_000).decode()
+
+    resp = await client.put(
+        f"{BASE}/company-profile", headers=auth_headers, json={"logo_data_uri": oversized}
+    )
+
+    assert resp.status_code == 400
+    error = _error(resp)
+    assert error["code"] == "ACCOUNTING_LOGO_TOO_LARGE"
+    assert error["detail"]["max_kb"] == 200
+    assert error["detail"]["size_kb"] > 200
+    # El mensaje del servidor vuelve a ser ingles: el espanol lo pone errors.ts.
+    assert "logo" in error["message"].lower()

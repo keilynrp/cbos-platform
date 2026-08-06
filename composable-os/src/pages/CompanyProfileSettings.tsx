@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { translateApiError } from "@/lib/errors";
 import {
   accountingService,
   type CompanyProfile,
@@ -55,7 +56,7 @@ export default function CompanyProfileSettings() {
       toast({ title: "Datos guardados" });
     },
     onError: (e: Error) =>
-      toast({ title: "No se pudo guardar", description: e.message, variant: "destructive" }),
+      toast({ title: "No se pudo guardar", description: translateApiError(e), variant: "destructive" }),
   });
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -111,7 +112,7 @@ export default function CompanyProfileSettings() {
           <div>
             <p className="font-medium">No se pudieron cargar los datos de facturación</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {error instanceof Error ? error.message : "Error desconocido"}
+              {translateApiError(error, "Error desconocido")}
             </p>
           </div>
           <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>

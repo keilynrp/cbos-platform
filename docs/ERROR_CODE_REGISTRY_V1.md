@@ -81,6 +81,14 @@ than to a bare identifier.
 | `PORTAL_QUOTE_ACCEPT_INVALID_STATUS` | 409 | portal | Client accept attempted from a status that does not allow it | `status` |
 | `PORTAL_QUOTE_REJECT_INVALID_STATUS` | 409 | portal | Client reject attempted from a status that does not allow it | `status` |
 | `PORTAL_ORDER_NOT_FOUND` | 404 | portal | No order exists yet for the session's quote | — |
+| `ACCOUNTING_INVOICE_NOT_FOUND` | 404 | accounting | The invoice does not exist in this workspace | `id` |
+| `ACCOUNTING_INVOICE_UPDATE_BLOCKED` | 409 | accounting | Status change attempted on a paid or void invoice | `status` |
+| `ACCOUNTING_INVOICE_DELETE_BLOCKED` | 409 | accounting | Deletion attempted outside draft/void/cancelled | `status` |
+| `ACCOUNTING_PAYMENT_INVOICE_BLOCKED` | 409 | accounting | Payment recorded against a void or cancelled invoice | `status` |
+| `ACCOUNTING_PAYMENT_EXCEEDS_DUE` | 400 | accounting | Payment amount is larger than the outstanding balance | `amount`, `amount_due` |
+| `ACCOUNTING_LOGO_INVALID_FORMAT` | 400 | accounting | Logo is not a png/jpeg base64 data URI | `allowed_mime` |
+| `ACCOUNTING_LOGO_INVALID_BASE64` | 400 | accounting | Logo payload does not decode as base64 | — |
+| `ACCOUNTING_LOGO_TOO_LARGE` | 400 | accounting | Logo exceeds the size cap | `size_kb`, `max_kb` |
 
 ---
 
@@ -97,7 +105,6 @@ undercounted at 11 when it actually had 13.
 
 | Module | `HTTPException` sites remaining |
 |---|---|
-| accounting | 8 |
 | contracts | 8 |
 | identity | 7 |
 | inventory | 7 |
@@ -105,5 +112,10 @@ undercounted at 11 when it actually had 13.
 | discovery | 3 |
 | workflows | 2 |
 
-`projects`, `sales`, `crm`, and `portal` are migrated; `projects` serves as the
-reference for the rest.
+`projects`, `sales`, `crm`, `portal`, and `accounting` are migrated; `projects`
+serves as the reference for the rest.
+
+`accounting` is also where the first Spanish-in-the-backend messages were
+undone: the logo validation errors used to ship their user-facing text from the
+server. They now send an English `message` plus the numbers in `detail`, and the
+Spanish lives in `errors.ts` like everything else.

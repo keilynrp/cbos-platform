@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -73,7 +73,12 @@ async def get_invoice(db: AsyncSession, workspace_id: str, invoice_id: str) -> I
     )
     inv = result.scalar_one_or_none()
     if not inv:
-        raise HTTPException(404, detail="Invoice not found")
+        raise CBOSException(
+            status_code=404,
+            code="ACCOUNTING_INVOICE_NOT_FOUND",
+            message="Invoice not found.",
+            detail={"id": invoice_id},
+        )
     return inv
 
 
@@ -155,7 +160,12 @@ async def update_invoice(
 
     if data.status is not None:
         if inv.status in ("paid", "void"):
-            raise HTTPException(409, detail=f"Cannot update a {inv.status} invoice")
+            raise CBOSException(
+                status_code=409,
+                code="ACCOUNTING_INVOICE_UPDATE_BLOCKED",
+                message=f"Cannot update a {inv.status} invoice.",
+                detail={"status": inv.status},
+            )
         old_status = inv.status
         inv.status = data.status
         if data.status == "sent" and old_status != "sent":
@@ -182,7 +192,12 @@ async def update_invoice(
 async def delete_invoice(db: AsyncSession, workspace_id: str, invoice_id: str) -> None:
     inv = await get_invoice(db, workspace_id, invoice_id)
     if inv.status not in ("draft", "void", "cancelled"):
-        raise HTTPException(409, detail="Only draft, void, or cancelled invoices can be deleted")
+        raise CBOSException(
+            status_code=409,
+            code="ACCOUNTING_INVOICE_DELETE_BLOCKED",
+            message="Only draft, void, or cancelled invoices can be deleted.",
+            detail={"status": inv.status},
+        )
     await db.delete(inv)
     await db.commit()
 
@@ -199,10 +214,20 @@ async def record_payment(
     inv = await get_invoice(db, workspace_id, invoice_id)
 
     if inv.status in ("void", "cancelled"):
-        raise HTTPException(409, detail=f"Cannot add payment to a {inv.status} invoice")
+        raise CBOSException(
+            status_code=409,
+            code="ACCOUNTING_PAYMENT_INVOICE_BLOCKED",
+            message=f"Cannot add payment to a {inv.status} invoice.",
+            detail={"status": inv.status},
+        )
 
     if data.amount > inv.amount_due + 0.01:
-        raise HTTPException(400, detail=f"Payment amount ({data.amount}) exceeds amount due ({inv.amount_due})")
+        raise CBOSException(
+            status_code=400,
+            code="ACCOUNTING_PAYMENT_EXCEEDS_DUE",
+            message=f"Payment amount ({data.amount}) exceeds amount due ({inv.amount_due}).",
+            detail={"amount": data.amount, "amount_due": inv.amount_due},
+        )
 
     payment = Payment(
         workspace_id=workspace_id,
@@ -289,30 +314,43 @@ _LOGO_PREFIX_RE = re.compile(r"^data:image/(png|jpeg);base64,")
 
 
 def _validate_logo_data_uri(value: str | None) -> None:
-    """Raise HTTPException(400) if the logo is not an acceptable data URI."""
+    """Raise CBOSException(400) if the logo is not an acceptable data URI.
+
+    Estos tres mensajes estaban en espanol en el backend, que es justo lo que
+    el ADR 0010 desarma: el texto del usuario se decide en el cliente. Aqui
+    quedan en ingles para logs, y el espanol vive en errors.ts.
+    """
     if value is None:
         return
 
     match = _LOGO_PREFIX_RE.match(value)
     if not match:
-        raise HTTPException(
-            400,
-            detail="El logo debe ser un data URI base64 de tipo image/png o image/jpeg",
+        raise CBOSException(
+            status_code=400,
+            code="ACCOUNTING_LOGO_INVALID_FORMAT",
+            message="Logo must be a base64 data URI of type image/png or image/jpeg.",
+            detail={"allowed_mime": ["image/png", "image/jpeg"]},
         )
 
     payload = value[match.end():]
     try:
         decoded = base64.b64decode(payload, validate=True)
     except (binascii.Error, ValueError):
-        raise HTTPException(400, detail="El logo no es base64 valido")
+        raise CBOSException(
+            status_code=400,
+            code="ACCOUNTING_LOGO_INVALID_BASE64",
+            message="Logo is not valid base64.",
+        )
 
     if len(decoded) > MAX_LOGO_BYTES:
-        raise HTTPException(
-            400,
-            detail=(
-                f"El logo pesa {len(decoded) // 1024} KB y el maximo son 200 KB. "
-                "Reduce la imagen antes de subirla."
+        raise CBOSException(
+            status_code=400,
+            code="ACCOUNTING_LOGO_TOO_LARGE",
+            message=(
+                f"Logo is {len(decoded) // 1024} KB; the maximum is "
+                f"{MAX_LOGO_BYTES // 1024} KB."
             ),
+            detail={"size_kb": len(decoded) // 1024, "max_kb": MAX_LOGO_BYTES // 1024},
         )
 
 
