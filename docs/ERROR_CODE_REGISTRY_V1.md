@@ -89,6 +89,11 @@ than to a bare identifier.
 | `ACCOUNTING_LOGO_INVALID_FORMAT` | 400 | accounting | Logo is not a png/jpeg base64 data URI | `allowed_mime` |
 | `ACCOUNTING_LOGO_INVALID_BASE64` | 400 | accounting | Logo payload does not decode as base64 | — |
 | `ACCOUNTING_LOGO_TOO_LARGE` | 400 | accounting | Logo exceeds the size cap | `size_kb`, `max_kb` |
+| `CONTRACT_NOT_FOUND` | 404 | contracts | The contract does not exist in this workspace | `id` |
+| `CONTRACT_INVALID_TRANSITION` | 422 | contracts | The requested status is not reachable from the current one | `from`, `to`, `allowed` |
+| `CONTRACT_DELETE_NOT_DRAFT` | 409 | contracts | Deletion attempted on a contract past draft | `status` |
+| `CONTRACT_CLAUSES_LOCKED` | 409 | contracts | Clause add/update/delete attempted on an executed, expired, or terminated contract | `status` |
+| `CONTRACT_CLAUSE_NOT_FOUND` | 404 | contracts | The clause does not exist in this contract | `id` |
 
 ---
 
@@ -105,15 +110,14 @@ undercounted at 11 when it actually had 13.
 
 | Module | `HTTPException` sites remaining |
 |---|---|
-| contracts | 8 |
 | identity | 7 |
 | inventory | 7 |
 | hr | 4 |
 | discovery | 3 |
 | workflows | 2 |
 
-`projects`, `sales`, `crm`, `portal`, and `accounting` are migrated; `projects`
-serves as the reference for the rest.
+`projects`, `sales`, `crm`, `portal`, `accounting`, and `contracts` are
+migrated; `projects` serves as the reference for the rest.
 
 `accounting` is also where the first Spanish-in-the-backend messages were
 undone: the logo validation errors used to ship their user-facing text from the

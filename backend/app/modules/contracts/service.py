@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -97,7 +97,12 @@ async def _get_contract_or_404(
     )
     contract = result.scalar_one_or_none()
     if not contract:
-        raise HTTPException(status_code=404, detail="Contract not found")
+        raise CBOSException(
+            status_code=404,
+            code="CONTRACT_NOT_FOUND",
+            message="Contract not found.",
+            detail={"id": contract_id},
+        )
     return contract
 
 
@@ -200,10 +205,11 @@ async def update_contract(
     if data.status and data.status != contract.status:
         allowed = _TRANSITIONS.get(contract.status, [])
         if data.status not in allowed:
-            raise HTTPException(
+            raise CBOSException(
                 status_code=422,
-                detail=f"Invalid transition: {contract.status} → {data.status}. "
-                       f"Allowed: {allowed or 'none (terminal state)'}",
+                code="CONTRACT_INVALID_TRANSITION",
+                message=f"Invalid transition: {contract.status} -> {data.status}.",
+                detail={"from": contract.status, "to": data.status, "allowed": allowed},
             )
         now = datetime.now(timezone.utc)
         ts_field = _TRANSITION_TIMESTAMPS.get(data.status)
@@ -261,10 +267,11 @@ async def delete_contract(
 ) -> None:
     contract = await _get_contract_or_404(db, workspace_id, contract_id)
     if contract.status not in ("draft",):
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"Cannot delete a contract in '{contract.status}' status. "
-                   "Only draft contracts can be deleted.",
+            code="CONTRACT_DELETE_NOT_DRAFT",
+            message=f"Cannot delete a contract in '{contract.status}' status.",
+            detail={"status": contract.status},
         )
     await db.delete(contract)
     await db.commit()
@@ -280,9 +287,11 @@ async def add_clause(
 ) -> ContractRead:
     contract = await _get_contract_or_404(db, workspace_id, contract_id)
     if contract.status in ("executed", "expired", "terminated"):
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"Cannot modify clauses of a '{contract.status}' contract.",
+            code="CONTRACT_CLAUSES_LOCKED",
+            message=f"Cannot modify clauses of a '{contract.status}' contract.",
+            detail={"status": contract.status},
         )
 
     # Auto-assign order if not specified
@@ -311,14 +320,21 @@ async def update_clause(
 ) -> ContractRead:
     contract = await _get_contract_or_404(db, workspace_id, contract_id)
     if contract.status in ("executed", "expired", "terminated"):
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"Cannot modify clauses of a '{contract.status}' contract.",
+            code="CONTRACT_CLAUSES_LOCKED",
+            message=f"Cannot modify clauses of a '{contract.status}' contract.",
+            detail={"status": contract.status},
         )
 
     clause = next((c for c in contract.clauses if c.id == clause_id), None)
     if not clause:
-        raise HTTPException(status_code=404, detail="Clause not found")
+        raise CBOSException(
+            status_code=404,
+            code="CONTRACT_CLAUSE_NOT_FOUND",
+            message="Clause not found.",
+            detail={"id": clause_id},
+        )
 
     if data.title is not None:
         clause.title = data.title
@@ -341,14 +357,21 @@ async def delete_clause(
 ) -> ContractRead:
     contract = await _get_contract_or_404(db, workspace_id, contract_id)
     if contract.status in ("executed", "expired", "terminated"):
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"Cannot modify clauses of a '{contract.status}' contract.",
+            code="CONTRACT_CLAUSES_LOCKED",
+            message=f"Cannot modify clauses of a '{contract.status}' contract.",
+            detail={"status": contract.status},
         )
 
     clause = next((c for c in contract.clauses if c.id == clause_id), None)
     if not clause:
-        raise HTTPException(status_code=404, detail="Clause not found")
+        raise CBOSException(
+            status_code=404,
+            code="CONTRACT_CLAUSE_NOT_FOUND",
+            message="Clause not found.",
+            detail={"id": clause_id},
+        )
 
     await db.delete(clause)
     await db.commit()

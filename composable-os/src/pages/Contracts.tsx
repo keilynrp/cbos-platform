@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { translateApiError } from "@/lib/errors";
 import {
   contractsService,
   type ContractListItem,
@@ -87,7 +88,7 @@ function CreateContractDialog({ open, onClose }: { open: boolean; onClose: () =>
       onClose();
       setForm({ title: "", value: undefined, currency: "USD", notes: "" });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
@@ -202,7 +203,7 @@ function ContractDetail({
       qc.invalidateQueries({ queryKey: ["contract", contractId] });
       toast({ title: "Estado actualizado" });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: translateApiError(e), variant: "destructive" }),
   });
 
   const addClause = useMutation({
@@ -216,7 +217,7 @@ function ContractDetail({
       setAddingClause(false);
       toast({ title: "Cláusula agregada" });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: translateApiError(e), variant: "destructive" }),
   });
 
   const deleteClause = useMutation({
@@ -226,7 +227,7 @@ function ContractDetail({
       qc.invalidateQueries({ queryKey: ["contract", contractId] });
       toast({ title: "Cláusula eliminada" });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: translateApiError(e), variant: "destructive" }),
   });
 
   if (isLoading || !contract) {
@@ -427,7 +428,7 @@ const Contracts = () => {
       if (selectedId) setSelectedId(null);
       toast({ title: "Contrato eliminado" });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: translateApiError(e), variant: "destructive" }),
   });
 
   // KPIs
