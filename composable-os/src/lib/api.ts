@@ -13,6 +13,27 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+/**
+ * Error de la API que conserva el `code` de CBOSException.
+ *
+ * Antes se lanzaba un Error pelado con el mensaje, de modo que el codigo se
+ * perdia y el frontend solo podia mostrar la prosa que escribiera el backend.
+ * Con el codigo disponible, `translateApiError` puede resolver el texto en
+ * espanol; `message` sigue siendo el del backend y hace de reserva cuando el
+ * codigo no esta mapeado. Ver ADR 0010.
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+    readonly detail?: Record<string, unknown>,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 // ── Core fetch wrapper ─────────────────────────────────────────────────────
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
@@ -39,7 +60,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       body?.error?.message ??
       (typeof body?.detail === "string" ? body.detail : null) ??
       `HTTP ${res.status}`;
-    throw new Error(message);
+    throw new ApiError(message, body?.error?.code, body?.error?.detail, res.status);
   }
 
   if (res.status === 204) return null as T;

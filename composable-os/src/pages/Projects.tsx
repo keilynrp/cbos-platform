@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { projectsService, Project, ProjectTask } from "@/services/projects";
+import { translateApiError } from "@/lib/errors";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ function CreateProjectDialog({
       onOpenChange(false);
       setForm({ title: "", description: "", budget: "", currency: "USD", start_date: "", end_date: "", notes: "" });
     },
-    onError: (e: Error) => toast({ title: "Error al crear proyecto", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error al crear proyecto", description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
@@ -205,7 +206,7 @@ function AddTaskDialog({
       onOpenChange(false);
       setForm({ title: "", description: "", due_date: "" });
     },
-    onError: (e: Error) => toast({ title: "Error al añadir tarea", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error al añadir tarea", description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
@@ -277,7 +278,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
     // se leia e.response.data.detail, forma de axios que este cliente no usa:
     // siempre daba undefined y el usuario solo veia el texto generico.
     onError: (e: Error) => toast({
-      title: e.message || "Transición no permitida",
+      title: translateApiError(e, "Transición no permitida"),
       variant: "destructive",
     }),
   });
@@ -523,7 +524,7 @@ export default function Projects() {
       if (selectedId === id) setSelectedId(null);
       toast({ title: "Proyecto eliminado" });
     },
-    onError: (e: Error) => toast({ title: "No se puede eliminar este proyecto", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "No se puede eliminar este proyecto", description: translateApiError(e), variant: "destructive" }),
   });
 
   // KPIs

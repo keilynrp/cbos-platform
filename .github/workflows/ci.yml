@@ -38,6 +38,9 @@ jobs:
       - name: Enforce event registry parity
         run: python scripts/ci/check_event_registry.py
 
+      - name: Enforce error code registry parity
+        run: python scripts/ci/check_error_registry.py
+
   backend:
     name: Backend — test
     runs-on: ubuntu-latest

@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -105,7 +105,12 @@ async def _get_project_or_404(
     )
     project = result.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+        raise CBOSException(
+            status_code=404,
+            code="PROJECT_NOT_FOUND",
+            message="Project not found.",
+            detail={"id": project_id},
+        )
     return project
 
 
@@ -210,10 +215,11 @@ async def update_project(
     if data.status and data.status != project.status:
         allowed = _PROJECT_TRANSITIONS.get(project.status, [])
         if data.status not in allowed:
-            raise HTTPException(
+            raise CBOSException(
                 status_code=422,
-                detail=f"Transicion invalida: {project.status} -> {data.status}. "
-                       f"Permitidas: {allowed or 'ninguna (estado final)'}",
+                code="PROJECT_INVALID_TRANSITION",
+                message=f"Invalid transition: {project.status} -> {data.status}.",
+                detail={"from": project.status, "to": data.status, "allowed": allowed},
             )
         now = datetime.now(timezone.utc)
         ts_field = _PROJECT_TRANSITION_TIMESTAMPS.get(data.status)
@@ -268,10 +274,11 @@ async def delete_project(
 ) -> None:
     project = await _get_project_or_404(db, workspace_id, project_id)
     if project.status != "planning":
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"No se puede eliminar un proyecto en estado '{project.status}'. "
-                   "Solo se pueden eliminar los proyectos en planificacion.",
+            code="PROJECT_DELETE_NOT_PLANNING",
+            message=f"Cannot delete a project in '{project.status}' status.",
+            detail={"status": project.status},
         )
     await db.delete(project)
     await db.commit()
@@ -288,9 +295,11 @@ async def add_task(
 ) -> ProjectRead:
     project = await _get_project_or_404(db, workspace_id, project_id)
     if project.status in _TERMINAL_PROJECT_STATUSES:
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"No se pueden anadir tareas a un proyecto en estado '{project.status}'.",
+            code="PROJECT_TASK_ADD_BLOCKED",
+            message=f"Cannot add tasks to a '{project.status}' project.",
+            detail={"status": project.status},
         )
 
     max_order = max((t.task_order for t in project.tasks), default=-1)
@@ -322,23 +331,31 @@ async def update_task(
 ) -> ProjectRead:
     project = await _get_project_or_404(db, workspace_id, project_id)
     if project.status in _TERMINAL_PROJECT_STATUSES:
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"No se pueden modificar las tareas de un proyecto en estado '{project.status}'.",
+            code="PROJECT_TASK_MODIFY_BLOCKED",
+            message=f"Cannot modify tasks of a '{project.status}' project.",
+            detail={"status": project.status},
         )
 
     task = next((t for t in project.tasks if t.id == task_id), None)
     if not task:
-        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+        raise CBOSException(
+            status_code=404,
+            code="PROJECT_TASK_NOT_FOUND",
+            message="Task not found.",
+            detail={"id": task_id},
+        )
 
     # Validate task status transition
     if data.status and data.status != task.status:
         allowed = _TASK_TRANSITIONS.get(task.status, [])
         if data.status not in allowed:
-            raise HTTPException(
+            raise CBOSException(
                 status_code=422,
-                detail=f"Transicion invalida de la tarea: {task.status} -> {data.status}. "
-                       f"Permitidas: {allowed or 'ninguna (estado final)'}",
+                code="PROJECT_TASK_INVALID_TRANSITION",
+                message=f"Invalid task transition: {task.status} -> {data.status}.",
+                detail={"from": task.status, "to": data.status, "allowed": allowed},
             )
         task.status = data.status
         if data.status == "done":
@@ -379,14 +396,21 @@ async def delete_task(
 ) -> ProjectRead:
     project = await _get_project_or_404(db, workspace_id, project_id)
     if project.status in _TERMINAL_PROJECT_STATUSES:
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"No se pueden eliminar tareas de un proyecto en estado '{project.status}'.",
+            code="PROJECT_TASK_DELETE_BLOCKED",
+            message=f"Cannot delete tasks from a '{project.status}' project.",
+            detail={"status": project.status},
         )
 
     task = next((t for t in project.tasks if t.id == task_id), None)
     if not task:
-        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+        raise CBOSException(
+            status_code=404,
+            code="PROJECT_TASK_NOT_FOUND",
+            message="Task not found.",
+            detail={"id": task_id},
+        )
 
     await db.delete(task)
     await db.commit()
