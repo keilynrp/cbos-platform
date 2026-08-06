@@ -25,6 +25,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { translateApiError } from "@/lib/errors";
 import {
   accountingService,
   type InvoiceListItem,
@@ -75,7 +76,7 @@ function InvoiceDetail({ invoice, onClose }: { invoice: Invoice; onClose: () => 
       qc.invalidateQueries({ queryKey: ["accounting-summary"] });
       toast({ title: "Estado actualizado" });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: translateApiError(e), variant: "destructive" }),
   });
 
   const recordPayment = useMutation({
@@ -91,7 +92,7 @@ function InvoiceDetail({ invoice, onClose }: { invoice: Invoice; onClose: () => 
       setPayOpen(false);
       toast({ title: "Pago registrado", description: `${fmt(parseFloat(payForm.amount))} registrado correctamente` });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
@@ -270,7 +271,7 @@ function NewInvoiceDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       onOpenChange(false);
       toast({ title: "Factura creada" });
     },
-    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "Error", description: translateApiError(e), variant: "destructive" }),
   });
 
   const lineTotal = lines.reduce((sum, l) => {
@@ -431,7 +432,7 @@ export default function Invoicing() {
       if (selectedId) setSelectedId(null);
       toast({ title: "Factura eliminada" });
     },
-    onError: (e: Error) => toast({ title: "No se puede eliminar", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => toast({ title: "No se puede eliminar", description: translateApiError(e), variant: "destructive" }),
   });
 
   return (

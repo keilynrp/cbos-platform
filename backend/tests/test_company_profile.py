@@ -5,7 +5,7 @@ import uuid
 from datetime import date
 
 import pytest
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -154,25 +154,33 @@ class TestLogoValidation:
         service._validate_logo_data_uri(None)
 
     def test_rejects_wrong_mime(self):
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(CBOSException) as exc:
             service._validate_logo_data_uri(_data_uri(100, mime="image/gif"))
         assert exc.value.status_code == 400
+        assert exc.value.code == "ACCOUNTING_LOGO_INVALID_FORMAT"
 
     def test_rejects_non_data_uri(self):
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(CBOSException) as exc:
             service._validate_logo_data_uri("https://example.com/logo.png")
         assert exc.value.status_code == 400
+        assert exc.value.code == "ACCOUNTING_LOGO_INVALID_FORMAT"
 
     def test_rejects_undecodable_base64(self):
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(CBOSException) as exc:
             service._validate_logo_data_uri("data:image/png;base64,!!!not-base64!!!")
         assert exc.value.status_code == 400
+        assert exc.value.code == "ACCOUNTING_LOGO_INVALID_BASE64"
 
     def test_rejects_over_200kb(self):
-        with pytest.raises(HTTPException) as exc:
+        with pytest.raises(CBOSException) as exc:
             service._validate_logo_data_uri(_data_uri(204_801))
         assert exc.value.status_code == 400
-        assert "200" in exc.value.detail
+        assert exc.value.code == "ACCOUNTING_LOGO_TOO_LARGE"
+        # Antes se afirmaba `"200" in exc.value.detail`, o sea el texto en
+        # espanol que escribia el backend. El limite ahora viaja como dato, que
+        # es lo que el cliente necesita para redactar su propia frase.
+        assert exc.value.extra_detail["max_kb"] == 200
+        assert exc.value.extra_detail["size_kb"] >= 200
 
 
 class TestCompanyProfileEndpoints:

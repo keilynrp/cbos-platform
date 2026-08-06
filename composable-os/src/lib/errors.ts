@@ -102,6 +102,26 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
     `No se puede aceptar una cotizacion en estado '${str(d, "status")}'.`,
   PORTAL_QUOTE_REJECT_INVALID_STATUS: (d) =>
     `No se puede rechazar una cotizacion en estado '${str(d, "status")}'.`,
+
+  ACCOUNTING_INVOICE_NOT_FOUND: () => "Factura no encontrada.",
+  ACCOUNTING_INVOICE_UPDATE_BLOCKED: (d) =>
+    `No se puede modificar una factura en estado '${str(d, "status")}'.`,
+  ACCOUNTING_INVOICE_DELETE_BLOCKED: (d) =>
+    `No se puede eliminar una factura en estado '${str(d, "status")}'. ` +
+    "Solo se pueden eliminar las de borrador, anuladas o canceladas.",
+  ACCOUNTING_PAYMENT_INVOICE_BLOCKED: (d) =>
+    `No se pueden registrar pagos en una factura en estado '${str(d, "status")}'.`,
+  ACCOUNTING_PAYMENT_EXCEEDS_DUE: (d) =>
+    `El pago de ${str(d, "amount")} supera el saldo pendiente de ${str(d, "amount_due")}.`,
+
+  // Estos tres venian con el texto en espanol cocido en el backend. Ahora el
+  // mensaje del servidor es ingles para logs y la frase se arma aqui.
+  ACCOUNTING_LOGO_INVALID_FORMAT: () =>
+    "El logo debe ser un data URI base64 de tipo image/png o image/jpeg.",
+  ACCOUNTING_LOGO_INVALID_BASE64: () => "El logo no es base64 valido.",
+  ACCOUNTING_LOGO_TOO_LARGE: (d) =>
+    `El logo pesa ${str(d, "size_kb")} KB y el maximo son ${str(d, "max_kb")} KB. ` +
+    "Reduce la imagen antes de subirla.",
 };
 
 /**
