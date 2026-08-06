@@ -231,6 +231,45 @@ async def test_completed_session_rejects_new_messages(
     assert resp.status_code == 409, (
         f"Expected 409 for completed session, got {resp.status_code}: {resp.text}"
     )
+    error = resp.json()["error"]
+    assert error["code"] == "DISCOVERY_SESSION_ALREADY_COMPLETED"
+    assert error["detail"]["status"] == "completed"
+
+
+# ── Error envelope (ADR 0010) ────────────────────────────────────────────────
+
+MISSING_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _error(resp) -> dict:
+    body = resp.json()
+    assert "error" in body, body
+    return body["error"]
+
+
+async def test_session_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(f"{BASE}/sessions/{MISSING_ID}", headers=auth_headers)
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "DISCOVERY_SESSION_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_apply_without_blueprint_error_shape(
+    client: AsyncClient, auth_headers: dict
+):
+    """Aplicar antes de generar el blueprint: 409 con codigo propio."""
+    session = await _create_session(client, auth_headers)
+
+    resp = await client.post(
+        f"{BASE}/sessions/{session['id']}/apply", headers=auth_headers
+    )
+
+    assert resp.status_code == 409
+    assert _error(resp)["code"] == "DISCOVERY_BLUEPRINT_MISSING"
+
+
 
 
 # ── 6. Capability catalog structure validation ────────────────────────────────

@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -82,7 +82,12 @@ async def get_session(
     )
     session = result.scalar_one_or_none()
     if not session:
-        raise HTTPException(status_code=404, detail="Discovery session not found")
+        raise CBOSException(
+            status_code=404,
+            code="DISCOVERY_SESSION_NOT_FOUND",
+            message="Discovery session not found.",
+            detail={"id": session_id},
+        )
     return session
 
 
@@ -110,8 +115,14 @@ async def send_message(
     session = await get_session(db, workspace_id, session_id)
 
     if session.status == "completed":
-        raise HTTPException(
-            status_code=409, detail="Session is already completed"
+        # ALREADY_COMPLETED y no SESSION_COMPLETED: ese nombre ya lo ocupa una
+        # constante de evento en app/events/types.py, y dos cosas distintas con
+        # el mismo identificador se acaban confundiendo al leer los logs.
+        raise CBOSException(
+            status_code=409,
+            code="DISCOVERY_SESSION_ALREADY_COMPLETED",
+            message="Session is already completed.",
+            detail={"status": session.status},
         )
 
     # Save user message
@@ -310,9 +321,10 @@ async def apply_blueprint(
     session = await get_session(db, workspace_id, session_id)
 
     if not session.blueprint:
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail="Session does not have a blueprint yet. Generate it first."
+            code="DISCOVERY_BLUEPRINT_MISSING",
+            message="Session does not have a blueprint yet. Generate it first.",
         )
 
     package = session.recommended_package or "starter"

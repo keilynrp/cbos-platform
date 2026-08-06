@@ -118,6 +118,9 @@ than to a bare identifier.
 | `HR_DEPARTMENT_NOT_FOUND` | 404 | hr | The department does not exist in this workspace | `id` |
 | `HR_EMPLOYEE_INVALID_TRANSITION` | 422 | hr | The requested status is not reachable from the current one | `from`, `to`, `allowed` |
 | `HR_EMPLOYEE_DELETE_TERMINATED` | 409 | hr | Deletion attempted on a terminated employee, kept for audit | `status` |
+| `DISCOVERY_SESSION_NOT_FOUND` | 404 | discovery | The discovery session does not exist in this workspace | `id` |
+| `DISCOVERY_SESSION_ALREADY_COMPLETED` | 409 | discovery | Message posted to a session that is already closed | `status` |
+| `DISCOVERY_BLUEPRINT_MISSING` | 409 | discovery | Apply attempted before the blueprint was generated | — |
 
 ---
 
@@ -134,12 +137,16 @@ undercounted at 11 when it actually had 13.
 
 | Module | `HTTPException` sites remaining |
 |---|---|
-| discovery | 3 |
 | workflows | 2 |
 
-`projects`, `sales`, `crm`, `portal`, `accounting`, `contracts`, `identity`,
-`inventory`, and `hr` are migrated; `projects` serves as the reference for the
-rest.
+Every module except `workflows` is migrated; `projects` serves as the reference
+for it.
+
+Codes must not reuse the name of an event constant in
+`backend/app/events/types.py`. `discovery` raises
+`DISCOVERY_SESSION_ALREADY_COMPLETED`, not `DISCOVERY_SESSION_COMPLETED`, because
+the latter is already an event — two different things sharing one identifier
+get confused when reading logs.
 
 `hr` is the second module, after `accounting`, whose messages were written in
 Spanish on the server. All four now send English and let `errors.ts` decide the

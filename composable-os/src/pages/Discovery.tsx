@@ -21,6 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { translateApiError } from "@/lib/errors";
 import {
   discoveryService,
   type DiscoverySession,
@@ -120,7 +121,7 @@ export default function Discovery() {
         }]);
       }
     },
-    onError: (err: Error) => toast({ title: "Error al crear sesión", description: err.message, variant: "destructive" }),
+    onError: (err: Error) => toast({ title: "Error al crear sesión", description: translateApiError(err), variant: "destructive" }),
   });
 
   const sendMessage = useMutation({
@@ -145,7 +146,7 @@ export default function Discovery() {
     onError: (err: Error) => {
       // Remove optimistic message
       setMessages((prev) => prev.filter((m) => !m.id.startsWith("opt-")));
-      toast({ title: "Error al enviar mensaje", description: err.message, variant: "destructive" });
+      toast({ title: "Error al enviar mensaje", description: translateApiError(err), variant: "destructive" });
     },
   });
 
@@ -157,7 +158,7 @@ export default function Discovery() {
       qc.invalidateQueries({ queryKey: ["discovery-sessions"] });
       toast({ title: "Blueprint generado", description: `Paquete recomendado: ${data.recommended_package}` });
     },
-    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err: Error) => toast({ title: "Error", description: translateApiError(err), variant: "destructive" }),
   });
 
   const applyBlueprint = useMutation({
@@ -166,7 +167,7 @@ export default function Discovery() {
       setApplyResult(result);
       qc.invalidateQueries({ queryKey: ["discovery-sessions"] });
     },
-    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    onError: (err: Error) => toast({ title: "Error", description: translateApiError(err), variant: "destructive" }),
   });
 
   // ── Handlers ──────────────────────────────────────────────────────────────
