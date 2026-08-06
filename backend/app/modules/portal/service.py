@@ -2,7 +2,7 @@ import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -55,9 +55,21 @@ async def _load_session(db: AsyncSession, token: str) -> PortalSession:
     )
     session = result.scalar_one_or_none()
     if not session:
-        raise HTTPException(status_code=404, detail="Portal session not found")
+        # Sin detail a proposito: aqui la sesion se busca por token, y el token
+        # es la credencial de acceso al portal. Devolverlo en el cuerpo lo
+        # sembraria en logs de cliente y trazas de error.
+        raise CBOSException(
+            status_code=404,
+            code="PORTAL_SESSION_NOT_FOUND",
+            message="Portal session not found.",
+        )
     if datetime.now(timezone.utc) > session.expires_at:
-        raise HTTPException(status_code=410, detail="Portal link has expired")
+        raise CBOSException(
+            status_code=410,
+            code="PORTAL_LINK_EXPIRED",
+            message="Portal link has expired.",
+            detail={"expires_at": session.expires_at.isoformat()},
+        )
     return session
 
 
@@ -69,7 +81,12 @@ async def _load_quote_with_lines(db: AsyncSession, quote_id: str) -> Quote:
     )
     quote = result.scalar_one_or_none()
     if not quote:
-        raise HTTPException(status_code=404, detail="Quote not found")
+        raise CBOSException(
+            status_code=404,
+            code="PORTAL_QUOTE_NOT_FOUND",
+            message="Quote not found.",
+            detail={"id": quote_id},
+        )
     return quote
 
 
@@ -113,11 +130,18 @@ async def create_session(
     )
     quote = result.scalar_one_or_none()
     if not quote:
-        raise HTTPException(status_code=404, detail="Quote not found")
+        raise CBOSException(
+            status_code=404,
+            code="PORTAL_QUOTE_NOT_FOUND",
+            message="Quote not found.",
+            detail={"id": data.quote_id},
+        )
     if quote.status not in ("draft", "sent"):
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"Cannot create portal session for quote in status '{quote.status}'"
+            code="PORTAL_QUOTE_NOT_SHAREABLE",
+            message=f"Cannot create portal session for quote in status '{quote.status}'.",
+            detail={"status": quote.status},
         )
 
     expire_hours = data.expire_hours or settings.portal_token_expire_hours
@@ -176,9 +200,19 @@ async def send_session_email(
     )
     session = result.scalar_one_or_none()
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+        raise CBOSException(
+            status_code=404,
+            code="PORTAL_SESSION_NOT_FOUND",
+            message="Portal session not found.",
+            detail={"id": session_id},
+        )
     if not session.client_email:
-        raise HTTPException(status_code=422, detail="Session has no client_email set")
+        raise CBOSException(
+            status_code=422,
+            code="PORTAL_SESSION_NO_CLIENT_EMAIL",
+            message="Session has no client_email set.",
+            detail={"id": session_id},
+        )
 
     quote = await _load_quote_with_lines(db, session.quote_id)
     workspace_name = await _get_workspace_name(db, workspace_id)
@@ -290,9 +324,11 @@ async def portal_accept(
 
     quote = await _load_quote_with_lines(db, session.quote_id)
     if quote.status not in ("sent", "draft"):
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail=f"Quote cannot be accepted in status '{quote.status}'"
+            code="PORTAL_QUOTE_ACCEPT_INVALID_STATUS",
+            message=f"Quote cannot be accepted in status '{quote.status}'.",
+            detail={"status": quote.status},
         )
 
     now = datetime.now(timezone.utc)
@@ -447,7 +483,12 @@ async def portal_reject(
 
     quote = await _load_quote_with_lines(db, session.quote_id)
     if quote.status not in ("sent", "draft"):
-        raise HTTPException(status_code=409, detail=f"Quote status is '{quote.status}'")
+        raise CBOSException(
+            status_code=409,
+            code="PORTAL_QUOTE_REJECT_INVALID_STATUS",
+            message=f"Quote cannot be rejected in status '{quote.status}'.",
+            detail={"status": quote.status},
+        )
 
     now = datetime.now(timezone.utc)
     quote.status = "rejected"
@@ -518,9 +559,10 @@ async def get_portal_order(
     )
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(
+        raise CBOSException(
             status_code=404,
-            detail="No order found. The quote may not have been accepted yet."
+            code="PORTAL_ORDER_NOT_FOUND",
+            message="No order found. The quote may not have been accepted yet.",
         )
 
     workspace_name = await _get_workspace_name(db, session.workspace_id)

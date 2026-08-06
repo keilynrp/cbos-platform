@@ -114,6 +114,13 @@ async def test_invalid_token_returns_404(client: AsyncClient):
     resp = await client.get(f"{PUBLIC}/quote/this-token-does-not-exist")
     assert resp.status_code == 404
 
+    error = resp.json()["error"]
+    assert error["code"] == "PORTAL_SESSION_NOT_FOUND"
+    # El token es la credencial de acceso: no puede volver en el cuerpo, ni
+    # siquiera "para depurar". Ver la regla 6 del registro de codigos.
+    assert "detail" not in error
+    assert "this-token-does-not-exist" not in resp.text
+
 
 async def test_expired_token_returns_410(
     client: AsyncClient, auth_headers: dict, db: AsyncSession
@@ -132,6 +139,11 @@ async def test_expired_token_returns_410(
 
     resp = await client.get(f"{PUBLIC}/quote/{token}")
     assert resp.status_code == 410, resp.text
+
+    error = resp.json()["error"]
+    assert error["code"] == "PORTAL_LINK_EXPIRED"
+    assert "expires_at" in error["detail"]
+    assert token not in resp.text
 
 
 # ── Quote view ────────────────────────────────────────────────────────────────
