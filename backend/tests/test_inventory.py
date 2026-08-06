@@ -110,3 +110,80 @@ async def test_reserve_more_than_available_returns_422(client: AsyncClient, auth
         "quantity": 100.0,  # more than available
     })
     assert resp.status_code == 422
+
+
+# ── Error envelope (ADR 0010) ────────────────────────────────────────────────
+#
+# inventory no tiene hoy pantallas que muteen stock: el mapa de errors.ts es
+# prospectivo y el consumidor real es el gateway de sales, que ya solo mira el
+# tipo de la excepcion. Estos tests fijan el contrato antes de que exista una
+# UI que dependa de el.
+
+MISSING_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _error(resp) -> dict:
+    body = resp.json()
+    assert "error" in body, body
+    return body["error"]
+
+
+async def test_product_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(f"{BASE}/products/{MISSING_ID}", headers=auth_headers)
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "INVENTORY_PRODUCT_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_duplicate_sku_error_shape(client: AsyncClient, auth_headers: dict):
+    await _create_product(client, auth_headers, "Dupe SKU")
+
+    resp = await client.post(f"{BASE}/products", headers=auth_headers, json={
+        "name": "Otro producto",
+        "sku": "SKU-DUPE-SKU",
+        "unit_of_measure": "unit",
+        "min_stock": 1.0,
+    })
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "INVENTORY_SKU_TAKEN"
+    assert error["detail"]["sku"] == "SKU-DUPE-SKU"
+
+
+async def test_insufficient_stock_error_shape(client: AsyncClient, auth_headers: dict):
+    product = await _create_product(client, auth_headers, "Short Stock")
+    await _add_stock(client, auth_headers, product["id"], 5.0)
+
+    resp = await client.post(f"{BASE}/reserve", headers=auth_headers, json={
+        "product_id": product["id"],
+        "quantity": 100.0,
+    })
+
+    assert resp.status_code == 422
+    error = _error(resp)
+    assert error["code"] == "INVENTORY_INSUFFICIENT_STOCK"
+    # Antes solo viajaba el disponible, cocido en la frase. Ahora tambien lo
+    # pedido, que es lo que permite al cliente decir cuanto falta.
+    assert error["detail"]["available"] == 5.0
+    assert error["detail"]["requested"] == 100.0
+    assert "unit" in error["detail"]
+
+
+async def test_invalid_movement_type_error_shape(client: AsyncClient, auth_headers: dict):
+    product = await _create_product(client, auth_headers, "Bad Movement")
+
+    resp = await client.post(f"{BASE}/movements", headers=auth_headers, json={
+        "product_id": product["id"],
+        "movement_type": "teleport",
+        "quantity": 1.0,
+        "location": "main",
+    })
+
+    assert resp.status_code == 422
+    error = _error(resp)
+    assert error["code"] == "INVENTORY_INVALID_MOVEMENT_TYPE"
+    assert error["detail"]["movement_type"] == "teleport"
+    assert error["detail"]["allowed"] == ["in", "out", "adjustment"]

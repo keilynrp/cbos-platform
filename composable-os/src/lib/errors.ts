@@ -151,6 +151,17 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
   AUTH_TOKEN_INVALID: () => "Tu sesion ha caducado. Vuelve a iniciar sesion.",
   AUTH_ADMIN_REQUIRED: () =>
     "Necesitas permisos de administrador para hacer esto.",
+
+  INVENTORY_PRODUCT_NOT_FOUND: () => "Producto no encontrado.",
+  INVENTORY_SKU_TAKEN: (d) => `El SKU '${str(d, "sku")}' ya existe.`,
+  INVENTORY_PRODUCT_IS_SERVICE: () =>
+    "Los servicios no llevan control de inventario.",
+  INVENTORY_INVALID_MOVEMENT_TYPE: (d) =>
+    `Tipo de movimiento invalido: '${str(d, "movement_type")}'. ` +
+    `Validos: ${list(d, "allowed")}.`,
+  INVENTORY_INSUFFICIENT_STOCK: (d) =>
+    `Stock insuficiente: se piden ${str(d, "requested")} y hay ` +
+    `${str(d, "available")} ${str(d, "unit")} disponibles.`,
 };
 
 /**
