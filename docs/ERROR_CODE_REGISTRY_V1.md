@@ -42,6 +42,17 @@ than to a bare identifier.
 | `PROJECT_TASK_MODIFY_BLOCKED` | 409 | projects | Tasks cannot be modified in the project's current status | `status` |
 | `PROJECT_TASK_DELETE_BLOCKED` | 409 | projects | Tasks cannot be deleted in the project's current status | `status` |
 | `PROJECT_TASK_INVALID_TRANSITION` | 422 | projects | The requested task status is not reachable from the current one | `from`, `to`, `allowed` |
+| `SALES_QUOTE_NOT_FOUND` | 404 | sales | The quote does not exist in this workspace | `id` |
+| `SALES_QUOTE_LINE_NOT_FOUND` | 404 | sales | The line does not exist in this quote | `id` |
+| `SALES_QUOTE_EDIT_NOT_DRAFT` | 409 | sales | Edit attempted on a quote past draft | `status` |
+| `SALES_QUOTE_LINES_NOT_DRAFT` | 409 | sales | Line add/update/remove/replace attempted on a quote past draft | `status` |
+| `SALES_QUOTE_LINES_REQUIRED` | 422 | sales | The quote would be left with no lines, or is sent with none | — |
+| `SALES_QUOTE_LINE_IDS_DUPLICATED` | 422 | sales | The replace-lines payload repeats a line id | `ids` |
+| `SALES_QUOTE_SEND_INVALID_STATUS` | 409 | sales | Send attempted from a status that does not allow it | `status` |
+| `SALES_QUOTE_ACCEPT_INVALID_STATUS` | 409 | sales | Accept attempted from a status that does not allow it | `status` |
+| `SALES_QUOTE_REJECT_INVALID_STATUS` | 409 | sales | Reject attempted from a status that does not allow it | `status` |
+| `SALES_ORDER_NOT_FOUND` | 404 | sales | The sales order does not exist in this workspace | `id` |
+| `SALES_ORDER_INVALID_TRANSITION` | 422 | sales | The requested order status is not reachable from the current one | `from`, `to`, `allowed` |
 
 ---
 
@@ -53,7 +64,6 @@ the user as whatever prose the backend wrote.
 
 | Module | `raise HTTPException` remaining |
 |---|---|
-| sales | 16 |
 | crm | 11 |
 | portal | 10 |
 | accounting | 8 |
@@ -64,4 +74,5 @@ the user as whatever prose the backend wrote.
 | discovery | 3 |
 | workflows | 2 |
 
-`projects` is migrated and serves as the reference for the rest.
+`projects` and `sales` are migrated; `projects` serves as the reference for the
+rest.

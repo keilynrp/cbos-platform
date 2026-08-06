@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { translateApiError } from "@/lib/errors";
 import {
   Plus, DollarSign, TrendingUp, FileText, ShoppingCart, Loader2, Download,
 } from "lucide-react";
@@ -126,7 +127,7 @@ function NewQuoteDialog({ open, onClose }: { open: boolean; onClose: () => void 
       onClose();
       setTitle("");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   return (
@@ -192,7 +193,7 @@ function CotizacionesTab() {
       qc.invalidateQueries({ queryKey: ["sales-quotes"] });
       toast.success("Cotización enviada");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const acceptQuote = useMutation({
@@ -202,7 +203,7 @@ function CotizacionesTab() {
       qc.invalidateQueries({ queryKey: ["sales-orders"] });
       toast.success("Cotización aceptada — orden creada");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const rejectQuote = useMutation({
@@ -212,7 +213,7 @@ function CotizacionesTab() {
       qc.invalidateQueries({ queryKey: ["sales-quotes"] });
       toast.success("Cotización rechazada");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   function handleReject(id: string) {
@@ -366,25 +367,25 @@ function OrdenesTab() {
   const confirmOrder = useMutation({
     mutationFn: (id: string) => salesService.confirmOrder(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success("Orden confirmada"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const startFulfillment = useMutation({
     mutationFn: (id: string) => salesService.startFulfillment(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success("Fulfillment iniciado"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const fulfillOrder = useMutation({
     mutationFn: (id: string) => salesService.fulfillOrder(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success("Orden completada"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const cancelOrder = useMutation({
     mutationFn: (id: string) => salesService.cancelOrder(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success("Orden cancelada"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   return (

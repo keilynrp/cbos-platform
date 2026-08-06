@@ -17,16 +17,16 @@ type Detail = Record<string, unknown>;
 const str = (d: Detail, k: string, fallback = "") =>
   d?.[k] === undefined || d?.[k] === null ? fallback : String(d[k]);
 
-const list = (d: Detail, k: string) =>
+const list = (d: Detail, k: string, empty = "ninguno") =>
   Array.isArray(d?.[k]) && (d[k] as unknown[]).length
     ? (d[k] as unknown[]).join(", ")
-    : "ninguno (estado final)";
+    : empty;
 
 const MESSAGES: Record<string, (d: Detail) => string> = {
   PROJECT_NOT_FOUND: () => "Proyecto no encontrado.",
   PROJECT_INVALID_TRANSITION: (d) =>
     `No se puede pasar de '${str(d, "from")}' a '${str(d, "to")}'. ` +
-    `Estados permitidos: ${list(d, "allowed")}.`,
+    `Estados permitidos: ${list(d, "allowed", "ninguno (estado final)")}.`,
   PROJECT_DELETE_NOT_PLANNING: (d) =>
     `No se puede eliminar un proyecto en estado '${str(d, "status")}'. ` +
     "Solo se pueden eliminar los proyectos en planificacion.",
@@ -40,7 +40,30 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
     `No se pueden eliminar tareas de un proyecto en estado '${str(d, "status")}'.`,
   PROJECT_TASK_INVALID_TRANSITION: (d) =>
     `La tarea no puede pasar de '${str(d, "from")}' a '${str(d, "to")}'. ` +
-    `Estados permitidos: ${list(d, "allowed")}.`,
+    `Estados permitidos: ${list(d, "allowed", "ninguno (estado final)")}.`,
+
+  SALES_QUOTE_NOT_FOUND: () => "Cotizacion no encontrada.",
+  SALES_QUOTE_LINE_NOT_FOUND: () => "Linea de la cotizacion no encontrada.",
+  SALES_QUOTE_EDIT_NOT_DRAFT: (d) =>
+    `Solo se pueden editar las cotizaciones en borrador; esta esta en '${str(d, "status")}'.`,
+  SALES_QUOTE_LINES_NOT_DRAFT: (d) =>
+    `Solo se pueden modificar las lineas de una cotizacion en borrador; ` +
+    `esta esta en '${str(d, "status")}'.`,
+  SALES_QUOTE_LINES_REQUIRED: () =>
+    "Una cotizacion debe tener al menos una linea.",
+  SALES_QUOTE_LINE_IDS_DUPLICATED: (d) =>
+    `Hay lineas repetidas en el envio: ${list(d, "ids")}.`,
+  SALES_QUOTE_SEND_INVALID_STATUS: (d) =>
+    `No se puede enviar una cotizacion en estado '${str(d, "status")}'.`,
+  SALES_QUOTE_ACCEPT_INVALID_STATUS: (d) =>
+    `No se puede aceptar una cotizacion en estado '${str(d, "status")}'.`,
+  SALES_QUOTE_REJECT_INVALID_STATUS: (d) =>
+    `No se puede rechazar una cotizacion en estado '${str(d, "status")}'.`,
+
+  SALES_ORDER_NOT_FOUND: () => "Orden de venta no encontrada.",
+  SALES_ORDER_INVALID_TRANSITION: (d) =>
+    `La orden no puede pasar de '${str(d, "from")}' a '${str(d, "to")}'. ` +
+    `Estados permitidos: ${list(d, "allowed", "ninguno (estado final)")}.`,
 };
 
 /**
