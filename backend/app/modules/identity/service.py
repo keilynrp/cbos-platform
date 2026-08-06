@@ -2,8 +2,9 @@ import secrets
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from fastapi import HTTPException, status
+from fastapi import status
 
+from app.core.exceptions import CBOSException
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, verify_token
 from app.events.bus import publish as publish_event
 from app.events.types import USER_AUTHENTICATED, USER_REGISTERED, WORKSPACE_CREATED, Event
@@ -49,9 +50,11 @@ async def register(data: RegisterRequest, db: AsyncSession) -> TokenResponse:
         select(Workspace).where(Workspace.slug == data.workspace_slug)
     )
     if existing.scalar_one_or_none():
-        raise HTTPException(
+        raise CBOSException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Workspace slug already exists",
+            code="IDENTITY_WORKSPACE_SLUG_TAKEN",
+            message="Workspace slug already exists.",
+            detail={"slug": data.workspace_slug},
         )
 
     # Verificar que el email no exista
@@ -59,9 +62,13 @@ async def register(data: RegisterRequest, db: AsyncSession) -> TokenResponse:
         select(User).where(User.email == data.email)
     )
     if existing_user.scalar_one_or_none():
-        raise HTTPException(
+        raise CBOSException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
+            code="IDENTITY_EMAIL_TAKEN",
+            # Sin detail: el 409 ya revela que el email existe -comportamiento
+            # previo, no de esta migracion-, pero devolverlo en el cuerpo lo
+            # dejaria ademas en logs y trazas sin ganar nada.
+            message="Email already registered.",
         )
 
     # Crear workspace
@@ -140,15 +147,19 @@ async def login(data: LoginRequest, db: AsyncSession) -> TokenResponse:
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(data.password, user.hashed_password):
-        raise HTTPException(
+        # Un solo codigo para "no existe" y "contrasena incorrecta". Separarlos
+        # convertiria el login en un oraculo de que correos estan registrados.
+        raise CBOSException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            code="IDENTITY_INVALID_CREDENTIALS",
+            message="Invalid email or password.",
         )
 
     if not user.is_active:
-        raise HTTPException(
+        raise CBOSException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account is disabled",
+            code="IDENTITY_ACCOUNT_DISABLED",
+            message="Account is disabled.",
         )
 
     token_payload = {
@@ -173,13 +184,12 @@ async def login(data: LoginRequest, db: AsyncSession) -> TokenResponse:
 
 
 async def refresh_tokens(refresh_token: str) -> TokenResponse:
-    from fastapi import HTTPException, status
-
     payload = verify_token(refresh_token, token_type="refresh")
     if not payload:
-        raise HTTPException(
+        raise CBOSException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token",
+            code="IDENTITY_REFRESH_TOKEN_INVALID",
+            message="Invalid or expired refresh token.",
         )
 
     token_payload = {
@@ -236,7 +246,12 @@ async def get_public_site(workspace_id: str, site_id: str, db: AsyncSession) -> 
     )
     site = result.scalar_one_or_none()
     if not site:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Public site not found")
+        raise CBOSException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="IDENTITY_PUBLIC_SITE_NOT_FOUND",
+            message="Public site not found.",
+            detail={"id": site_id},
+        )
     return site
 
 
@@ -252,9 +267,11 @@ async def create_public_site(
         )
     )
     if existing.scalar_one_or_none():
-        raise HTTPException(
+        raise CBOSException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Public site slug already exists",
+            code="IDENTITY_PUBLIC_SITE_SLUG_TAKEN",
+            message="Public site slug already exists.",
+            detail={"slug": data.site_slug},
         )
 
     site = PublicSite(

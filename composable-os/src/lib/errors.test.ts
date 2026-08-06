@@ -56,6 +56,26 @@ describe("translateApiError", () => {
     expect(translateApiError(new Error(""), "Transición no permitida")).toBe("Transición no permitida");
   });
 
+  it("keeps the two login failure causes indistinguishable", () => {
+    // El backend manda un solo codigo para "correo desconocido" y "contrasena
+    // incorrecta" a proposito. El cliente tampoco puede inventarse la
+    // diferencia: una sola entrada, un solo texto.
+    const error = new ApiError("Invalid email or password.", "IDENTITY_INVALID_CREDENTIALS", undefined, 401);
+
+    const text = translateApiError(error);
+
+    expect(text).toBe("Correo o contrasena incorrectos.");
+    expect(text).not.toMatch(/correo.*no existe|no registrado/i);
+  });
+
+  it("tells an expired session apart from a rejected login", () => {
+    const expired = new ApiError("Invalid or expired token.", "AUTH_TOKEN_INVALID", undefined, 401);
+    const rejected = new ApiError("Invalid email or password.", "IDENTITY_INVALID_CREDENTIALS", undefined, 401);
+
+    expect(translateApiError(expired)).not.toBe(translateApiError(rejected));
+    expect(translateApiError(expired)).toContain("sesion");
+  });
+
   it("never leaks the raw code as user-facing text", () => {
     const error = new ApiError("", "PORTAL_LINK_EXPIRED", undefined, 410);
 

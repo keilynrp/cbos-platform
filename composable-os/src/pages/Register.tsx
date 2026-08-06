@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Zap } from "lucide-react";
+import { translateApiError } from "@/lib/errors";
 
 function toSlug(value: string) {
   return value
@@ -56,7 +57,7 @@ export default function Register() {
       await register(form);
       navigate("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al registrar. Intenta de nuevo.");
+      setError(translateApiError(err, "Error al registrar. Intenta de nuevo."));
     } finally {
       setLoading(false);
     }
