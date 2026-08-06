@@ -224,3 +224,103 @@ async def test_add_multiple_clauses_then_delete_one(client: AsyncClient, auth_he
     remaining = [c["id"] for c in resp.json()["clauses"]]
     assert len(remaining) == 2
     assert delete_id not in remaining
+
+
+# ── Error envelope (ADR 0010) ────────────────────────────────────────────────
+#
+# El `code` y las claves de `detail` son el contrato que consume
+# composable-os/src/lib/errors.ts. Renombrar una clave no rompe al frontend: lo
+# hace caer al mensaje en ingles del backend, en silencio.
+
+MISSING_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _error(resp) -> dict:
+    body = resp.json()
+    assert "error" in body, body
+    return body["error"]
+
+
+async def test_contract_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(f"{BASE}/{MISSING_ID}", headers=auth_headers)
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "CONTRACT_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_clause_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    contract = await _create_contract(client, auth_headers, title="Missing clause")
+
+    resp = await client.delete(
+        f"{BASE}/{contract['id']}/clauses/{MISSING_ID}", headers=auth_headers
+    )
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "CONTRACT_CLAUSE_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_invalid_transition_error_shape(client: AsyncClient, auth_headers: dict):
+    contract = await _create_contract(client, auth_headers, title="Bad transition")
+
+    # draft → executed no existe: hay que pasar por sent y signed.
+    resp = await client.patch(
+        f"{BASE}/{contract['id']}", headers=auth_headers, json={"status": "executed"}
+    )
+
+    assert resp.status_code == 422
+    error = _error(resp)
+    assert error["code"] == "CONTRACT_INVALID_TRANSITION"
+    assert error["detail"] == {
+        "from": "draft",
+        "to": "executed",
+        "allowed": ["sent", "terminated"],
+    }
+
+
+async def test_terminal_transition_error_shape(client: AsyncClient, auth_headers: dict):
+    contract = await _create_contract(client, auth_headers, title="Terminated")
+    cid = contract["id"]
+    await _transition(client, auth_headers, cid, "terminated")
+
+    resp = await client.patch(f"{BASE}/{cid}", headers=auth_headers, json={"status": "sent"})
+
+    assert resp.status_code == 422
+    error = _error(resp)
+    assert error["code"] == "CONTRACT_INVALID_TRANSITION"
+    # Estado final: `allowed` vacia, y el cliente redacta "ninguno (estado final)".
+    assert error["detail"]["allowed"] == []
+
+
+async def test_delete_non_draft_error_shape(client: AsyncClient, auth_headers: dict):
+    contract = await _create_contract(client, auth_headers, title="Sent contract")
+    cid = contract["id"]
+    await _transition(client, auth_headers, cid, "sent")
+
+    resp = await client.delete(f"{BASE}/{cid}", headers=auth_headers)
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "CONTRACT_DELETE_NOT_DRAFT"
+    assert error["detail"]["status"] == "sent"
+
+
+async def test_clauses_locked_error_shape(client: AsyncClient, auth_headers: dict):
+    contract = await _create_contract(client, auth_headers, title="Locked clauses")
+    cid = contract["id"]
+    # Las clausulas se bloquean en executed/expired/terminated, no en sent.
+    await _transition(client, auth_headers, cid, "terminated")
+
+    resp = await client.post(
+        f"{BASE}/{cid}/clauses",
+        headers=auth_headers,
+        json={"title": "Too late", "body": "No cabe"},
+    )
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "CONTRACT_CLAUSES_LOCKED"
+    assert error["detail"]["status"] == "terminated"

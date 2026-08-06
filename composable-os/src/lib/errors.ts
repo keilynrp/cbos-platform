@@ -122,6 +122,17 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
   ACCOUNTING_LOGO_TOO_LARGE: (d) =>
     `El logo pesa ${str(d, "size_kb")} KB y el maximo son ${str(d, "max_kb")} KB. ` +
     "Reduce la imagen antes de subirla.",
+
+  CONTRACT_NOT_FOUND: () => "Contrato no encontrado.",
+  CONTRACT_CLAUSE_NOT_FOUND: () => "Clausula no encontrada.",
+  CONTRACT_INVALID_TRANSITION: (d) =>
+    `El contrato no puede pasar de '${str(d, "from")}' a '${str(d, "to")}'. ` +
+    `Estados permitidos: ${list(d, "allowed", "ninguno (estado final)")}.`,
+  CONTRACT_DELETE_NOT_DRAFT: (d) =>
+    `No se puede eliminar un contrato en estado '${str(d, "status")}'. ` +
+    "Solo se pueden eliminar los borradores.",
+  CONTRACT_CLAUSES_LOCKED: (d) =>
+    `No se pueden modificar las clausulas de un contrato en estado '${str(d, "status")}'.`,
 };
 
 /**
