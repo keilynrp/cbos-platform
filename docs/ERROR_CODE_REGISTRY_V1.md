@@ -36,6 +36,12 @@ than to a bare identifier.
    lookup was by session id, and nothing at all when it was by token — the
    portal token *is* the access credential. Putting a lookup key in `detail`
    because "it helps debugging" is exactly how credentials leak.
+7. **A code must not become an oracle.** Where the old free-text message
+   deliberately conflated several causes, the code conflates them too.
+   `IDENTITY_INVALID_CREDENTIALS` covers both "no such email" and "wrong
+   password"; `AUTH_TOKEN_INVALID` covers missing, malformed, expired, and
+   orphaned tokens. Splitting them would read as helpful precision and would
+   hand an attacker a working enumeration signal.
 
 ---
 
@@ -94,6 +100,15 @@ than to a bare identifier.
 | `CONTRACT_DELETE_NOT_DRAFT` | 409 | contracts | Deletion attempted on a contract past draft | `status` |
 | `CONTRACT_CLAUSES_LOCKED` | 409 | contracts | Clause add/update/delete attempted on an executed, expired, or terminated contract | `status` |
 | `CONTRACT_CLAUSE_NOT_FOUND` | 404 | contracts | The clause does not exist in this contract | `id` |
+| `IDENTITY_WORKSPACE_SLUG_TAKEN` | 409 | identity | Registration used a workspace slug that already exists | `slug` |
+| `IDENTITY_EMAIL_TAKEN` | 409 | identity | Registration used an already-registered email | — |
+| `IDENTITY_INVALID_CREDENTIALS` | 401 | identity | Login failed — unknown email **or** wrong password | — |
+| `IDENTITY_ACCOUNT_DISABLED` | 403 | identity | Credentials were right but the account is inactive | — |
+| `IDENTITY_REFRESH_TOKEN_INVALID` | 401 | identity | Refresh token is invalid or expired | — |
+| `IDENTITY_PUBLIC_SITE_NOT_FOUND` | 404 | identity | The public site does not exist in this workspace | `id` |
+| `IDENTITY_PUBLIC_SITE_SLUG_TAKEN` | 409 | identity | A public site with that slug already exists | `slug` |
+| `AUTH_TOKEN_INVALID` | 401 | core (`deps.py`) | Bearer token missing, invalid, expired, or its user is gone/inactive (sends `WWW-Authenticate`) | — |
+| `AUTH_ADMIN_REQUIRED` | 403 | core (`deps.py`) | Route requires admin or owner role | — |
 
 ---
 
@@ -110,14 +125,17 @@ undercounted at 11 when it actually had 13.
 
 | Module | `HTTPException` sites remaining |
 |---|---|
-| identity | 7 |
 | inventory | 7 |
 | hr | 4 |
 | discovery | 3 |
 | workflows | 2 |
 
-`projects`, `sales`, `crm`, `portal`, `accounting`, and `contracts` are
-migrated; `projects` serves as the reference for the rest.
+`projects`, `sales`, `crm`, `portal`, `accounting`, `contracts`, and `identity`
+are migrated; `projects` serves as the reference for the rest.
+
+`core/deps.py` is migrated too. It is not a module, but it raises the auth
+errors every protected route returns, and `check_error_registry.py` scans it
+explicitly for that reason.
 
 `accounting` is also where the first Spanish-in-the-backend messages were
 undone: the logo validation errors used to ship their user-facing text from the

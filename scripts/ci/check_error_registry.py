@@ -25,6 +25,11 @@ REGISTRY = ROOT / "docs" / "ERROR_CODE_REGISTRY_V1.md"
 MODULES = ROOT / "backend" / "app" / "modules"
 FRONTEND_MAP = ROOT / "composable-os" / "src" / "lib" / "errors.ts"
 
+# core/deps.py no es un modulo pero levanta los errores de autenticacion que
+# devuelve cualquier ruta protegida. Dejarlo fuera del barrido haria que sus
+# codigos parecieran entradas muertas del registro.
+EXTRA_SOURCES = [ROOT / "backend" / "app" / "core" / "deps.py"]
+
 # Los genericos de core/exceptions.py no describen un caso concreto y no se
 # traducen: quedan fuera del registro a proposito.
 GENERIC = {"NOT_FOUND", "CONFLICT", "VALIDATION_ERROR", "FORBIDDEN"}
@@ -44,7 +49,8 @@ def main() -> int:
     # Se barre todo el modulo, no solo service.py: hay codigos que se levantan
     # desde el router (workflows/router.py, por ejemplo) y quedarian invisibles.
     raised: dict[str, str] = {}
-    for path in sorted(MODULES.glob("*/*.py")):
+    sources = sorted(MODULES.glob("*/*.py")) + [p for p in EXTRA_SOURCES if p.exists()]
+    for path in sources:
         for code in _RAISED_CODE.findall(path.read_text(encoding="utf-8")):
             raised.setdefault(code, path.relative_to(ROOT).as_posix())
 

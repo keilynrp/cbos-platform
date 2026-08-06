@@ -1,9 +1,10 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.database import get_db
+from app.core.exceptions import CBOSException
 from app.core.security import verify_token
 
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -15,9 +16,13 @@ async def get_current_user(
 ):
     from app.modules.identity.models import User
 
-    credentials_exception = HTTPException(
+    # Un unico codigo para las cuatro razones por las que el token no sirve
+    # -ausente, invalido, sin sub, usuario inexistente o inactivo-. Distinguirlas
+    # le diria a quien prueba tokens cual de sus intentos se acerco mas.
+    credentials_exception = CBOSException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or expired token",
+        code="AUTH_TOKEN_INVALID",
+        message="Invalid or expired token.",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -53,7 +58,8 @@ async def get_current_admin_user(
     if current_user.is_owner or current_user.role == "admin":
         return current_user
 
-    raise HTTPException(
+    raise CBOSException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Admin access required",
+        code="AUTH_ADMIN_REQUIRED",
+        message="Admin access required.",
     )

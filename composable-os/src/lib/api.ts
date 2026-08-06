@@ -46,21 +46,26 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401) {
-    clearToken();
-    window.location.href = "/login";
-    throw new Error("Unauthorized");
-  }
-
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     // CBOSException: { error: { code, message, detail } }
     // HTTPException: { detail: "string" | [...] }
+    const code: string | undefined = body?.error?.code;
     const message =
       body?.error?.message ??
       (typeof body?.detail === "string" ? body.detail : null) ??
       `HTTP ${res.status}`;
-    throw new ApiError(message, body?.error?.code, body?.error?.detail, res.status);
+
+    // Solo la sesion invalida expulsa al login. Un intento de acceso fallido
+    // tambien responde 401, y antes caia en este mismo branch: se limpiaba el
+    // token y el usuario leia "Unauthorized" en vez del motivo. Un codigo que
+    // no reconocemos se trata como sesion invalida, que es la reserva segura.
+    if (res.status === 401 && code !== "IDENTITY_INVALID_CREDENTIALS") {
+      clearToken();
+      window.location.href = "/login";
+    }
+
+    throw new ApiError(message, code, body?.error?.detail, res.status);
   }
 
   if (res.status === 204) return null as T;

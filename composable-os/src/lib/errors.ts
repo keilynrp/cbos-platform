@@ -133,6 +133,24 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
     "Solo se pueden eliminar los borradores.",
   CONTRACT_CLAUSES_LOCKED: (d) =>
     `No se pueden modificar las clausulas de un contrato en estado '${str(d, "status")}'.`,
+
+  IDENTITY_WORKSPACE_SLUG_TAKEN: (d) =>
+    `El identificador '${str(d, "slug")}' ya esta en uso.`,
+  IDENTITY_EMAIL_TAKEN: () => "Ese correo ya esta registrado.",
+  IDENTITY_INVALID_CREDENTIALS: () => "Correo o contrasena incorrectos.",
+  IDENTITY_ACCOUNT_DISABLED: () =>
+    "Esta cuenta esta desactivada. Contacta con un administrador.",
+  IDENTITY_REFRESH_TOKEN_INVALID: () =>
+    "Tu sesion ha caducado. Vuelve a iniciar sesion.",
+  IDENTITY_PUBLIC_SITE_NOT_FOUND: () => "Sitio publico no encontrado.",
+  IDENTITY_PUBLIC_SITE_SLUG_TAKEN: (d) =>
+    `Ya existe un sitio publico con el identificador '${str(d, "slug")}'.`,
+
+  // Los levanta core/deps.py, no un modulo: son los errores de auth que
+  // devuelve cualquier ruta protegida.
+  AUTH_TOKEN_INVALID: () => "Tu sesion ha caducado. Vuelve a iniciar sesion.",
+  AUTH_ADMIN_REQUIRED: () =>
+    "Necesitas permisos de administrador para hacer esto.",
 };
 
 /**
