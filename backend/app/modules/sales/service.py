@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -48,15 +48,13 @@ _ORDER_TRANSITIONS: dict[str, set[str]] = {
 def _assert_order_transition(current: str, target: str) -> None:
     allowed = _ORDER_TRANSITIONS.get(current, set())
     if target not in allowed:
-        terminal = not allowed
-        raise HTTPException(
+        raise CBOSException(
             status_code=422,
-            detail=(
-                f"Cannot transition order from '{current}' to '{target}'. "
-                + ("Terminal state — no further transitions allowed."
-                   if terminal
-                   else f"Allowed transitions: {sorted(allowed)}")
-            ),
+            code="SALES_ORDER_INVALID_TRANSITION",
+            message=f"Cannot transition order from '{current}' to '{target}'.",
+            # sorted() y no el set: el detail se serializa a JSON, y ademas el
+            # orden estable evita que el texto del cliente baile entre llamadas.
+            detail={"from": current, "to": target, "allowed": sorted(allowed)},
         )
 
 
@@ -133,7 +131,12 @@ async def _load_quote(db: AsyncSession, workspace_id: str, quote_id: str) -> Quo
     )
     quote = result.scalar_one_or_none()
     if not quote:
-        raise HTTPException(status_code=404, detail="Quote not found")
+        raise CBOSException(
+            status_code=404,
+            code="SALES_QUOTE_NOT_FOUND",
+            message="Quote not found.",
+            detail={"id": quote_id},
+        )
     return quote
 
 
@@ -151,7 +154,12 @@ async def _load_order_with_lines(
     )
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=404, detail="Sales order not found")
+        raise CBOSException(
+            status_code=404,
+            code="SALES_ORDER_NOT_FOUND",
+            message="Sales order not found.",
+            detail={"id": order_id},
+        )
     return order
 
 
@@ -271,7 +279,12 @@ async def update_quote(
 ) -> Quote:
     quote = await _load_quote(db, workspace_id, quote_id)
     if quote.status not in ("draft",):
-        raise HTTPException(status_code=409, detail="Only draft quotes can be edited")
+        raise CBOSException(
+            status_code=409,
+            code="SALES_QUOTE_EDIT_NOT_DRAFT",
+            message=f"Only draft quotes can be edited; this one is '{quote.status}'.",
+            detail={"status": quote.status},
+        )
 
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(quote, field, value)
@@ -289,7 +302,12 @@ async def add_line(
 ) -> Quote:
     quote = await _load_quote(db, workspace_id, quote_id)
     if quote.status != "draft":
-        raise HTTPException(status_code=409, detail="Only draft quotes can be modified")
+        raise CBOSException(
+            status_code=409,
+            code="SALES_QUOTE_LINES_NOT_DRAFT",
+            message=f"Only draft quotes can be modified; this one is '{quote.status}'.",
+            detail={"status": quote.status},
+        )
 
     amount = _calc_line_amount(data.quantity, data.unit_price, data.discount_percent, data.tax_percent)
     line = QuoteLine(
@@ -325,11 +343,21 @@ async def remove_line(
 ) -> Quote:
     quote = await _load_quote(db, workspace_id, quote_id)
     if quote.status != "draft":
-        raise HTTPException(status_code=409, detail="Only draft quotes can be modified")
+        raise CBOSException(
+            status_code=409,
+            code="SALES_QUOTE_LINES_NOT_DRAFT",
+            message=f"Only draft quotes can be modified; this one is '{quote.status}'.",
+            detail={"status": quote.status},
+        )
 
     line = next((l for l in quote.lines if l.id == line_id), None)
     if not line:
-        raise HTTPException(status_code=404, detail="Line not found")
+        raise CBOSException(
+            status_code=404,
+            code="SALES_QUOTE_LINE_NOT_FOUND",
+            message="Quote line not found.",
+            detail={"id": line_id},
+        )
 
     await db.delete(line)
     await db.flush()
@@ -350,11 +378,21 @@ async def update_line(
 ) -> Quote:
     quote = await _load_quote(db, workspace_id, quote_id)
     if quote.status != "draft":
-        raise HTTPException(status_code=409, detail="Only draft quotes can be modified")
+        raise CBOSException(
+            status_code=409,
+            code="SALES_QUOTE_LINES_NOT_DRAFT",
+            message=f"Only draft quotes can be modified; this one is '{quote.status}'.",
+            detail={"status": quote.status},
+        )
 
     line = next((l for l in quote.lines if l.id == line_id), None)
     if not line:
-        raise HTTPException(status_code=404, detail="Line not found")
+        raise CBOSException(
+            status_code=404,
+            code="SALES_QUOTE_LINE_NOT_FOUND",
+            message="Quote line not found.",
+            detail={"id": line_id},
+        )
 
     changes = data.model_dump(exclude_unset=True)
     for field, value in changes.items():
@@ -386,14 +424,29 @@ async def replace_lines(
 ) -> Quote:
     quote = await _load_quote(db, workspace_id, quote_id)
     if quote.status != "draft":
-        raise HTTPException(status_code=409, detail="Only draft quotes can be modified")
+        raise CBOSException(
+            status_code=409,
+            code="SALES_QUOTE_LINES_NOT_DRAFT",
+            message=f"Only draft quotes can be modified; this one is '{quote.status}'.",
+            detail={"status": quote.status},
+        )
 
     if not lines_data:
-        raise HTTPException(status_code=422, detail="Quote must have at least one line")
+        raise CBOSException(
+            status_code=422,
+            code="SALES_QUOTE_LINES_REQUIRED",
+            message="A quote must have at least one line.",
+        )
 
     incoming_ids = [d.id for d in lines_data if d.id]
     if len(incoming_ids) != len(set(incoming_ids)):
-        raise HTTPException(status_code=422, detail="Duplicate line IDs in payload")
+        duplicated = sorted({i for i in incoming_ids if incoming_ids.count(i) > 1})
+        raise CBOSException(
+            status_code=422,
+            code="SALES_QUOTE_LINE_IDS_DUPLICATED",
+            message="Duplicate line IDs in payload.",
+            detail={"ids": duplicated},
+        )
     incoming_ids_set = set(incoming_ids)
 
     # Delete lines not in payload
@@ -469,9 +522,18 @@ async def send_quote(
 ) -> Quote:
     quote = await _load_quote(db, workspace_id, quote_id)
     if quote.status not in ("draft",):
-        raise HTTPException(status_code=409, detail=f"Cannot send a quote in status '{quote.status}'")
+        raise CBOSException(
+            status_code=409,
+            code="SALES_QUOTE_SEND_INVALID_STATUS",
+            message=f"Cannot send a quote in status '{quote.status}'.",
+            detail={"status": quote.status},
+        )
     if not quote.lines:
-        raise HTTPException(status_code=422, detail="Quote must have at least one line")
+        raise CBOSException(
+            status_code=422,
+            code="SALES_QUOTE_LINES_REQUIRED",
+            message="A quote must have at least one line.",
+        )
 
     quote.status = "sent"
     quote.sent_at = datetime.now(timezone.utc)
@@ -498,7 +560,12 @@ async def accept_quote(
 ) -> tuple[Quote, SalesOrder]:
     quote = await _load_quote(db, workspace_id, quote_id)
     if quote.status not in ("sent", "draft"):
-        raise HTTPException(status_code=409, detail=f"Cannot accept a quote in status '{quote.status}'")
+        raise CBOSException(
+            status_code=409,
+            code="SALES_QUOTE_ACCEPT_INVALID_STATUS",
+            message=f"Cannot accept a quote in status '{quote.status}'.",
+            detail={"status": quote.status},
+        )
 
     now = datetime.now(timezone.utc)
     quote.status = "accepted"
@@ -574,7 +641,12 @@ async def reject_quote(
 ) -> Quote:
     quote = await _load_quote(db, workspace_id, quote_id)
     if quote.status not in ("sent", "draft"):
-        raise HTTPException(status_code=409, detail=f"Cannot reject a quote in status '{quote.status}'")
+        raise CBOSException(
+            status_code=409,
+            code="SALES_QUOTE_REJECT_INVALID_STATUS",
+            message=f"Cannot reject a quote in status '{quote.status}'.",
+            detail={"status": quote.status},
+        )
 
     quote.status = "rejected"
     quote.rejected_at = datetime.now(timezone.utc)

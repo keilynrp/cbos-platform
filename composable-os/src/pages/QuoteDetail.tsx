@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { translateApiError } from "@/lib/errors";
 import { ArrowLeft, Plus, Trash2, Download, Loader2, Share2, Copy, Mail } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -97,7 +98,7 @@ export default function QuoteDetail() {
     mutationFn: ({ lineId, data }: { lineId: string; data: QuoteLineUpdateDto }) =>
       salesService.updateLine(id!, lineId, data),
     onSuccess: invalidateQuote,
-    onError: (e: Error) => toast.error(`Error al guardar: ${e.message}`),
+    onError: (e: Error) => toast.error(`Error al guardar: ${translateApiError(e)}`),
   });
 
   const addLineMutation = useMutation({
@@ -110,13 +111,13 @@ export default function QuoteDetail() {
         line_order: (quote?.lines.length ?? 0) + 1,
       }),
     onSuccess: invalidateQuote,
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const removeLineMutation = useMutation({
     mutationFn: (lineId: string) => salesService.removeLine(id!, lineId),
     onSuccess: invalidateQuote,
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   // ── Quote-level mutations ──────────────────────────────────────────────────
@@ -125,13 +126,13 @@ export default function QuoteDetail() {
     mutationFn: (data: Parameters<typeof salesService.updateQuote>[1]) =>
       salesService.updateQuote(id!, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["quote", id] }),
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const sendMutation = useMutation({
     mutationFn: () => salesService.sendQuote(id!),
     onSuccess: () => { invalidateQuote(); toast.success("Cotización enviada"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const acceptMutation = useMutation({
@@ -142,13 +143,13 @@ export default function QuoteDetail() {
       qc.invalidateQueries({ queryKey: ["sales-orders"] });
       toast.success("Cotización aceptada — orden creada");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const rejectMutation = useMutation({
     mutationFn: () => salesService.rejectQuote(id!),
     onSuccess: () => { invalidateQuote(); toast.success("Cotización rechazada"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -193,7 +194,7 @@ export default function QuoteDetail() {
       });
       toast.success("Link copiado");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const sendPortalEmailMutation = useMutation({
@@ -211,7 +212,7 @@ export default function QuoteDetail() {
       toast.success(`Email enviado a ${shareEmail}`);
       setShareOpen(false);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const canShare = quote ? ["draft", "sent"].includes(quote.status) : false;

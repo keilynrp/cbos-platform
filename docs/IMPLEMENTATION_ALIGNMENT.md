@@ -36,6 +36,7 @@ Legacy documents are historical reference only unless explicitly promoted by ADR
 
 - The MVP wedge is implemented end to end, but some boundaries remain more coupled than the target architecture wants
 - API conventions are documented, but conformance is still uneven outside the most critical modules
+- Error Code Registry V1 exists and CI enforces parity between raised codes, registry entries, and the frontend translation map. `projects` and `sales` raise registered codes and their pages render Spanish from them; the other nine modules still return free-text `detail` and reach the user in English
 - Event Registry V1 exists and CI now enforces parity between event constants, registry entries, and statically detectable publishers
 - Capability specs exist for active modules, but their freshness is uneven and they need periodic maintenance
 - Strategic integration direction for external brand sites now exists in docs, and Public Site Lead Intake V1 has an initial backend implementation path alongside Portal
