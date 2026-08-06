@@ -254,3 +254,100 @@ async def test_multiple_projects_status_filter(client: AsyncClient, auth_headers
 
     assert p1["id"] not in active_ids
     assert p2["id"] not in planning_ids
+
+
+# ── 7. Error envelope (ADR 0010) ─────────────────────────────────────────────
+#
+# El `code` y las claves de `detail` son el contrato que consume
+# composable-os/src/lib/errors.ts para armar el texto en espanol. Si aqui se
+# renombra una clave el frontend no falla: se queda con el mensaje en ingles del
+# backend, que es justo la degradacion silenciosa que estos tests cortan.
+
+def _error(resp) -> dict:
+    body = resp.json()
+    assert "error" in body, body
+    return body["error"]
+
+
+async def test_project_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    missing = "00000000-0000-0000-0000-000000000000"
+    resp = await client.get(f"{BASE}/{missing}", headers=auth_headers)
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "PROJECT_NOT_FOUND"
+    assert error["detail"]["id"] == missing
+
+
+async def test_invalid_transition_error_shape(client: AsyncClient, auth_headers: dict):
+    project = await _create_project(client, auth_headers)
+    await _transition(client, auth_headers, project["id"], "cancelled")
+
+    resp = await client.patch(
+        f"{BASE}/{project['id']}", headers=auth_headers, json={"status": "active"}
+    )
+
+    assert resp.status_code == 422
+    error = _error(resp)
+    assert error["code"] == "PROJECT_INVALID_TRANSITION"
+    assert error["detail"] == {"from": "cancelled", "to": "active", "allowed": []}
+
+
+async def test_delete_non_planning_error_shape(client: AsyncClient, auth_headers: dict):
+    project = await _create_project(client, auth_headers)
+    await _transition(client, auth_headers, project["id"], "active")
+
+    resp = await client.delete(f"{BASE}/{project['id']}", headers=auth_headers)
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "PROJECT_DELETE_NOT_PLANNING"
+    assert error["detail"]["status"] == "active"
+
+
+async def test_task_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    project = await _create_project(client, auth_headers)
+    missing = "00000000-0000-0000-0000-000000000000"
+
+    resp = await client.patch(
+        f"{BASE}/{project['id']}/tasks/{missing}",
+        headers=auth_headers,
+        json={"title": "Nope"},
+    )
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "PROJECT_TASK_NOT_FOUND"
+    assert error["detail"]["id"] == missing
+
+
+async def test_task_add_blocked_error_shape(client: AsyncClient, auth_headers: dict):
+    project = await _create_project(client, auth_headers)
+    await _transition(client, auth_headers, project["id"], "cancelled")
+
+    resp = await client.post(
+        f"{BASE}/{project['id']}/tasks", headers=auth_headers, json={"title": "Too late"}
+    )
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "PROJECT_TASK_ADD_BLOCKED"
+    assert error["detail"]["status"] == "cancelled"
+
+
+async def test_task_invalid_transition_error_shape(client: AsyncClient, auth_headers: dict):
+    project = await _create_project(client, auth_headers)
+    pid = project["id"]
+    updated = await _add_task(client, auth_headers, pid, "Some task")
+    task_id = updated["tasks"][0]["id"]
+
+    resp = await client.patch(
+        f"{BASE}/{pid}/tasks/{task_id}", headers=auth_headers, json={"status": "done"}
+    )
+
+    assert resp.status_code == 422
+    error = _error(resp)
+    assert error["code"] == "PROJECT_TASK_INVALID_TRANSITION"
+    assert error["detail"]["from"] == "todo"
+    assert error["detail"]["to"] == "done"
+    assert "done" not in error["detail"]["allowed"]

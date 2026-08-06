@@ -98,43 +98,47 @@ Observed current patterns:
 
 ### Current
 
-Most domain errors are raised with `HTTPException` and a `detail` string.
+Two shapes coexist while modules are migrated.
 
-Example patterns visible in code:
+Migrated modules raise `CBOSException` (`app/core/exceptions.py`), which the
+handler in `app/main.py` renders as:
 
-- `"Workspace slug already exists"`
-- `"Invalid email or password"`
-- `"Lead not found"`
-- `"Only draft quotes can be edited"`
-- `"Insufficient available stock: ..."`
+```json
+{
+  "error": {
+    "code": "PROJECT_DELETE_NOT_PLANNING",
+    "message": "Cannot delete a project in 'active' status.",
+    "detail": { "status": "active" }
+  }
+}
+```
+
+Modules not yet migrated still raise `HTTPException` with a free-text `detail`
+string, in patterns like `"Lead not found"` or `"Only draft quotes can be
+edited"`. `docs/ERROR_CODE_REGISTRY_V1.md` tracks which modules remain.
 
 ### Standard
 
-The current minimum supported error contract is:
+New and touched code raises `CBOSException`. Adopted by
+[ADR 0010](adr/0010-internationalization-strategy.md):
 
-```json
-{
-  "detail": "Human-readable error message"
-}
-```
+- **`code` is a stable machine identifier** and must be registered in
+  `docs/ERROR_CODE_REGISTRY_V1.md`. CI enforces the parity
+  (`scripts/ci/check_error_registry.py`). Renaming a code is a breaking change:
+  add a new one and retire the old.
+- **`code` is specific, not generic.** `CONFLICT` cannot be turned into a useful
+  sentence; `PROJECT_DELETE_NOT_PLANNING` can. The generic subclasses in
+  `core/exceptions.py` are for cases with nothing more precise to say and are
+  not translated.
+- **`message` is English and developer-facing.** It is what lands in logs, and
+  the client's fallback — not the string the user is meant to read.
+- **Interpolated values go in `detail`, never baked into `message`.** The client
+  needs the parts to build its own sentence.
 
-Short-term standard:
-
-- all errors must include a useful `detail`
-- messages should describe the business rule that failed
-- wedge-critical modules should avoid inconsistent phrasing for equivalent failures
-
-Future standardization target:
-
-```json
-{
-  "detail": "Human-readable error message",
-  "code": "OPTIONAL_MACHINE_CODE",
-  "context": {}
-}
-```
-
-This richer shape is not active yet and should not be assumed by clients until implemented.
+Clients read `code` and render their own text; `composable-os/src/lib/errors.ts`
+does this for the Spanish UI. An unmapped code falls back to `message`, so a
+module that has not migrated degrades to English prose rather than to a bare
+identifier.
 
 ## Resource Naming
 
@@ -279,7 +283,8 @@ The API already uses explicit business transitions, which is a good fit for CBOS
 ## Current Gaps To Fix
 
 - Inventory pagination does not match CRM and Sales conventions
-- Error payloads are consistent enough for humans, but not yet for machine codes
+- Only `projects` raises registered error codes; the other ten modules still
+  return free-text `detail` and reach the user untranslated
 - Equivalent business errors may still use uneven wording across modules
 - The system needs a short cross-module policy for `404` versus `403` in workspace-scoped access
 
