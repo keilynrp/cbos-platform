@@ -114,6 +114,10 @@ than to a bare identifier.
 | `INVENTORY_PRODUCT_IS_SERVICE` | 422 | inventory | Stock operation attempted on a service product | `product_id` |
 | `INVENTORY_INVALID_MOVEMENT_TYPE` | 422 | inventory | `movement_type` outside in/out/adjustment | `movement_type`, `allowed` |
 | `INVENTORY_INSUFFICIENT_STOCK` | 422 | inventory | Movement or reservation exceeds available stock | `available`, `requested`, `unit` |
+| `HR_EMPLOYEE_NOT_FOUND` | 404 | hr | The employee does not exist in this workspace | `id` |
+| `HR_DEPARTMENT_NOT_FOUND` | 404 | hr | The department does not exist in this workspace | `id` |
+| `HR_EMPLOYEE_INVALID_TRANSITION` | 422 | hr | The requested status is not reachable from the current one | `from`, `to`, `allowed` |
+| `HR_EMPLOYEE_DELETE_TERMINATED` | 409 | hr | Deletion attempted on a terminated employee, kept for audit | `status` |
 
 ---
 
@@ -130,12 +134,16 @@ undercounted at 11 when it actually had 13.
 
 | Module | `HTTPException` sites remaining |
 |---|---|
-| hr | 4 |
 | discovery | 3 |
 | workflows | 2 |
 
-`projects`, `sales`, `crm`, `portal`, `accounting`, `contracts`, `identity`, and
-`inventory` are migrated; `projects` serves as the reference for the rest.
+`projects`, `sales`, `crm`, `portal`, `accounting`, `contracts`, `identity`,
+`inventory`, and `hr` are migrated; `projects` serves as the reference for the
+rest.
+
+`hr` is the second module, after `accounting`, whose messages were written in
+Spanish on the server. All four now send English and let `errors.ts` decide the
+wording.
 
 `core/deps.py` is migrated too. It is not a module, but it raises the auth
 errors every protected route returns, and `check_error_registry.py` scans it

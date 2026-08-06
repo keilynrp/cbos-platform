@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -77,7 +77,12 @@ async def _get_employee_or_404(
     )
     emp = result.scalar_one_or_none()
     if not emp:
-        raise HTTPException(status_code=404, detail="Empleado no encontrado")
+        raise CBOSException(
+            status_code=404,
+            code="HR_EMPLOYEE_NOT_FOUND",
+            message="Employee not found.",
+            detail={"id": employee_id},
+        )
     return emp
 
 
@@ -91,7 +96,12 @@ async def _get_department_or_404(
     )
     dept = result.scalar_one_or_none()
     if not dept:
-        raise HTTPException(status_code=404, detail="Departamento no encontrado")
+        raise CBOSException(
+            status_code=404,
+            code="HR_DEPARTMENT_NOT_FOUND",
+            message="Department not found.",
+            detail={"id": department_id},
+        )
     return dept
 
 
@@ -256,10 +266,11 @@ async def update_employee(
     if data.status and data.status != emp.status:
         allowed = _TRANSITIONS.get(emp.status, [])
         if data.status not in allowed:
-            raise HTTPException(
+            raise CBOSException(
                 status_code=422,
-                detail=f"Transicion invalida: {emp.status} -> {data.status}. "
-                       f"Permitidas: {allowed or 'ninguna (estado final)'}",
+                code="HR_EMPLOYEE_INVALID_TRANSITION",
+                message=f"Invalid transition: {emp.status} -> {data.status}.",
+                detail={"from": emp.status, "to": data.status, "allowed": allowed},
             )
         now = datetime.now(timezone.utc)
         ts_field = _TRANSITION_TIMESTAMPS.get(data.status)
@@ -323,9 +334,14 @@ async def delete_employee(
 ) -> None:
     emp = await _get_employee_or_404(db, workspace_id, employee_id)
     if emp.status == "terminated":
-        raise HTTPException(
+        raise CBOSException(
             status_code=409,
-            detail="No se puede eliminar el registro de un empleado dado de baja. Se conservan para la traza de auditoria.",
+            code="HR_EMPLOYEE_DELETE_TERMINATED",
+            message=(
+                "Cannot delete a terminated employee record; "
+                "they are kept for the audit trail."
+            ),
+            detail={"status": emp.status},
         )
     await db.delete(emp)
     await db.commit()
