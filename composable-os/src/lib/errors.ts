@@ -171,6 +171,12 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
   HR_EMPLOYEE_DELETE_TERMINATED: () =>
     "No se puede eliminar el registro de un empleado dado de baja. " +
     "Se conservan para la traza de auditoria.",
+
+  DISCOVERY_SESSION_NOT_FOUND: () => "Sesion de descubrimiento no encontrada.",
+  DISCOVERY_SESSION_ALREADY_COMPLETED: () =>
+    "Esta sesion ya esta cerrada, no admite mas mensajes.",
+  DISCOVERY_BLUEPRINT_MISSING: () =>
+    "La sesion todavia no tiene blueprint. Generalo antes de aplicarlo.",
 };
 
 /**
