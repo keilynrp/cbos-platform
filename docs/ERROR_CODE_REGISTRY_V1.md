@@ -109,6 +109,11 @@ than to a bare identifier.
 | `IDENTITY_PUBLIC_SITE_SLUG_TAKEN` | 409 | identity | A public site with that slug already exists | `slug` |
 | `AUTH_TOKEN_INVALID` | 401 | core (`deps.py`) | Bearer token missing, invalid, expired, or its user is gone/inactive (sends `WWW-Authenticate`) | — |
 | `AUTH_ADMIN_REQUIRED` | 403 | core (`deps.py`) | Route requires admin or owner role | — |
+| `INVENTORY_PRODUCT_NOT_FOUND` | 404 | inventory | The product does not exist in this workspace | `id` |
+| `INVENTORY_SKU_TAKEN` | 409 | inventory | Another product in the workspace already uses that SKU | `sku` |
+| `INVENTORY_PRODUCT_IS_SERVICE` | 422 | inventory | Stock operation attempted on a service product | `product_id` |
+| `INVENTORY_INVALID_MOVEMENT_TYPE` | 422 | inventory | `movement_type` outside in/out/adjustment | `movement_type`, `allowed` |
+| `INVENTORY_INSUFFICIENT_STOCK` | 422 | inventory | Movement or reservation exceeds available stock | `available`, `requested`, `unit` |
 
 ---
 
@@ -125,13 +130,12 @@ undercounted at 11 when it actually had 13.
 
 | Module | `HTTPException` sites remaining |
 |---|---|
-| inventory | 7 |
 | hr | 4 |
 | discovery | 3 |
 | workflows | 2 |
 
-`projects`, `sales`, `crm`, `portal`, `accounting`, `contracts`, and `identity`
-are migrated; `projects` serves as the reference for the rest.
+`projects`, `sales`, `crm`, `portal`, `accounting`, `contracts`, `identity`, and
+`inventory` are migrated; `projects` serves as the reference for the rest.
 
 `core/deps.py` is migrated too. It is not a module, but it raises the auth
 errors every protected route returns, and `check_error_registry.py` scans it

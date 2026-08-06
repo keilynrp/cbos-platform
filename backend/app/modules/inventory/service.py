@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -62,7 +62,12 @@ async def create_product(
         )
     )
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail=f"SKU '{data.sku}' already exists")
+        raise CBOSException(
+            status_code=409,
+            code="INVENTORY_SKU_TAKEN",
+            message=f"SKU '{data.sku}' already exists.",
+            detail={"sku": data.sku},
+        )
 
     product = Product(workspace_id=workspace_id, **data.model_dump())
     db.add(product)
@@ -113,7 +118,12 @@ async def get_product(db: AsyncSession, workspace_id: str, product_id: str) -> P
     )
     product = result.scalar_one_or_none()
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise CBOSException(
+            status_code=404,
+            code="INVENTORY_PRODUCT_NOT_FOUND",
+            message="Product not found.",
+            detail={"id": product_id},
+        )
     return product
 
 
@@ -238,9 +248,22 @@ async def record_movement(
     product = await get_product(db, workspace_id, data.product_id)
 
     if product.is_service:
-        raise HTTPException(status_code=422, detail="Services do not track inventory")
+        raise CBOSException(
+            status_code=422,
+            code="INVENTORY_PRODUCT_IS_SERVICE",
+            message="Services do not track inventory.",
+            detail={"product_id": product.id},
+        )
     if data.movement_type not in ("in", "out", "adjustment"):
-        raise HTTPException(status_code=422, detail="movement_type must be in | out | adjustment")
+        raise CBOSException(
+            status_code=422,
+            code="INVENTORY_INVALID_MOVEMENT_TYPE",
+            message="movement_type must be in | out | adjustment.",
+            detail={
+                "movement_type": data.movement_type,
+                "allowed": ["in", "out", "adjustment"],
+            },
+        )
 
     item = await _get_or_create_inventory_item(db, workspace_id, product.id, data.location)
 
@@ -251,9 +274,18 @@ async def record_movement(
         qty_recorded = data.quantity
     elif data.movement_type == "out":
         if item.available_stock < data.quantity:
-            raise HTTPException(
+            raise CBOSException(
                 status_code=422,
-                detail=f"Insufficient available stock: {item.available_stock} {product.unit} available"
+                code="INVENTORY_INSUFFICIENT_STOCK",
+                message=(
+                    f"Insufficient available stock: {item.available_stock} "
+                    f"{product.unit} available."
+                ),
+                detail={
+                    "available": item.available_stock,
+                    "requested": data.quantity,
+                    "unit": product.unit,
+                },
             )
         item.current_stock -= data.quantity
         qty_recorded = -data.quantity
@@ -311,14 +343,28 @@ async def reserve_stock(
 ) -> StockMovement:
     product = await get_product(db, workspace_id, data.product_id)
     if product.is_service:
-        raise HTTPException(status_code=422, detail="Services do not track inventory")
+        raise CBOSException(
+            status_code=422,
+            code="INVENTORY_PRODUCT_IS_SERVICE",
+            message="Services do not track inventory.",
+            detail={"product_id": product.id},
+        )
 
     item = await _get_or_create_inventory_item(db, workspace_id, product.id, data.location)
 
     if item.available_stock < data.quantity:
-        raise HTTPException(
+        raise CBOSException(
             status_code=422,
-            detail=f"Insufficient available stock: {item.available_stock} {product.unit} available"
+            code="INVENTORY_INSUFFICIENT_STOCK",
+            message=(
+                f"Insufficient available stock: {item.available_stock} "
+                f"{product.unit} available."
+            ),
+            detail={
+                "available": item.available_stock,
+                "requested": data.quantity,
+                "unit": product.unit,
+            },
         )
 
     stock_before = item.current_stock
@@ -595,7 +641,10 @@ async def auto_reserve_for_order(
                 )
             )
             reserved.append(line.product_id)
-        except HTTPException:
+        except CBOSException:
+            # La reserva parcial es intencionada: una linea sin stock no tumba
+            # el pedido entero, se anota en `failed`. Antes se capturaba
+            # HTTPException, que ademas se tragaba cualquier 404 o 422 ajeno.
             failed.append(line.product_id)
 
     return OrderReserveResult(
