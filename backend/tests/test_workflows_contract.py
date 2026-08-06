@@ -192,3 +192,20 @@ async def test_dlq_list_returns_valid_shape(client: AsyncClient, auth_headers: d
 async def test_dlq_delete_nonexistent_returns_404(client: AsyncClient, auth_headers: dict):
     resp = await client.delete(f"{BASE}/dlq/nonexistent-entry-0", headers=auth_headers)
     assert resp.status_code == 404
+
+    # Unico codigo de la plataforma levantado desde un router y no desde un
+    # service. Por eso check_error_registry.py barre */*.py y no solo
+    # service.py: con el barrido original este codigo era invisible.
+    error = resp.json()["error"]
+    assert error["code"] == "WORKFLOW_DLQ_ENTRY_NOT_FOUND"
+    assert error["detail"]["entry_id"] == "nonexistent-entry-0"
+
+
+async def test_workflow_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    missing = "00000000-0000-0000-0000-000000000000"
+    resp = await client.get(f"{BASE}/{missing}", headers=auth_headers)
+
+    assert resp.status_code == 404
+    error = resp.json()["error"]
+    assert error["code"] == "WORKFLOW_NOT_FOUND"
+    assert error["detail"]["id"] == missing

@@ -31,13 +31,13 @@ Legacy documents are historical reference only unless explicitly promoted by ADR
 - Contracts, Projects, and HR have deploy readiness evidence: backend routers registered, Alembic migrations present, active frontend routes/services, valid production compose config, local HTTP create/list smoke, and passing frontend production build
 - Public token-based external interaction already exists in production through Portal
 - Business events are emitted through the shared event envelope in `backend/app/events/types.py`
+- Domain errors are emitted through the shared error envelope in `backend/app/core/exceptions.py`. Every module and `core/deps.py` raise registered codes; no `HTTPException` with free-text `detail` remains in `backend/app/modules/` or the auth dependencies. CI enforces parity between raised codes, `docs/ERROR_CODE_REGISTRY_V1.md`, and the frontend translation map, so the user-facing wording lives in `composable-os/src/lib/errors.ts` per ADR 0010
 
 ### Partially Aligned
 
 - The MVP wedge is implemented end to end, but some boundaries remain more coupled than the target architecture wants
 - API conventions are documented, but conformance is still uneven outside the most critical modules
-- Error Code Registry V1 exists and CI enforces parity between raised codes, registry entries, and the frontend translation map. Every module except `workflows` raises registered codes — plus `core/deps.py`, which owns the auth errors every protected route returns — and their pages render Spanish from them; only `workflows` still returns free-text `detail`
-- `inventory` is the exception to that last clause: it has no frontend surface that mutates stock, so its translations are prospective. Its real consumer is the Sales→Inventory gateway, which reacts to the exception type and never parsed the message
+- `inventory` is the one module whose translations are prospective: it has no frontend surface that mutates stock. Its real consumer is the Sales→Inventory gateway, which reacts to the exception type and never parsed the message
 - Event Registry V1 exists and CI now enforces parity between event constants, registry entries, and statically detectable publishers
 - Capability specs exist for active modules, but their freshness is uneven and they need periodic maintenance
 - Strategic integration direction for external brand sites now exists in docs, and Public Site Lead Intake V1 has an initial backend implementation path alongside Portal

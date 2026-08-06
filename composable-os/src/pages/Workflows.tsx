@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { translateApiError } from "@/lib/errors";
 import {
   Zap, Plus, Play, Trash2, ToggleLeft, CheckCircle2, XCircle,
   Clock, BarChart3, ChevronRight, Loader2,
@@ -151,7 +152,7 @@ function CreateWorkflowDialog({ open, onClose }: { open: boolean; onClose: () =>
       setEventType("");
       setActionMsg("Workflow triggered");
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -294,13 +295,13 @@ export default function Workflows() {
     mutationFn: (id: string) => workflowsService.toggle(id),
     onMutate: (id) => setTogglingId(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["workflows"] }); setTogglingId(null); },
-    onError: (e: Error) => { toast.error(e.message); setTogglingId(null); },
+    onError: (e: Error) => { toast.error(translateApiError(e)); setTogglingId(null); },
   });
 
   const deleteMutation = useMutation({
     mutationFn: workflowsService.delete,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["workflows"] }); toast.success("Workflow eliminado"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const active = workflows?.filter((w) => w.enabled).length ?? 0;

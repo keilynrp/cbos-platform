@@ -177,6 +177,10 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
     "Esta sesion ya esta cerrada, no admite mas mensajes.",
   DISCOVERY_BLUEPRINT_MISSING: () =>
     "La sesion todavia no tiene blueprint. Generalo antes de aplicarlo.",
+
+  WORKFLOW_NOT_FOUND: () => "Flujo de trabajo no encontrado.",
+  WORKFLOW_DLQ_ENTRY_NOT_FOUND: () =>
+    "La entrada de la cola de fallos ya no existe.",
 };
 
 /**
