@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { translateApiError } from "@/lib/errors";
 import {
   Plus, MoreHorizontal, Building2, Users, DollarSign, TrendingUp,
   Phone, Mail, Calendar, ChevronRight, ArrowRight, FolderKanban,
@@ -298,7 +299,7 @@ function ChangeStageDialog({ opp, onClose }: { opp: Opportunity | null; onClose:
       toast.success("Etapa actualizada");
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   return (
@@ -367,7 +368,7 @@ function ConvertLeadDialog({ lead, onClose }: { lead: Lead | null; onClose: () =
       toast.success("Lead convertido a oportunidad");
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   return (
@@ -440,7 +441,7 @@ function LogActivityDialog({ context, onClose }: { context: ActivityCtx | null; 
       toast.success("Actividad registrada");
       onClose();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   return (
@@ -505,7 +506,7 @@ function NewLeadDialog({ open, onClose, onCreated }: { open: boolean; onClose: (
       onCreated?.();
       setForm({ first_name: "", last_name: "", email: "", phone: "", company_name: "", source: "web" });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   return (
@@ -574,7 +575,7 @@ function NewOpportunityDialog({ open, onClose }: { open: boolean; onClose: () =>
       onClose();
       setForm({ title: "", stage: "new", value: "", probability: "50", close_date: "" });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   return (

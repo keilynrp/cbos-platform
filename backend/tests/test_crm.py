@@ -156,3 +156,104 @@ async def test_pipeline_summary(client: AsyncClient, auth_headers: dict):
     data = resp.json()
     assert "total_opportunities" in data
     assert data["total_opportunities"] >= 2
+
+
+# ── Error envelope (ADR 0010) ────────────────────────────────────────────────
+#
+# El `code` y las claves de `detail` son el contrato que consume
+# composable-os/src/lib/errors.ts. Renombrar una clave no rompe al frontend: lo
+# hace caer al mensaje en ingles del backend, en silencio.
+
+MISSING_ID = "00000000-0000-0000-0000-000000000000"
+
+
+def _error(resp) -> dict:
+    body = resp.json()
+    assert "error" in body, body
+    return body["error"]
+
+
+async def test_lead_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(f"{BASE}/leads/{MISSING_ID}", headers=auth_headers)
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "CRM_LEAD_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_opportunity_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(f"{BASE}/opportunities/{MISSING_ID}", headers=auth_headers)
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "CRM_OPPORTUNITY_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_activity_not_found_error_shape(client: AsyncClient, auth_headers: dict):
+    resp = await client.patch(
+        f"{BASE}/activities/{MISSING_ID}/complete", headers=auth_headers
+    )
+
+    assert resp.status_code == 404
+    error = _error(resp)
+    assert error["code"] == "CRM_ACTIVITY_NOT_FOUND"
+    assert error["detail"]["id"] == MISSING_ID
+
+
+async def test_lead_already_converted_error_shape(client: AsyncClient, auth_headers: dict):
+    created = await client.post(f"{BASE}/leads", headers=auth_headers, json={
+        "first_name": "Convert", "last_name": "Twice", "source": "manual",
+    })
+    lead_id = created.json()["id"]
+    payload = {"title": "Converted opp", "value": 500.0}
+
+    first = await client.post(
+        f"{BASE}/leads/{lead_id}/convert", headers=auth_headers, json=payload
+    )
+    assert first.status_code == 201, first.text
+
+    resp = await client.post(
+        f"{BASE}/leads/{lead_id}/convert", headers=auth_headers, json=payload
+    )
+
+    assert resp.status_code == 409
+    error = _error(resp)
+    assert error["code"] == "CRM_LEAD_ALREADY_CONVERTED"
+    assert error["detail"]["id"] == lead_id
+
+
+async def test_opportunity_invalid_stage_error_shape(client: AsyncClient, auth_headers: dict):
+    opp = await _create_opp(client, auth_headers, "Bogus stage")
+
+    resp = await client.patch(
+        f"{BASE}/opportunities/{opp['id']}/stage",
+        headers=auth_headers,
+        json={"stage": "not_a_stage"},
+    )
+
+    assert resp.status_code == 422
+    error = _error(resp)
+    assert error["code"] == "CRM_OPPORTUNITY_INVALID_STAGE"
+    assert error["detail"]["stage"] == "not_a_stage"
+    assert "qualified" in error["detail"]["allowed"]
+
+
+async def test_opportunity_invalid_transition_error_shape(client: AsyncClient, auth_headers: dict):
+    opp = await _create_opp(client, auth_headers, "Transition shape")
+
+    # new → won: hay que pasar por qualified/proposal/negotiation
+    resp = await client.patch(
+        f"{BASE}/opportunities/{opp['id']}/stage",
+        headers=auth_headers,
+        json={"stage": "won"},
+    )
+
+    assert resp.status_code == 422
+    error = _error(resp)
+    assert error["code"] == "CRM_OPPORTUNITY_INVALID_TRANSITION"
+    assert error["detail"]["from"] == "new"
+    assert error["detail"]["to"] == "won"
+    # set en el servicio: tiene que llegar como lista JSON ordenada
+    assert error["detail"]["allowed"] == ["lost", "qualified"]

@@ -253,6 +253,7 @@ async def test_public_lead_create_idempotency_conflicts_on_different_payload(
         json={"first_name": "Different", "email": "different@example.com"},
     )
     assert second.status_code == 409, second.text
+    assert second.json()["error"]["code"] == "CRM_PUBLIC_INTAKE_IDEMPOTENCY_CONFLICT"
 
 
 async def test_public_lead_create_rate_limit_returns_retry_after(
@@ -279,7 +280,12 @@ async def test_public_lead_create_rate_limit_returns_retry_after(
 
     assert first.status_code == 201, first.text
     assert second.status_code == 429, second.text
+    # La cabecera y el sobre de error tienen que convivir: CBOSException pasa
+    # `headers` y el handler los propaga. Sin eso, migrar el shape se llevaba
+    # por delante el Retry-After sin que nada lo notara.
     assert second.headers["retry-after"] == "60"
+    assert second.json()["error"]["code"] == "CRM_PUBLIC_INTAKE_RATE_LIMITED"
+    assert second.json()["error"]["detail"]["retry_after_seconds"] == 60
     crm_service._public_rate_limit_buckets.clear()
 
 
@@ -302,6 +308,23 @@ async def test_public_lead_create_logs_rejected_origin(
     assert "public_lead_intake outcome=rejected" in caplog.text
     assert "site_slug=inbounduxd" in caplog.text
     assert "reason=origin_not_allowed" in caplog.text
+
+    error = resp.json()["error"]
+    assert error["code"] == "CRM_PUBLIC_SITE_ORIGIN_NOT_ALLOWED"
+    assert error["detail"]["origin"] == "https://evil.example.com"
+
+
+async def test_public_lead_create_missing_site_key_error_shape(
+    client: AsyncClient, session_factory, workspace
+):
+    resp = await client.post(
+        f"{BASE}/public/leads",
+        headers={"Origin": "https://inbounduxd.example.com"},
+        json={"first_name": "Kei", "email": "kei@example.com"},
+    )
+
+    assert resp.status_code == 401
+    assert resp.json()["error"]["code"] == "CRM_PUBLIC_SITE_KEY_INVALID"
 
 
 # ── Leads — get and update by ID ─────────────────────────────────────────────

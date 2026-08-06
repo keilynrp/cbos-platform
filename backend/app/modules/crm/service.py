@@ -6,7 +6,8 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Sequence
 
-from fastapi import HTTPException, status
+from fastapi import status
+from app.core.exceptions import CBOSException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,9 +82,13 @@ def _enforce_public_rate_limit(site_slug: str, client_ip: str | None) -> None:
         bucket.popleft()
 
     if len(bucket) >= settings.public_site_rate_limit_per_minute:
-        raise HTTPException(
+        raise CBOSException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Rate limit exceeded for public site intake",
+            code="CRM_PUBLIC_INTAKE_RATE_LIMITED",
+            message="Rate limit exceeded for public site intake.",
+            detail={"retry_after_seconds": 60},
+            # La cabecera no es decorativa: es lo que un cliente automatizado
+            # lee para reintentar. Va aparte del cuerpo a proposito.
             headers={"Retry-After": "60"},
         )
 
@@ -140,10 +145,11 @@ _OPP_TRANSITIONS: dict[str, set[str]] = {
 def _assert_opp_transition(current: str, target: str) -> None:
     allowed = _OPP_TRANSITIONS.get(current, set())
     if target not in allowed:
-        raise HTTPException(
+        raise CBOSException(
             status_code=422,
-            detail=f"Cannot transition opportunity from '{current}' to '{target}'. "
-                   f"Allowed: {sorted(allowed) or 'none (terminal state)'}",
+            code="CRM_OPPORTUNITY_INVALID_TRANSITION",
+            message=f"Cannot transition opportunity from '{current}' to '{target}'.",
+            detail={"from": current, "to": target, "allowed": sorted(allowed)},
         )
 
 
@@ -199,9 +205,10 @@ async def create_public_lead(
     client_ip: str | None,
     data: PublicLeadCreate,
 ) -> tuple[PublicLeadCaptureResponse, bool]:
-    credentials_exception = HTTPException(
+    credentials_exception = CBOSException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Missing or invalid site key",
+        code="CRM_PUBLIC_SITE_KEY_INVALID",
+        message="Missing or invalid site key.",
     )
     if not site_key:
         _audit_public_intake(
@@ -233,7 +240,12 @@ async def create_public_lead(
             client_ip=client_ip,
             reason="inactive_site",
         )
-        raise HTTPException(status_code=403, detail="Public site is inactive")
+        raise CBOSException(
+            status_code=403,
+            code="CRM_PUBLIC_SITE_INACTIVE",
+            message="Public site is inactive.",
+            detail={"site_slug": site.site_slug},
+        )
 
     normalized_origin = _normalize_origin(origin) if origin else None
     allowed_origins = {_normalize_origin(item) for item in site.allowed_origins}
@@ -246,11 +258,16 @@ async def create_public_lead(
             client_ip=client_ip,
             reason="origin_not_allowed",
         )
-        raise HTTPException(status_code=403, detail="Origin not allowed for this site")
+        raise CBOSException(
+            status_code=403,
+            code="CRM_PUBLIC_SITE_ORIGIN_NOT_ALLOWED",
+            message="Origin not allowed for this site.",
+            detail={"origin": origin},
+        )
 
     try:
         _enforce_public_rate_limit(site.site_slug, client_ip)
-    except HTTPException:
+    except CBOSException:
         _audit_public_intake(
             "rejected",
             site_slug=site.site_slug,
@@ -281,9 +298,10 @@ async def create_public_lead(
                     client_ip=client_ip,
                     reason="idempotency_conflict",
                 )
-                raise HTTPException(
+                raise CBOSException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail="Idempotency key already used with different payload",
+                    code="CRM_PUBLIC_INTAKE_IDEMPOTENCY_CONFLICT",
+                    message="Idempotency key already used with a different payload.",
                 )
             lead = await get_lead(db, site.workspace_id, existing.lead_id)
             _audit_public_intake(
@@ -386,7 +404,12 @@ async def get_lead(db: AsyncSession, workspace_id: str, lead_id: str) -> Lead:
     )
     lead = result.scalar_one_or_none()
     if not lead:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lead not found")
+        raise CBOSException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="CRM_LEAD_NOT_FOUND",
+            message="Lead not found.",
+            detail={"id": lead_id},
+        )
     return lead
 
 
@@ -414,9 +437,11 @@ async def convert_lead(
     lead = await get_lead(db, workspace_id, lead_id)
 
     if lead.status == "converted":
-        raise HTTPException(
+        raise CBOSException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Lead already converted",
+            code="CRM_LEAD_ALREADY_CONVERTED",
+            message="Lead already converted.",
+            detail={"id": lead_id},
         )
 
     opp = Opportunity(
@@ -458,7 +483,12 @@ async def create_opportunity(
     data: OpportunityCreate,
 ) -> Opportunity:
     if data.stage not in VALID_STAGES:
-        raise HTTPException(status_code=422, detail=f"Invalid stage: {data.stage}")
+        raise CBOSException(
+            status_code=422,
+            code="CRM_OPPORTUNITY_INVALID_STAGE",
+            message=f"Invalid stage: {data.stage}.",
+            detail={"stage": data.stage, "allowed": sorted(VALID_STAGES)},
+        )
 
     if data.organization_id:
         await validate_workspace_ownership(db, Organization, data.organization_id, workspace_id, "organization_id")
@@ -511,7 +541,12 @@ async def get_opportunity(
     )
     opp = result.scalar_one_or_none()
     if not opp:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Opportunity not found")
+        raise CBOSException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="CRM_OPPORTUNITY_NOT_FOUND",
+            message="Opportunity not found.",
+            detail={"id": opp_id},
+        )
     return opp
 
 
@@ -548,7 +583,12 @@ async def change_stage(
     data: OpportunityStageChange,
 ) -> Opportunity:
     if data.stage not in VALID_STAGES:
-        raise HTTPException(status_code=422, detail=f"Invalid stage: {data.stage}")
+        raise CBOSException(
+            status_code=422,
+            code="CRM_OPPORTUNITY_INVALID_STAGE",
+            message=f"Invalid stage: {data.stage}.",
+            detail={"stage": data.stage, "allowed": sorted(VALID_STAGES)},
+        )
 
     opp = await get_opportunity(db, workspace_id, opp_id)
     previous_stage = opp.stage
@@ -685,7 +725,12 @@ async def complete_activity(
     )
     activity = result.scalar_one_or_none()
     if not activity:
-        raise HTTPException(status_code=404, detail="Activity not found")
+        raise CBOSException(
+            status_code=404,
+            code="CRM_ACTIVITY_NOT_FOUND",
+            message="Activity not found.",
+            detail={"id": activity_id},
+        )
 
     activity.completed_at = datetime.now(timezone.utc)
     await db.commit()

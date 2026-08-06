@@ -64,6 +64,29 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
   SALES_ORDER_INVALID_TRANSITION: (d) =>
     `La orden no puede pasar de '${str(d, "from")}' a '${str(d, "to")}'. ` +
     `Estados permitidos: ${list(d, "allowed", "ninguno (estado final)")}.`,
+
+  CRM_LEAD_NOT_FOUND: () => "Lead no encontrado.",
+  CRM_LEAD_ALREADY_CONVERTED: () => "Este lead ya fue convertido.",
+  CRM_OPPORTUNITY_NOT_FOUND: () => "Oportunidad no encontrada.",
+  CRM_ACTIVITY_NOT_FOUND: () => "Actividad no encontrada.",
+  CRM_OPPORTUNITY_INVALID_STAGE: (d) =>
+    `Etapa invalida: '${str(d, "stage")}'. ` +
+    `Etapas validas: ${list(d, "allowed")}.`,
+  CRM_OPPORTUNITY_INVALID_TRANSITION: (d) =>
+    `La oportunidad no puede pasar de '${str(d, "from")}' a '${str(d, "to")}'. ` +
+    `Etapas permitidas: ${list(d, "allowed", "ninguna (etapa final)")}.`,
+
+  // Captacion publica: la levanta el sitio externo, no composable-os. Se
+  // traduce igual porque el registro exige que todo codigo tenga texto, y
+  // porque estos errores tambien salen en el panel de diagnostico del sitio.
+  CRM_PUBLIC_SITE_KEY_INVALID: () => "Clave del sitio ausente o invalida.",
+  CRM_PUBLIC_SITE_INACTIVE: () => "El sitio publico esta inactivo.",
+  CRM_PUBLIC_SITE_ORIGIN_NOT_ALLOWED: (d) =>
+    `Origen no permitido para este sitio${d?.origin ? `: ${str(d, "origin")}` : ""}.`,
+  CRM_PUBLIC_INTAKE_IDEMPOTENCY_CONFLICT: () =>
+    "La clave de idempotencia ya se uso con un contenido distinto.",
+  CRM_PUBLIC_INTAKE_RATE_LIMITED: (d) =>
+    `Demasiadas solicitudes. Reintenta en ${str(d, "retry_after_seconds", "60")} segundos.`,
 };
 
 /**
