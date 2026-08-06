@@ -1,11 +1,12 @@
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_current_workspace_id
+from app.core.exceptions import CBOSException
 from app.events.bus import get_redis
 from app.modules.identity.models import User
 from app.modules.workflows import service
@@ -98,7 +99,12 @@ async def delete_dlq_entry(
     r = await get_redis()
     deleted = await r.xdel("cbos:events:dlq", entry_id)
     if deleted == 0:
-        raise HTTPException(status_code=404, detail="DLQ entry not found")
+        raise CBOSException(
+            status_code=404,
+            code="WORKFLOW_DLQ_ENTRY_NOT_FOUND",
+            message="DLQ entry not found.",
+            detail={"entry_id": entry_id},
+        )
 
 
 # ── Per-workflow routes ────────────────────────────────────────────────────────

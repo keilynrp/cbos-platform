@@ -42,6 +42,18 @@ than to a bare identifier.
    password"; `AUTH_TOKEN_INVALID` covers missing, malformed, expired, and
    orphaned tokens. Splitting them would read as helpful precision and would
    hand an attacker a working enumeration signal.
+8. **A code never reuses the name of an event constant.** `discovery` raises
+   `DISCOVERY_SESSION_ALREADY_COMPLETED` rather than the obvious
+   `DISCOVERY_SESSION_COMPLETED`, which is already an event in
+   `backend/app/events/types.py`. Both identifiers land in the same logs, and
+   two different things sharing a name get read as one.
+
+### Scope of the check
+
+`scripts/ci/check_error_registry.py` scans every `*.py` under
+`backend/app/modules/` — not just `service.py`, because `workflows` raises from
+its router — plus `backend/app/core/deps.py`, which is not a module but owns the
+auth errors every protected route returns.
 
 ---
 
@@ -121,42 +133,40 @@ than to a bare identifier.
 | `DISCOVERY_SESSION_NOT_FOUND` | 404 | discovery | The discovery session does not exist in this workspace | `id` |
 | `DISCOVERY_SESSION_ALREADY_COMPLETED` | 409 | discovery | Message posted to a session that is already closed | `status` |
 | `DISCOVERY_BLUEPRINT_MISSING` | 409 | discovery | Apply attempted before the blueprint was generated | — |
+| `WORKFLOW_NOT_FOUND` | 404 | workflows | The workflow does not exist in this workspace | `id` |
+| `WORKFLOW_DLQ_ENTRY_NOT_FOUND` | 404 | workflows | The dead-letter entry is already gone (raised from `router.py`) | `entry_id` |
 
 ---
 
-## Pending migration
+## Migration complete
 
-The remaining modules still raise `HTTPException` with free-text `detail`. They
-are migrated module by module; until a module appears above, its errors reach
-the user as whatever prose the backend wrote.
+Every module raises registered codes, and so does `core/deps.py`. No
+`HTTPException` with a free-text `detail` is left in `backend/app/modules/` or
+in the auth dependencies.
 
-Counts below include exceptions built once and raised later
-(`exc = HTTPException(...)` … `raise exc`), not just literal `raise
-HTTPException`. `crm` hid two error sites behind that pattern and was
-undercounted at 11 when it actually had 13.
+The fallback in `translateApiError` — an unmapped code degrades to the backend's
+English `message` — stays in place. It now has no real cases: it is the safety
+net for a code added without a translation, which CI already refuses to merge.
 
-| Module | `HTTPException` sites remaining |
-|---|---|
-| workflows | 2 |
+### What the migration turned up
 
-Every module except `workflows` is migrated; `projects` serves as the reference
-for it.
+Notes worth keeping, because each one cost a debugging pass:
 
-Codes must not reuse the name of an event constant in
-`backend/app/events/types.py`. `discovery` raises
-`DISCOVERY_SESSION_ALREADY_COMPLETED`, not `DISCOVERY_SESSION_COMPLETED`, because
-the latter is already an event — two different things sharing one identifier
-get confused when reading logs.
-
-`hr` is the second module, after `accounting`, whose messages were written in
-Spanish on the server. All four now send English and let `errors.ts` decide the
-wording.
-
-`core/deps.py` is migrated too. It is not a module, but it raises the auth
-errors every protected route returns, and `check_error_registry.py` scans it
-explicitly for that reason.
-
-`accounting` is also where the first Spanish-in-the-backend messages were
-undone: the logo validation errors used to ship their user-facing text from the
-server. They now send an English `message` plus the numbers in `detail`, and the
-Spanish lives in `errors.ts` like everything else.
+- **`crm` was undercounted.** The pending table counted `raise HTTPException`
+  and missed two sites built once and raised later
+  (`exc = HTTPException(...)` … `raise exc`). It had 13 error sites, not 11.
+- **`workflows` raises from `router.py`, not `service.py`.** That is why
+  `check_error_registry.py` scans `*/*.py` across the module rather than
+  `service.py` alone.
+- **Response headers are part of the contract.** Migrating `crm`'s 429 would
+  have silently dropped `Retry-After` until `CBOSException` learned to carry
+  `headers`.
+- **`accounting` and `hr` wrote user-facing Spanish on the server.** Undoing
+  that was the point of ADR 0010, not a side effect of it.
+- **`portal` and `identity` errors carry security weight.** A lookup key can be
+  a credential, and a code can become an enumeration oracle. See rules 6 and 7.
+- **The frontend had two silent breakages**, both pre-existing and both only
+  visible once codes existed: `CustomerPortal.tsx` parsed `body.detail`, which
+  the envelope no longer has at the root, and `lib/api.ts` swallowed every 401
+  before reading the body, so a failed login read "Unauthorized" and cleared the
+  session.

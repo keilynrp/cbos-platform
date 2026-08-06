@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from app.core.exceptions import CBOSException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,7 +71,12 @@ async def get_workflow(
     )
     wf = result.scalar_one_or_none()
     if not wf:
-        raise HTTPException(status_code=404, detail="Workflow not found")
+        raise CBOSException(
+            status_code=404,
+            code="WORKFLOW_NOT_FOUND",
+            message="Workflow not found.",
+            detail={"id": workflow_id},
+        )
     return wf
 
 
