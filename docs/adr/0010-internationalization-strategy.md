@@ -1,7 +1,7 @@
 # ADR 0010 — Internationalization Strategy
 
-**Status:** Accepted — Option B
-**Date:** 2026-08-05
+**Status:** Accepted — Option B implemented, Option C committed
+**Date:** 2026-08-05 (Option B) · 2026-08-07 (product answer, Option C committed)
 **Deciders:** Platform team
 
 ---
@@ -46,12 +46,23 @@ recorded product requirement for it.
 
 ---
 
-## The question this ADR must answer
+## The question this ADR must answer — answered
 
 **Is serving more than one language a product goal?**
 
-Everything below depends on that answer, and it is not a technical question.
-The engineering options only become comparable once it is settled.
+**Yes.** Confirmed by the product owner on 2026-08-07. Serving more than one
+language is a core requirement, not a possibility to keep open.
+
+That settles what this ADR left deliberately unresolved, and it changes the
+status of the options below: Option A is now ruled out rather than merely
+cheaper, and Option C stops being a contingency and becomes committed work.
+
+**Committed does not mean implemented.** Option C is roughly 470 user-facing
+strings across 19 active pages, plus a locale on the user or workspace,
+`Accept-Language` negotiation, and the server-rendered artifacts — invoice PDFs
+and notification emails — which no frontend catalogue can reach. None of that
+exists yet. What is done is Option B, which was chosen precisely because it
+holds up under either answer.
 
 ---
 
@@ -99,9 +110,22 @@ generated server-side.
 
 ## Decision
 
-**Option B is adopted.** Option C remains target state, gated on the product
-question above, which stays open: adopting B does not answer whether the
-product will serve more than one language, and deliberately does not need to.
+**Option B is adopted and implemented.** Every module and `core/deps.py` raise
+registered codes, CI enforces parity between the codes, the registry and the
+frontend map, and the user-facing wording lives in
+`composable-os/src/lib/errors.ts`.
+
+**Option C is committed**, now that the product question is answered. It is not
+scheduled here: this ADR records that multi-language is a core requirement and
+that the backend must stay language-neutral, not when the catalogues get built.
+Sequencing belongs to a backlog item, and the work is large enough to deserve
+its own plan.
+
+**Option A is ruled out.** Translating the backend's prose into Spanish would
+have to be undone the moment a second language ships.
+
+What Option B bought is precisely this: the decision arrived after the work,
+and none of it has to be redone.
 
 The reasoning is that Option B is the only work that is correct under *both*
 answers to the product question. A backend that returns codes instead of prose

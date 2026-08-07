@@ -89,6 +89,27 @@ This wedge is the priority rule for architecture and delivery.
 
 These may remain partial as long as they do not block the wedge.
 
+### Cross-Cutting Commitments
+
+Not capabilities of their own, but constraints every capability has to respect.
+
+- **Internationalization.** Serving more than one language is a core product
+  requirement, confirmed 2026-08-07 and recorded in ADR 0010. The architectural
+  consequence is that **the backend stays language-neutral**: domain services
+  raise registered error codes with structured `detail`, never prose meant for
+  a user to read, and the wording lives in the frontend catalogue. That half is
+  built and enforced in CI.
+
+  What is committed but not built is the rest: string catalogues for the ~470
+  user-facing strings, a locale on the user or workspace, `Accept-Language`
+  negotiation, and the server-rendered artifacts — invoice PDFs and
+  notification emails — that no frontend catalogue can reach.
+
+  This belongs here rather than under Future Architecture because it is not a
+  candidate to weigh later. It is decided, and it constrains how new surfaces
+  are written from now on: **a new module that hardcodes user-facing prose in
+  the backend is creating work that will have to be undone.**
+
 ## Future Architecture
 
 The following are valid future directions, but not part of the current architectural commitment:
