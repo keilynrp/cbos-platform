@@ -70,7 +70,56 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 
 # ── Session-scoped engine — create schema once per session ────────────────────
 
-async def _reset_schema(url: str, terminate_connections: bool = True) -> None:
+# ── Exclusion mutua entre sesiones de pytest ──────────────────────────────────
+
+# Clave arbitraria pero fija: dos sesiones que la pidan sobre la misma base se
+# excluyen. Postgres libera el lock solo cuando la conexion se cierra, incluso
+# si el proceso muere de golpe, asi que no hace falta limpiar nada a mano.
+_SESSION_LOCK_KEY = 0x0CB05_7E57
+
+
+def _pg_dsn(url: str) -> dict:
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url.replace("postgresql+asyncpg://", "postgresql://"))
+    return {
+        "host": parsed.hostname,
+        "port": parsed.port or 5432,
+        "user": parsed.username,
+        "password": parsed.password,
+        "database": parsed.path.lstrip("/"),
+    }
+
+
+async def _acquire_session_lock(url: str):
+    """Toma el lock de la base de tests, o aborta con un mensaje entendible.
+
+    Sin esto, dos sesiones simultaneas producen `IntegrityError` de clave
+    duplicada que parecen un fallo de aislamiento entre tests y no lo son: el
+    `_reset_schema` de la sesion que arranca mata las conexiones de la que ya
+    estaba corriendo, y a partir de ahi los errores no guardan relacion con la
+    causa. Diagnosticar eso cuesta mucho mas que prevenirlo.
+    """
+    import asyncpg
+
+    conn = await asyncpg.connect(**_pg_dsn(url))
+    if not await conn.fetchval("SELECT pg_try_advisory_lock($1)", _SESSION_LOCK_KEY):
+        await conn.close()
+        pytest.exit(
+            f"\nLa base de tests ({_pg_dsn(url)['database']}) ya la esta usando otra "
+            "sesion de pytest.\n\n"
+            "Correr dos a la vez no da resultados fiables: la que arranca reinicia el "
+            "esquema y corta las conexiones de la otra.\n\n"
+            "  ps aux | grep pytest      # ver cual sigue viva\n\n"
+            "Espera a que termine, o matala, y vuelve a lanzar.",
+            returncode=1,
+        )
+    return conn
+
+
+async def _reset_schema(
+    url: str, terminate_connections: bool = True, keep_pid: int | None = None
+) -> None:
     """Reset the public schema via a raw asyncpg connection.
 
     Using a direct asyncpg connection (not SQLAlchemy) avoids the
@@ -92,13 +141,18 @@ async def _reset_schema(url: str, terminate_connections: bool = True) -> None:
             database="postgres",
         )
         try:
+            # keep_pid protege la conexion que sostiene el advisory lock: es de
+            # esta misma sesion y matarla liberaria el lock a mitad de la corrida.
             await admin_conn.execute(
                 """
                 SELECT pg_terminate_backend(pid)
                 FROM pg_stat_activity
-                WHERE datname = $1 AND pid <> pg_backend_pid()
+                WHERE datname = $1
+                  AND pid <> pg_backend_pid()
+                  AND ($2::int IS NULL OR pid <> $2::int)
                 """,
                 parsed.path.lstrip("/"),
+                keep_pid,
             )
         finally:
             await admin_conn.close()
@@ -122,13 +176,19 @@ async def test_engine():
     # NullPool: no connection pooling — each connection is created fresh in the
     # current pytest-asyncio session loop. Keeping setup and teardown inside the
     # same loop avoids asyncpg cleanup on a closed loop during fixture teardown.
-    await _reset_schema(TEST_DATABASE_URL)
+    # El lock se toma antes de tocar el esquema: si hay otra sesion viva, aborta
+    # aqui en vez de reiniciarle la base por debajo.
+    lock_conn = await _acquire_session_lock(TEST_DATABASE_URL)
+    lock_pid = await lock_conn.fetchval("SELECT pg_backend_pid()")
+
+    await _reset_schema(TEST_DATABASE_URL, keep_pid=lock_pid)
     engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield engine
     await engine.dispose()
     await _reset_schema(TEST_DATABASE_URL, terminate_connections=False)
+    await lock_conn.close()  # cerrar la conexion libera el lock
 
 
 @pytest.fixture(scope="session")
