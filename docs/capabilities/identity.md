@@ -37,6 +37,17 @@ The module is expected to own:
   `users`. The join is done in the route and not in `get_current_user`, which
   runs on every protected route and does not need the name. `full_name` is
   `null` when the user has no Person
+- `DELETE /api/v1/users/{user_id}?confirm_email=<email>` — destructive and
+  irreversible, so it is gated four ways, none of which replaces the others:
+  admin-only (`get_current_admin_user`); scoped to the caller's workspace, so a
+  user from another tenant returns `404` and never `403`; refuses self-deletion
+  and refuses the workspace owner; and requires `confirm_email` to match the
+  target exactly, which forces the caller to name who they are deleting instead
+  of trusting a pasted id. If the user still owns records the database refuses
+  the delete and the route returns `409 IDENTITY_USER_HAS_RECORDS` carrying the
+  foreign key that blocked it, rather than an opaque `500`. The linked Person
+  survives on purpose: it may also be a business contact referenced by quotes,
+  orders or contracts
 - `GET /api/v1/workspaces/me`
 - `POST /api/v1/persons`
 - `GET /api/v1/organizations`

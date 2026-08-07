@@ -1,7 +1,9 @@
+import logging
 import secrets
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from fastapi import status
 
 from app.core.exceptions import CBOSException
@@ -17,6 +19,8 @@ from app.modules.identity.schemas import (
     TokenResponse,
     UserRead,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_origin(origin: str) -> str:
@@ -221,6 +225,93 @@ async def read_me(user: User, db: AsyncSession) -> UserRead:
         out.full_name = result.scalar_one_or_none()
 
     return out
+
+
+async def delete_user(
+    db: AsyncSession,
+    workspace_id: str,
+    actor: User,
+    user_id: str,
+    confirm_email: str,
+) -> None:
+    """Borra un usuario. Operacion destructiva y sin vuelta atras.
+
+    Las cuatro barreras existen por motivos distintos y ninguna sustituye a
+    las otras: el filtro por workspace impide tocar otro tenant, la de
+    autoborrado impide que un admin se deje fuera, la del owner impide dejar
+    el workspace sin dueno, y la confirmacion por email obliga a nombrar a
+    quien se borra en vez de fiarse de un id pegado.
+    """
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.workspace_id == workspace_id)
+    )
+    user = result.scalar_one_or_none()
+
+    # Un usuario de otro workspace es indistinguible de uno inexistente: 404 y
+    # no 403, por la politica de acceso entre workspaces de API_CONVENTIONS.
+    if not user:
+        raise CBOSException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="IDENTITY_USER_NOT_FOUND",
+            message="User not found.",
+            detail={"id": user_id},
+        )
+
+    if user.id == actor.id:
+        raise CBOSException(
+            status_code=status.HTTP_409_CONFLICT,
+            code="IDENTITY_CANNOT_DELETE_SELF",
+            message="You cannot delete your own account.",
+        )
+
+    if user.is_owner:
+        raise CBOSException(
+            status_code=status.HTTP_409_CONFLICT,
+            code="IDENTITY_CANNOT_DELETE_OWNER",
+            message="The workspace owner cannot be deleted.",
+            detail={"email": user.email},
+        )
+
+    if confirm_email.strip().lower() != user.email.lower():
+        raise CBOSException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code="IDENTITY_DELETE_CONFIRMATION_MISMATCH",
+            # Sin detail con el email real: quien no sabe a quien esta borrando
+            # no deberia averiguarlo probando.
+            message="Confirmation email does not match the target user.",
+        )
+
+    try:
+        await db.delete(user)
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        # Se deja fallar a la base en vez de enumerar aqui las tablas que
+        # apuntan a users: la lista cambia con cada modulo nuevo y una copia
+        # en este servicio envejeceria en silencio. El nombre de la constraint
+        # que devuelve Postgres ya dice donde mirar.
+        # exc.orig es el envoltorio dbapi de SQLAlchemy y no lleva el nombre; el
+        # error de asyncpg que si lo lleva cuelga de su __cause__. Se miran los
+        # dos para no depender de esa capa.
+        orig = getattr(exc, "orig", None)
+        constraint = getattr(orig, "constraint_name", None) or getattr(
+            getattr(orig, "__cause__", None), "constraint_name", None
+        )
+        raise CBOSException(
+            status_code=status.HTTP_409_CONFLICT,
+            code="IDENTITY_USER_HAS_RECORDS",
+            message="User still owns records and cannot be deleted.",
+            detail={"constraint": constraint} if constraint else None,
+        ) from exc
+
+    # La Person enlazada sobrevive a proposito: puede ser ademas un contacto de
+    # negocio referenciado por presupuestos, pedidos o contratos, y borrarla
+    # arrastraria historial que no es del usuario.
+    await db.commit()
+    logger.warning(
+        "user deleted: id=%s email=%s workspace=%s by=%s",
+        user_id, user.email, workspace_id, actor.id,
+    )
 
 
 async def create_person(workspace_id: str, data, db: AsyncSession) -> Person:

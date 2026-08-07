@@ -243,3 +243,132 @@ async def test_invalid_token_error_shape(client: AsyncClient):
     # Mismo codigo que el token ausente: no se distingue "no mandaste token" de
     # "mandaste uno malo".
     assert _error(resp)["code"] == "AUTH_TOKEN_INVALID"
+
+
+# ── Borrado de usuario ────────────────────────────────────────────────────────
+#
+# Endpoint destructivo y sin vuelta atras: cada barrera lleva su test, porque
+# ninguna sustituye a las otras y un fallo silencioso en cualquiera de ellas
+# solo se nota cuando ya se ha borrado a quien no tocaba.
+
+async def _make_member(session_factory, workspace, email: str, is_owner: bool = False):
+    from app.core.security import hash_password
+    from app.modules.identity.models import User
+
+    async with session_factory() as session:
+        user = User(
+            workspace_id=workspace.id,
+            email=email,
+            hashed_password=hash_password("memberpassword123"),
+            role="member",
+            is_owner=is_owner,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        return user
+
+
+async def test_admin_deletes_a_member(
+    client: AsyncClient, auth_headers: dict, session_factory, workspace
+):
+    member = await _make_member(session_factory, workspace, "borrable@test.corp")
+
+    resp = await client.delete(
+        f"/api/v1/users/{member.id}?confirm_email=borrable@test.corp",
+        headers=auth_headers,
+    )
+    assert resp.status_code == 204
+
+    # Y deja de existir de verdad, no solo desactivado.
+    again = await client.delete(
+        f"/api/v1/users/{member.id}?confirm_email=borrable@test.corp",
+        headers=auth_headers,
+    )
+    assert again.status_code == 404
+
+
+async def test_delete_requires_the_confirmation_email_to_match(
+    client: AsyncClient, auth_headers: dict, session_factory, workspace
+):
+    member = await _make_member(session_factory, workspace, "confirmar@test.corp")
+
+    resp = await client.delete(
+        f"/api/v1/users/{member.id}?confirm_email=otro@test.corp", headers=auth_headers
+    )
+
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "IDENTITY_DELETE_CONFIRMATION_MISMATCH"
+    # Y no revela a quien apuntaba el id.
+    assert "confirmar@test.corp" not in resp.text
+
+
+async def test_delete_without_confirmation_is_rejected(
+    client: AsyncClient, auth_headers: dict, session_factory, workspace
+):
+    # Sin el parametro no hay borrado posible: la barrera no es opcional.
+    member = await _make_member(session_factory, workspace, "sinconfirmar@test.corp")
+
+    resp = await client.delete(f"/api/v1/users/{member.id}", headers=auth_headers)
+
+    assert resp.status_code == 422
+
+
+async def test_cannot_delete_yourself(client: AsyncClient, auth_headers: dict, test_user):
+    resp = await client.delete(
+        f"/api/v1/users/{test_user.id}?confirm_email={test_user.email}",
+        headers=auth_headers,
+    )
+
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "IDENTITY_CANNOT_DELETE_SELF"
+
+
+async def test_cannot_delete_the_workspace_owner(
+    client: AsyncClient, auth_headers: dict, session_factory, workspace
+):
+    owner = await _make_member(session_factory, workspace, "duena@test.corp", is_owner=True)
+
+    resp = await client.delete(
+        f"/api/v1/users/{owner.id}?confirm_email=duena@test.corp", headers=auth_headers
+    )
+
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "IDENTITY_CANNOT_DELETE_OWNER"
+
+
+async def test_delete_requires_authentication(client: AsyncClient, session_factory, workspace):
+    member = await _make_member(session_factory, workspace, "sinauth@test.corp")
+
+    resp = await client.delete(f"/api/v1/users/{member.id}?confirm_email=sinauth@test.corp")
+
+    assert resp.status_code == 401
+
+
+async def test_cannot_delete_a_user_that_still_owns_records(
+    client: AsyncClient, auth_headers: dict, session_factory, workspace
+):
+    # leads.owner_id apunta a users sin ON DELETE, asi que la base rechaza el
+    # borrado. Sin esta barrera la peticion saldria como un 500 opaco.
+    from app.modules.crm.models import Lead
+
+    member = await _make_member(session_factory, workspace, "conleads@test.corp")
+    async with session_factory() as session:
+        session.add(Lead(
+            workspace_id=workspace.id,
+            first_name="Lead de alguien",
+            source="manual",
+            owner_id=member.id,
+        ))
+        await session.commit()
+
+    resp = await client.delete(
+        f"/api/v1/users/{member.id}?confirm_email=conleads@test.corp",
+        headers=auth_headers,
+    )
+
+    assert resp.status_code == 409
+    error = resp.json()["error"]
+    assert error["code"] == "IDENTITY_USER_HAS_RECORDS"
+    # La constraint que rechazo nombra la tabla donde mirar.
+    assert error["detail"]["constraint"] == "leads_owner_id_fkey"

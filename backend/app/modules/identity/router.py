@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -31,6 +31,28 @@ async def me(
     db: AsyncSession = Depends(get_db),
 ):
     return await service.read_me(current_user, db)
+
+
+# ── Users ──────────────────────────────────────────────────
+
+@router.delete("/users/{user_id}", status_code=204)
+async def delete_user(
+    user_id: str,
+    confirm_email: str = Query(
+        ...,
+        description="Email exacto del usuario a borrar. Debe coincidir.",
+    ),
+    current_user=Depends(get_current_admin_user),
+    workspace_id: str = Depends(get_current_workspace_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """Borra un usuario del workspace. Solo admins, y sin vuelta atras.
+
+    La confirmacion viaja como query param y no en el cuerpo porque un DELETE
+    con body lo descartan algunos clientes y proxies, y aqui perderlo en
+    silencio convertiria la barrera en decorativa.
+    """
+    await service.delete_user(db, workspace_id, current_user, user_id, confirm_email)
 
 
 # ── Workspace ──────────────────────────────────────────────
