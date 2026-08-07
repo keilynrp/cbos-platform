@@ -26,8 +26,11 @@ async def refresh(data: schemas.RefreshRequest):
 
 
 @router.get("/auth/me", response_model=schemas.UserRead)
-async def me(current_user=Depends(get_current_user)):
-    return current_user
+async def me(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await service.read_me(current_user, db)
 
 
 # ── Workspace ──────────────────────────────────────────────

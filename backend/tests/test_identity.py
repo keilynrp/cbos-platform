@@ -84,6 +84,59 @@ async def test_get_me_with_valid_token(client: AsyncClient, auth_headers: dict):
     assert data["email"] == "owner@test.corp"
 
 
+async def test_get_me_includes_full_name_from_person(
+    client: AsyncClient, auth_headers: dict
+):
+    # El nombre no esta en users: se une desde la Person enlazada.
+    resp = await client.get("/api/v1/auth/me", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] == "Test Owner"
+
+
+async def test_get_me_returns_the_name_used_at_registration(client: AsyncClient):
+    # El recorrido que importa: lo que el usuario escribio al registrarse tiene
+    # que poder leerlo despues, que es justo lo que no ocurria.
+    tokens = await _register_fresh(client, "-mename")
+    resp = await client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {tokens['access_token']}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] == "John Doe"
+
+
+async def test_get_me_without_person_returns_null_full_name(
+    client: AsyncClient, session_factory, workspace
+):
+    # person_id es nullable, asi que un usuario sin Person es legal y no tiene
+    # nombre que dar. El contrato dice null, no una peticion rota.
+    from app.core.security import create_access_token, hash_password
+    from app.modules.identity.models import User
+
+    async with session_factory() as session:
+        user = User(
+            workspace_id=workspace.id,
+            person_id=None,
+            email="nameless@test.corp",
+            hashed_password=hash_password("testpassword123"),
+            role="member",
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+    token = create_access_token({
+        "sub": user.id,
+        "workspace_id": workspace.id,
+        "role": user.role,
+    })
+    resp = await client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["full_name"] is None
+
+
 async def test_get_me_without_token_returns_401(client: AsyncClient):
     resp = await client.get("/api/v1/auth/me")
     assert resp.status_code == 401
