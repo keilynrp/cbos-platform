@@ -100,6 +100,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # Antes de la suite: tarda un segundo y avisa de una deriva en los docs
+      # sin esperar los seis minutos de los tests.
+      - name: Check documented test count
+        run: python ../scripts/ci/check_test_count.py
+
       - name: Run tests
         run: pytest --tb=short -q
 
