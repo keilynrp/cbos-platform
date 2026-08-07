@@ -142,6 +142,14 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
     "Esta cuenta esta desactivada. Contacta con un administrador.",
   IDENTITY_REFRESH_TOKEN_INVALID: () =>
     "Tu sesion ha caducado. Vuelve a iniciar sesion.",
+  IDENTITY_USER_NOT_FOUND: () => "Usuario no encontrado.",
+  IDENTITY_CANNOT_DELETE_SELF: () => "No puedes borrar tu propia cuenta.",
+  IDENTITY_CANNOT_DELETE_OWNER: (d) =>
+    `No se puede borrar a ${str(d, "email", "el propietario")}: es el propietario del espacio de trabajo.`,
+  IDENTITY_DELETE_CONFIRMATION_MISMATCH: () =>
+    "El correo de confirmacion no coincide con el usuario que vas a borrar.",
+  IDENTITY_USER_HAS_RECORDS: () =>
+    "No se puede borrar: el usuario todavia tiene registros asignados. Reasignalos o desactiva la cuenta.",
   IDENTITY_PUBLIC_SITE_NOT_FOUND: () => "Sitio publico no encontrado.",
   IDENTITY_PUBLIC_SITE_SLUG_TAKEN: (d) =>
     `Ya existe un sitio publico con el identificador '${str(d, "slug")}'.`,

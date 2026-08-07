@@ -117,6 +117,11 @@ auth errors every protected route returns.
 | `IDENTITY_INVALID_CREDENTIALS` | 401 | identity | Login failed — unknown email **or** wrong password | — |
 | `IDENTITY_ACCOUNT_DISABLED` | 403 | identity | Credentials were right but the account is inactive | — |
 | `IDENTITY_REFRESH_TOKEN_INVALID` | 401 | identity | Refresh token is invalid or expired | — |
+| `IDENTITY_USER_NOT_FOUND` | 404 | identity | The user does not exist in this workspace. 404 and not 403: a user from another workspace is indistinguishable from one that does not exist | `id` |
+| `IDENTITY_CANNOT_DELETE_SELF` | 409 | identity | An admin tried to delete their own account | — |
+| `IDENTITY_CANNOT_DELETE_OWNER` | 409 | identity | Deleting the workspace owner would leave the workspace without one | `email` |
+| `IDENTITY_DELETE_CONFIRMATION_MISMATCH` | 422 | identity | `confirm_email` did not match the target user. No `detail`: whoever does not know who they are deleting should not learn it by guessing | — |
+| `IDENTITY_USER_HAS_RECORDS` | 409 | identity | The user still owns records that block the delete. `constraint` is the Postgres foreign key that refused, which names the table to look at | `constraint` |
 | `IDENTITY_PUBLIC_SITE_NOT_FOUND` | 404 | identity | The public site does not exist in this workspace | `id` |
 | `IDENTITY_PUBLIC_SITE_SLUG_TAKEN` | 409 | identity | A public site with that slug already exists | `slug` |
 | `AUTH_TOKEN_INVALID` | 401 | core (`deps.py`) | Bearer token missing, invalid, expired, or its user is gone/inactive (sends `WWW-Authenticate`) | — |
