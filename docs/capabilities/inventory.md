@@ -59,4 +59,5 @@ Inventory publishes and maintains versioned contracts for:
 ## Current Gaps
 
 - Reservation semantics should be documented more deeply as an API contract, especially partial reservation behavior and failure reporting.
+- `GET /stock` bounds its response with `limit`/`offset`, but still loads every product in the workspace before slicing. `low_stock_only` compares aggregated available stock against `min_stock` in Python, so pushing the filter into SQL needs a `GROUP BY`/`HAVING` rewrite. Worth doing when a workspace's catalogue grows past a few thousand products.
 - Inventory should not own order state; Sales owns order lifecycle and calls Inventory through the ADR 0007 gateway.
