@@ -147,4 +147,4 @@ A module may advance from Tier 3 → Tier 2 or Tier 2 → Tier 1 when it achieve
 
 **12 modules Tier 1 — 12 total modules.**
 Full wedge funnel: Discovery → Identity → CRM → Sales → Inventory → Portal → Workflows → Accounting → Notifications → Contracts → Projects → HR.
-**642 tests across 39 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete. Q4 Q1 (frontend CI type-check) complete. Q4 Q2 (invoice PDF download) complete. M1 (Contracts) complete. M2 (Projects) complete. M3 (HR/Team) complete. Fase 1 (integration tests + specs for M1/M2/M3) complete.
+**668 tests across 39 test files.** Q3 backlog 100% closed. Q4 G2 (overdue automation) complete. Q4 E1 (analytics real data) complete. Q4 Q1 (frontend CI type-check) complete. Q4 Q2 (invoice PDF download) complete. M1 (Contracts) complete. M2 (Projects) complete. M3 (HR/Team) complete. Fase 1 (integration tests + specs for M1/M2/M3) complete.
