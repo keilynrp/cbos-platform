@@ -101,3 +101,16 @@ async def test_product_not_visible_across_workspaces(client: AsyncClient, auth_h
     assert resp.status_code == 200
     ids = [p["id"] for p in resp.json()]
     assert product["id"] not in ids
+
+
+async def test_product_from_another_workspace_returns_404(
+    client: AsyncClient, auth_headers: dict
+):
+    # 404 y no 403: distinguirlos le diria a quien prueba ids cuales existen.
+    product = await _create_product(client, auth_headers, sku="ISO-404")
+    ws2_headers = await _get_second_auth_headers(client)
+
+    resp = await client.get(f"{BASE}/products/{product['id']}", headers=ws2_headers)
+
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "INVENTORY_PRODUCT_NOT_FOUND"

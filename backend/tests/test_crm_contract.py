@@ -623,3 +623,32 @@ async def test_opportunities_not_visible_across_workspaces(
     resp = await client.get(f"{BASE}/opportunities", headers=headers_b)
     assert resp.status_code == 200
     assert resp.json() == []
+
+
+async def test_lead_from_another_workspace_returns_404(
+    client: AsyncClient, auth_headers: dict
+):
+    # No basta con que no aparezca en el listado: pedirlo por id tiene que
+    # responder 404, no 403. Un 403 confirmaria que el registro existe.
+    lead = await _create_lead(client, auth_headers, first_name="Private Lead")
+    headers_b = await _register_workspace(
+        client, "iso-lead-404-b", "iso-lead-404-b@isolation.example.com"
+    )
+
+    resp = await client.get(f"{BASE}/leads/{lead['id']}", headers=headers_b)
+
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "CRM_LEAD_NOT_FOUND"
+
+
+async def test_opportunity_from_another_workspace_returns_404(
+    client: AsyncClient, auth_headers: dict
+):
+    opp = await _create_opp(client, auth_headers, title="Private Opp")
+    headers_b = await _register_workspace(
+        client, "iso-opp-404-b", "iso-opp-404-b@isolation.example.com"
+    )
+
+    resp = await client.get(f"{BASE}/opportunities/{opp['id']}", headers=headers_b)
+
+    assert resp.status_code == 404

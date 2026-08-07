@@ -209,3 +209,13 @@ async def test_workflow_not_found_error_shape(client: AsyncClient, auth_headers:
     error = resp.json()["error"]
     assert error["code"] == "WORKFLOW_NOT_FOUND"
     assert error["detail"]["id"] == missing
+
+
+async def test_workflow_from_another_workspace_returns_404(client, auth_headers: dict):
+    # 404 y no 403: distinguirlos le diria a quien prueba ids cuales existen.
+    workflow = await _create_workflow(client, auth_headers)
+    ws2_headers = await _get_second_auth_headers(client)
+
+    resp = await client.get(f"{BASE}/{workflow['id']}", headers=ws2_headers)
+
+    assert resp.status_code == 404

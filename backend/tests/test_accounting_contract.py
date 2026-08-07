@@ -299,3 +299,15 @@ async def test_invoice_pdf_workspace_isolated(client: AsyncClient, auth_headers:
     ws2 = await _get_second_auth_headers(client)
     resp = await client.get(f"{BASE}/invoices/{invoice['id']}/pdf", headers=ws2)
     assert resp.status_code == 404
+
+
+async def test_invoice_from_another_workspace_returns_404(
+    client: AsyncClient, auth_headers: dict
+):
+    # 404 y no 403: distinguirlos le diria a quien prueba ids cuales existen.
+    invoice = await _create_invoice(client, auth_headers)
+    ws2_headers = await _get_second_auth_headers(client)
+
+    resp = await client.get(f"{BASE}/invoices/{invoice['id']}", headers=ws2_headers)
+
+    assert resp.status_code == 404
