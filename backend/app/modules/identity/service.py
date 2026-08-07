@@ -15,6 +15,7 @@ from app.modules.identity.schemas import (
     PublicSiteCreate,
     PublicSiteUpdate,
     TokenResponse,
+    UserRead,
 )
 
 
@@ -202,6 +203,24 @@ async def refresh_tokens(refresh_token: str) -> TokenResponse:
         access_token=create_access_token(token_payload),
         refresh_token=create_refresh_token(token_payload),
     )
+
+
+async def read_me(user: User, db: AsyncSession) -> UserRead:
+    """Une el nombre de Person al usuario autenticado.
+
+    La consulta se hace aqui y no en get_current_user a proposito: esa
+    dependencia corre en cada ruta protegida y solo /auth/me necesita el
+    nombre, asi que cargarlo alli seria un join por peticion para nada.
+    """
+    out = UserRead.model_validate(user)
+
+    if user.person_id:
+        result = await db.execute(
+            select(Person.full_name).where(Person.id == user.person_id)
+        )
+        out.full_name = result.scalar_one_or_none()
+
+    return out
 
 
 async def create_person(workspace_id: str, data, db: AsyncSession) -> Person:

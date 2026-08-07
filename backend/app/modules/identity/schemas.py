@@ -57,6 +57,9 @@ class UserRead(BaseModel):
     is_active: bool
     is_owner: bool
     created_at: datetime
+    # Vive en Person, no en User, y por eso se une al leer. Opcional porque la
+    # relacion lo es: un User sin person_id es legal y no tiene nombre que dar.
+    full_name: str | None = None
 
     model_config = {"from_attributes": True}
 

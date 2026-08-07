@@ -19,6 +19,8 @@ Identity is a foundational capability and a hard dependency for the MVP wedge.
 ## Core Entities
 
 - User
+- Person — holds the human details, `full_name` among them. `User.person_id`
+  is nullable, so a user without a Person is legal and simply has no name
 - Workspace membership or workspace association
 - Authentication credentials
 - PublicSite
@@ -30,7 +32,11 @@ The module is expected to own:
 - register
 - login
 - token refresh
-- current user/session resolution
+- current user/session resolution — `GET /api/v1/auth/me` returns the user plus
+  `full_name`, joined from the linked Person because the field does not live on
+  `users`. The join is done in the route and not in `get_current_user`, which
+  runs on every protected route and does not need the name. `full_name` is
+  `null` when the user has no Person
 - `GET /api/v1/workspaces/me`
 - `POST /api/v1/persons`
 - `GET /api/v1/organizations`
