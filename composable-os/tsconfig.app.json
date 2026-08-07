@@ -27,8 +27,17 @@
     "types": [
       "vitest/globals"
     ],
-    "useDefineForClassFields": true
+    "useDefineForClassFields": true,
+    "useUnknownInCatchVariables": true
   },
+  "//useUnknownInCatchVariables": [
+    "Con strict en false el parametro de un catch es any implicito, y ahi no",
+    "llega el linter: no-explicit-any solo ve los any escritos. Ese fue el",
+    "hueco por el que paso e.response.data.detail, una forma de axios que este",
+    "codigo no usa; la expresion daba undefined y el usuario veia un mensaje",
+    "generico. Con unknown, tocar una propiedad del error no compila y hay que",
+    "pasarlo por translateApiError, que ya acepta unknown."
+  ],
   "include": [
     "src"
   ],
