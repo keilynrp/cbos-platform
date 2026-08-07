@@ -343,3 +343,34 @@ async def test_orders_not_visible_across_workspaces(
     resp = await client.get(f"{BASE}/orders", headers=headers_b)
     assert resp.status_code == 200, resp.text
     assert resp.json() == []
+
+
+async def test_quote_from_another_workspace_returns_404(
+    client: AsyncClient, auth_headers: dict
+):
+    # Pedirlo por id desde otro workspace responde 404, no 403: un 403
+    # confirmaria que el presupuesto existe.
+    quote = await _create_quote(client, auth_headers, title="Private Quote")
+    headers_b = await _register_workspace(
+        client, "iso-quote-404-b", "iso-quote-404-b@isolation.example.com"
+    )
+
+    resp = await client.get(f"{BASE}/quotes/{quote['id']}", headers=headers_b)
+
+    assert resp.status_code == 404
+
+
+async def test_order_from_another_workspace_returns_404(
+    client: AsyncClient, auth_headers: dict
+):
+    quote = await _create_quote(client, auth_headers, title="Private Order")
+    order = (await client.patch(
+        f"{BASE}/quotes/{quote['id']}/accept", headers=auth_headers
+    )).json()
+    headers_b = await _register_workspace(
+        client, "iso-order-404-b", "iso-order-404-b@isolation.example.com"
+    )
+
+    resp = await client.get(f"{BASE}/orders/{order['id']}", headers=headers_b)
+
+    assert resp.status_code == 404

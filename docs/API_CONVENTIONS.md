@@ -94,6 +94,27 @@ Observed current patterns:
 - `409` for business-state conflicts
 - `422` for semantic validation errors
 
+### 404 Versus 403 In Workspace-Scoped Access
+
+**Anything outside the caller's workspace is a `404`, never a `403`.** A record
+that belongs to another workspace is indistinguishable from one that does not
+exist. This is the same reasoning that keeps login from saying which half of the
+pair was wrong: a `403` would confirm the id is real, turning any endpoint into
+an oracle for probing ids across tenants.
+
+In practice this needs no separate check. Every workspace-scoped query filters
+by `workspace_id`, so the row is simply not found and the module raises its own
+`*_NOT_FOUND` code. A route that fetches by id first and compares the workspace
+afterwards is the shape to avoid — it is the only way to end up with a `403`
+here by accident.
+
+`403` stays for authorization decisions that do not depend on tenancy:
+`AUTH_ADMIN_REQUIRED` for a role the caller lacks,
+`IDENTITY_ACCOUNT_DISABLED` for a deactivated account, and the public-intake
+rejections in CRM (`CRM_PUBLIC_SITE_INACTIVE`,
+`CRM_PUBLIC_SITE_ORIGIN_NOT_ALLOWED`), which are about the site, not a
+workspace boundary.
+
 ## Error Shape
 
 ### Current
@@ -291,7 +312,6 @@ The API already uses explicit business transitions, which is a good fit for CBOS
 - `inventory` raises registered codes, but no frontend surface mutates stock,
   so its translations are prospective and nothing exercises them end to end
 - Equivalent business errors may still use uneven wording across modules
-- The system needs a short cross-module policy for `404` versus `403` in workspace-scoped access
 
 ## Immediate Adoption Rule
 
