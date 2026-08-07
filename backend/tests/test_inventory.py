@@ -255,3 +255,46 @@ async def test_list_routes_reject_limit_above_the_cap(client: AsyncClient, auth_
     for path in ("/categories", "/products", "/stock", "/movements"):
         resp = await client.get(f"{BASE}{path}?limit=201", headers=auth_headers)
         assert resp.status_code == 422, f"{path} acepto limit=201"
+
+
+async def test_low_stock_includes_products_without_any_inventory_item(
+    client: AsyncClient, auth_headers: dict
+):
+    # Un producto sin movimientos no tiene fila en inventory_items. El filtro se
+    # resuelve ahora con un LEFT JOIN justo por esto: con un join interno
+    # desapareceria, y cero disponible es el caso mas urgente de todos.
+    product = await _create_product(client, auth_headers, "Never Stocked")
+
+    resp = await client.get(f"{BASE}/stock?low_stock_only=true", headers=auth_headers)
+
+    assert resp.status_code == 200
+    levels = {s["product_id"]: s for s in resp.json()}
+    assert product["id"] in levels
+    assert levels[product["id"]]["total_available"] == 0.0
+    assert levels[product["id"]]["is_low_stock"] is True
+
+
+async def test_low_stock_is_evaluated_within_the_requested_location(
+    client: AsyncClient, auth_headers: dict
+):
+    # Con location, los totales son los de esa ubicacion. El producto tiene de
+    # sobra en conjunto, pero esta bajo minimos donde se pregunta.
+    product = await _create_product(client, auth_headers, "Split Across Locations")
+    for loc, qty in (("main", 100.0), ("warehouse", 1.0)):
+        resp = await client.post(f"{BASE}/movements", headers=auth_headers, json={
+            "product_id": product["id"],
+            "movement_type": "in",
+            "quantity": qty,
+            "location": loc,
+        })
+        assert resp.status_code == 201, resp.text
+
+    overall = await client.get(f"{BASE}/stock?low_stock_only=true", headers=auth_headers)
+    assert product["id"] not in {s["product_id"] for s in overall.json()}
+
+    scoped = await client.get(
+        f"{BASE}/stock?low_stock_only=true&location=warehouse", headers=auth_headers
+    )
+    levels = {s["product_id"]: s for s in scoped.json()}
+    assert product["id"] in levels
+    assert levels[product["id"]]["total_available"] == 1.0

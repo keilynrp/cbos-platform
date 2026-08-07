@@ -288,11 +288,6 @@ The API already uses explicit business transitions, which is a good fit for CBOS
 
 ## Current Gaps To Fix
 
-- `GET /inventory/stock` pages correctly, but it still loads every product in
-  the workspace before slicing: `low_stock_only` compares aggregated available
-  stock against `min_stock` in Python, so the filter cannot be pushed into SQL
-  without a `GROUP BY`/`HAVING` rewrite. The response is bounded; the query is
-  not
 - `inventory` raises registered codes, but no frontend surface mutates stock,
   so its translations are prospective and nothing exercises them end to end
 - Equivalent business errors may still use uneven wording across modules
