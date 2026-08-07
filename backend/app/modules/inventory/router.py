@@ -37,11 +37,13 @@ async def create_category(
 
 @router.get("/categories", response_model=list[CategoryRead])
 async def list_categories(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
 ):
-    return await service.list_categories(db, workspace_id)
+    return await service.list_categories(db, workspace_id, limit, offset)
 
 
 # ── Products ──────────────────────────────────────────────────────────────────
@@ -98,11 +100,15 @@ async def get_stock_levels(
     product_id: str | None = Query(default=None),
     location: str | None = Query(default=None),
     low_stock_only: bool = Query(default=False),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
 ):
-    return await service.get_stock_levels(db, workspace_id, product_id, location, low_stock_only)
+    return await service.get_stock_levels(
+        db, workspace_id, product_id, location, low_stock_only, limit, offset
+    )
 
 
 # ── Movements ─────────────────────────────────────────────────────────────────

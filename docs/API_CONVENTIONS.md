@@ -168,7 +168,9 @@ Observed current patterns:
 
 - CRM and Sales list routes use `limit=50`, `offset=0`, max `200`
 - Workflows run listing uses `limit=50`, max `200`
-- Inventory list routes use `limit=100`, `offset=0`, max `500`
+- Inventory list routes use `limit=50`, `offset=0`, max `200`, including
+  `/categories` and `/stock`, which returned unbounded lists until they were
+  aligned
 
 ### Standard
 
@@ -178,7 +180,9 @@ For wedge-critical modules, normalize to:
 - `limit` max `200`
 - `offset` default `0`
 
-Inventory currently exceeds this standard and should be aligned unless a specific operational need justifies a higher cap.
+Every wedge-critical list route now meets this. A list route must also carry an
+explicit `ORDER BY`: without one the database may return rows in any order, and
+two consecutive pages then overlap or skip records.
 
 ## Filtering
 
@@ -284,7 +288,11 @@ The API already uses explicit business transitions, which is a good fit for CBOS
 
 ## Current Gaps To Fix
 
-- Inventory pagination does not match CRM and Sales conventions
+- `GET /inventory/stock` pages correctly, but it still loads every product in
+  the workspace before slicing: `low_stock_only` compares aggregated available
+  stock against `min_stock` in Python, so the filter cannot be pushed into SQL
+  without a `GROUP BY`/`HAVING` rewrite. The response is bounded; the query is
+  not
 - `inventory` raises registered codes, but no frontend surface mutates stock,
   so its translations are prospective and nothing exercises them end to end
 - Equivalent business errors may still use uneven wording across modules

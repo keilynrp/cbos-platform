@@ -35,6 +35,15 @@ async def _add_stock(client: AsyncClient, auth_headers: dict, product_id: str, q
     return resp.json()
 
 
+async def _create_category(client: AsyncClient, auth_headers: dict, slug: str) -> dict:
+    resp = await client.post(f"{BASE}/categories", headers=auth_headers, json={
+        "name": f"Cat {slug}",
+        "slug": slug,
+    })
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
 async def test_create_product_returns_201(client: AsyncClient, auth_headers: dict):
@@ -187,3 +196,62 @@ async def test_invalid_movement_type_error_shape(client: AsyncClient, auth_heade
     assert error["code"] == "INVENTORY_INVALID_MOVEMENT_TYPE"
     assert error["detail"]["movement_type"] == "teleport"
     assert error["detail"]["allowed"] == ["in", "out", "adjustment"]
+
+
+# ── Paginacion ────────────────────────────────────────────────────────────────
+
+async def test_categories_respect_limit_and_offset(client: AsyncClient, auth_headers: dict):
+    for i in range(3):
+        await _create_category(client, auth_headers, f"cat-page-{i}")
+
+    first = await client.get(f"{BASE}/categories?limit=2", headers=auth_headers)
+    second = await client.get(f"{BASE}/categories?limit=2&offset=2", headers=auth_headers)
+
+    assert first.status_code == 200
+    assert len(first.json()) == 2
+    # Las paginas no se solapan: el orden es estable por nombre.
+    first_ids = {c["id"] for c in first.json()}
+    second_ids = {c["id"] for c in second.json()}
+    assert first_ids.isdisjoint(second_ids)
+
+
+async def test_stock_respects_limit_and_offset(client: AsyncClient, auth_headers: dict):
+    for i in range(3):
+        product = await _create_product(client, auth_headers, f"Paged {i}")
+        await _add_stock(client, auth_headers, product["id"], 10.0)
+
+    first = await client.get(f"{BASE}/stock?limit=2", headers=auth_headers)
+    second = await client.get(f"{BASE}/stock?limit=2&offset=2", headers=auth_headers)
+
+    assert first.status_code == 200
+    assert len(first.json()) == 2
+    first_ids = {s["product_id"] for s in first.json()}
+    second_ids = {s["product_id"] for s in second.json()}
+    assert first_ids.isdisjoint(second_ids)
+
+
+async def test_stock_pagination_applies_after_low_stock_filter(
+    client: AsyncClient, auth_headers: dict
+):
+    # Dos por debajo del minimo y uno por encima. Si el recorte fuese anterior al
+    # filtro, pedir limit=2 podria devolver uno solo: el producto con stock de
+    # sobra ocuparia sitio en la pagina y luego se descartaria.
+    for i in range(2):
+        low = await _create_product(client, auth_headers, f"Low {i}")
+        await _add_stock(client, auth_headers, low["id"], 1.0)
+    healthy = await _create_product(client, auth_headers, "Healthy")
+    await _add_stock(client, auth_headers, healthy["id"], 500.0)
+
+    resp = await client.get(f"{BASE}/stock?low_stock_only=true&limit=2", headers=auth_headers)
+
+    assert resp.status_code == 200
+    levels = resp.json()
+    assert len(levels) == 2
+    assert all(level["is_low_stock"] for level in levels)
+
+
+async def test_list_routes_reject_limit_above_the_cap(client: AsyncClient, auth_headers: dict):
+    # 200 es el techo compartido con CRM y Sales; inventory ya no es la excepcion.
+    for path in ("/categories", "/products", "/stock", "/movements"):
+        resp = await client.get(f"{BASE}{path}?limit=201", headers=auth_headers)
+        assert resp.status_code == 422, f"{path} acepto limit=201"

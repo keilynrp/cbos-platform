@@ -40,12 +40,17 @@ async def create_category(
 
 
 async def list_categories(
-    db: AsyncSession, workspace_id: str
+    db: AsyncSession,
+    workspace_id: str,
+    limit: int = 50,
+    offset: int = 0,
 ) -> Sequence[ProductCategory]:
     result = await db.execute(
         select(ProductCategory)
         .where(ProductCategory.workspace_id == workspace_id)
         .order_by(ProductCategory.name)
+        .limit(limit)
+        .offset(offset)
     )
     return result.scalars().all()
 
@@ -95,7 +100,7 @@ async def list_products(
     category_id: str | None = None,
     is_active: bool | None = None,
     is_service: bool | None = None,
-    limit: int = 100,
+    limit: int = 50,
     offset: int = 0,
 ) -> Sequence[Product]:
     q = select(Product).where(Product.workspace_id == workspace_id)
@@ -146,6 +151,8 @@ async def get_stock_levels(
     product_id: str | None = None,
     location: str | None = None,
     low_stock_only: bool = False,
+    limit: int = 50,
+    offset: int = 0,
 ) -> list[StockLevel]:
     # Load products with their inventory items
     q = (
@@ -155,6 +162,10 @@ async def get_stock_levels(
     )
     if product_id:
         q = q.where(Product.id == product_id)
+    # Sin orden explicito el motor puede devolver las filas como quiera, y dos
+    # paginas consecutivas se solaparian o se saltarian productos. Se ordena por
+    # nombre igual que list_products.
+    q = q.order_by(Product.name)
     result = await db.execute(q)
     products = result.scalars().all()
 
@@ -186,7 +197,13 @@ async def get_stock_levels(
             locations=[InventoryItemRead.model_validate(i) for i in items],
         ))
 
-    return levels
+    # El recorte va aqui y no en la consulta a proposito. low_stock_only compara
+    # el disponible agregado contra min_stock, y eso se calcula en Python sobre
+    # los inventory_items ya cargados; limitar en SQL antes de filtrar devolveria
+    # paginas mas cortas que el limite y con huecos entre ellas. Asi la pagina es
+    # correcta, pero la consulta sigue trayendo todos los productos: acotar
+    # tambien ese coste pide bajar el filtro a SQL con un group by/having.
+    return levels[offset : offset + limit]
 
 
 async def _get_or_create_inventory_item(
@@ -462,7 +479,7 @@ async def list_movements(
     product_id: str | None = None,
     movement_type: str | None = None,
     reference_id: str | None = None,
-    limit: int = 100,
+    limit: int = 50,
     offset: int = 0,
 ) -> Sequence[StockMovement]:
     q = select(StockMovement).where(StockMovement.workspace_id == workspace_id)
