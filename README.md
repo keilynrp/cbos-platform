@@ -40,7 +40,7 @@ El sistema está construido como un **monolito modular** con límites de dominio
 Discovery → Lead → Opportunity → Quote → Order → Inventory → Portal → Invoice → Payment
 ```
 
-**498 tests** (contrato + integración + e2e) en 36 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
+**642 tests** (contrato + integración + e2e) en 39 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
 
 ---
 
@@ -106,7 +106,7 @@ cbos-platform/
 │   │   │   ├── accounting/         Facturación, pagos, overdue scanner
 │   │   │   └── analytics/          Agregación cross-módulo
 │   │   └── main.py                 Lifespan, routers, CORS, background tasks
-│   ├── tests/                      498 tests (pytest-asyncio)
+│   ├── tests/                      642 tests (pytest-asyncio)
 │   ├── alembic/                    Migraciones de base de datos
 │   └── requirements.txt
 ├── composable-os/                  React 18 + Vite frontend
@@ -232,19 +232,17 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-**498 tests** en 36 archivos:
+**642 tests** en 39 archivos. Las categorías no se solapan: cada archivo cuenta
+una sola vez y las filas suman 39.
 
 | Categoría | Archivos | Cobertura |
 |-----------|----------|-----------|
-| Contract tests | 12 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation por módulo |
-| Integration tests | 12 archivos (`test_*.py`) | Flows de servicio, lógica de negocio |
+| Contract tests | 11 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation y forma del error por módulo |
+| Integration tests | 17 archivos | Flows de servicio y lógica de negocio, incluidos contracts, projects y HR |
 | E2E cross-module | 5 archivos (`test_e2e_*.py`) | Sales→Accounting, Portal→WS, Discovery→Blueprint, Notification pipeline |
 | Consumer / scanner | 3 archivos | Workflow consumer, invoice consumer, overdue scanner |
+| Analytics | 2 archivos | Summary, revenue, pipeline: auth, shape, workspace isolation, empty state |
 | Smoke | 1 archivo (`test_wedge_smoke.py`) | Funnel completo: CRM→Sales→Inventory→Portal→Accounting (7 módulos) |
-| Analytics | 1 archivo | Summary, revenue, pipeline: auth, shape, workspace isolation, empty state |
-| Contracts | 2 archivos (`test_contracts_contract.py` + `test_contracts.py`) | State machine, clause management, numbering, lifecycle, org filter (41 tests) |
-| Projects  | 2 archivos (`test_projects_contract.py` + `test_projects.py`) | State machine, task management, numbering, lifecycle, filters (44 tests) |
-| HR/Team   | 2 archivos (`test_hr_contract.py` + `test_hr.py`) | Employee lifecycle, departments, state machine, filters, timestamps (48 tests) |
 
 ```bash
 # Cobertura detallada

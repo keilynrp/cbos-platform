@@ -98,10 +98,8 @@ Observed current patterns:
 
 ### Current
 
-Two shapes coexist while modules are migrated.
-
-Migrated modules raise `CBOSException` (`app/core/exceptions.py`), which the
-handler in `app/main.py` renders as:
+There is one shape. Every module and `core/deps.py` raise `CBOSException`
+(`app/core/exceptions.py`), which the handler in `app/main.py` renders as:
 
 ```json
 {
@@ -113,9 +111,9 @@ handler in `app/main.py` renders as:
 }
 ```
 
-Modules not yet migrated still raise `HTTPException` with a free-text `detail`
-string, in patterns like `"Lead not found"` or `"Only draft quotes can be
-edited"`. `docs/ERROR_CODE_REGISTRY_V1.md` tracks which modules remain.
+No `HTTPException` with a free-text `detail` remains in `backend/app/modules/`
+or in the auth dependencies. `docs/ERROR_CODE_REGISTRY_V1.md` holds the 74
+registered codes.
 
 ### Standard
 
@@ -141,8 +139,8 @@ New and touched code raises `CBOSException`. Adopted by
 
 Clients read `code` and render their own text; `composable-os/src/lib/errors.ts`
 does this for the Spanish UI. An unmapped code falls back to `message`, so a
-module that has not migrated degrades to English prose rather than to a bare
-identifier.
+code that reaches the client ahead of its translation degrades to English prose
+rather than to a bare identifier.
 
 ## Resource Naming
 
@@ -287,8 +285,8 @@ The API already uses explicit business transitions, which is a good fit for CBOS
 ## Current Gaps To Fix
 
 - Inventory pagination does not match CRM and Sales conventions
-- Only `projects` raises registered error codes; the other ten modules still
-  return free-text `detail` and reach the user untranslated
+- `inventory` raises registered codes, but no frontend surface mutates stock,
+  so its translations are prospective and nothing exercises them end to end
 - Equivalent business errors may still use uneven wording across modules
 - The system needs a short cross-module policy for `404` versus `403` in workspace-scoped access
 
