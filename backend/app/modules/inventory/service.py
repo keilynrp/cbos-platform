@@ -1,7 +1,7 @@
 from typing import Sequence
 
 from app.core.exceptions import CBOSException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -154,19 +154,51 @@ async def get_stock_levels(
     limit: int = 50,
     offset: int = 0,
 ) -> list[StockLevel]:
-    # Load products with their inventory items
-    q = (
-        select(Product)
-        .options(selectinload(Product.inventory_items))
+    # El stock por producto se agrega en SQL para poder filtrar y paginar sin
+    # traer el catalogo entero. Va en subconsulta agrupada -no en un HAVING
+    # sobre el join- porque asi cada producto aparece una sola vez y el LEFT
+    # JOIN puede conservar los que no tienen ninguna existencia.
+    totals = select(
+        InventoryItem.product_id.label("product_id"),
+        func.sum(InventoryItem.current_stock).label("current"),
+        func.sum(InventoryItem.reserved_stock).label("reserved"),
+    ).where(InventoryItem.workspace_id == workspace_id)
+    if location:
+        totals = totals.where(InventoryItem.location == location)
+    totals = totals.group_by(InventoryItem.product_id).subquery()
+
+    # Un producto sin existencias no tiene fila en totals, y sus totales son 0.
+    # Con un join interno desapareceria, y es justo el que mas falta hace ver:
+    # cero disponible esta por debajo de cualquier min_stock positivo.
+    current = func.coalesce(totals.c.current, 0.0)
+    reserved = func.coalesce(totals.c.reserved, 0.0)
+
+    ids_q = (
+        select(Product.id)
+        .outerjoin(totals, totals.c.product_id == Product.id)
         .where(Product.workspace_id == workspace_id, Product.is_service == False)  # noqa: E712
     )
     if product_id:
-        q = q.where(Product.id == product_id)
+        ids_q = ids_q.where(Product.id == product_id)
+    if low_stock_only:
+        ids_q = ids_q.where(current - reserved < Product.min_stock)
     # Sin orden explicito el motor puede devolver las filas como quiera, y dos
     # paginas consecutivas se solaparian o se saltarian productos. Se ordena por
     # nombre igual que list_products.
-    q = q.order_by(Product.name)
-    result = await db.execute(q)
+    ids_q = ids_q.order_by(Product.name).limit(limit).offset(offset)
+
+    page_ids = (await db.execute(ids_q)).scalars().all()
+    if not page_ids:
+        return []
+
+    # Segunda consulta, ya acotada a la pagina, para traer el detalle por
+    # ubicacion que la respuesta necesita.
+    result = await db.execute(
+        select(Product)
+        .options(selectinload(Product.inventory_items))
+        .where(Product.id.in_(page_ids))
+        .order_by(Product.name)
+    )
     products = result.scalars().all()
 
     levels = []
@@ -177,11 +209,12 @@ async def get_stock_levels(
 
         total_current = sum(i.current_stock for i in items)
         total_reserved = sum(i.reserved_stock for i in items)
-        total_available = sum(i.available_stock for i in items)
+        # Se resta agregado, no se suman los disponibles por ubicacion, para que
+        # coincida exactamente con lo que acaba de decidir el filtro en SQL: dos
+        # formas equivalentes en aritmetica exacta pueden discrepar en el ultimo
+        # bit con floats, y ahi el filtro y la respuesta se contradirian.
+        total_available = round(total_current - total_reserved, 4)
         is_low = total_available < p.min_stock
-
-        if low_stock_only and not is_low:
-            continue
 
         from app.modules.inventory.schemas import InventoryItemRead
         levels.append(StockLevel(
@@ -197,13 +230,7 @@ async def get_stock_levels(
             locations=[InventoryItemRead.model_validate(i) for i in items],
         ))
 
-    # El recorte va aqui y no en la consulta a proposito. low_stock_only compara
-    # el disponible agregado contra min_stock, y eso se calcula en Python sobre
-    # los inventory_items ya cargados; limitar en SQL antes de filtrar devolveria
-    # paginas mas cortas que el limite y con huecos entre ellas. Asi la pagina es
-    # correcta, pero la consulta sigue trayendo todos los productos: acotar
-    # tambien ese coste pide bajar el filtro a SQL con un group by/having.
-    return levels[offset : offset + limit]
+    return levels
 
 
 async def _get_or_create_inventory_item(
