@@ -180,8 +180,25 @@ Option C.
 
 ---
 
+## Follow-on decisions
+
+Option C left three questions open that code could not answer. All three were
+closed on 2026-08-07 — the same day the product answer landed — across two ADRs:
+
+- **ADR 0015** promotes `react-i18next` for the frontend tier under ADR 0002,
+  and holds the backend to plain dictionaries
+- **ADR 0016** puts the locale on `users` with a workspace default, resolves the
+  external-recipient case through `portal_sessions.locale`, and fixes the
+  resolution order
+
+The sequenced work is in `docs/superpowers/plans/2026-08-07-i18n-full.md`.
+
+---
+
 ## Related
 
+- ADR 0015: react-i18next promotion — the frontend runtime for Option C
+- ADR 0016: Locale ownership and resolution — where the language comes from
 - ADR 0002: Freeze MVP stack — the constraint that makes this ADR necessary
 - ADR 0004: Events as versioned domain contracts — the precedent for treating
   identifiers as a contract with registry enforcement in CI
