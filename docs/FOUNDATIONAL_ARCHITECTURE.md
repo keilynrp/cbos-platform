@@ -94,7 +94,7 @@ These may remain partial as long as they do not block the wedge.
 Not capabilities of their own, but constraints every capability has to respect.
 
 - **Internationalization.** Serving more than one language is a core product
-  requirement, confirmed 2026-08-07 and recorded in ADR 0010. The architectural
+  requirement, confirmed 2026-08-07 and recorded in ADR 0014. The architectural
   consequence is that **the backend stays language-neutral**: domain services
   raise registered error codes with structured `detail`, never prose meant for
   a user to read, and the wording lives in the frontend catalogue. That half is

@@ -1,8 +1,14 @@
-# ADR 0010 — Internationalization Strategy
+# ADR 0014 — Internationalization Strategy
 
 **Status:** Accepted — Option B implemented, Option C committed
 **Date:** 2026-08-05 (Option B) · 2026-08-07 (product answer, Option C committed)
 **Deciders:** Platform team
+
+> **Renumbered 0010 → 0014 on 2026-08-07.** This ADR was filed as 0010, a number
+> already taken by "Promote Accounting to Tier 1" (2026-04-12). The collision made
+> the phrase "ADR 0010" ambiguous in prose across several documents — it meant
+> accounting in the quarterly plans and i18n in the error-handling docs. Commits
+> and links predating the rename refer to this file as 0010.
 
 ---
 
