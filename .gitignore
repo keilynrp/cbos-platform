@@ -67,3 +67,7 @@ composable-os/.git/
 
 # Artefactos de sesiones de brainstorming (HTML, PIDs, estado)
 .superpowers/
+
+# Permisos personales de Claude Code: settings.json es el compartido del
+# proyecto, settings.local.json es de cada persona y no debe versionarse
+.claude/settings.local.json

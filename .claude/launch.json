@@ -2,19 +2,19 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "Full Stack (Docker)",
+      "name": "Full Stack (Docker Compose)",
       "runtimeExecutable": "docker",
       "runtimeArgs": ["compose", "up", "--build"],
-      "port": 8443
+      "port": 80
     },
     {
-      "name": "Frontend (Vite)",
+      "name": "Frontend (Vite + React)",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 5173
     },
     {
-      "name": "Backend (uvicorn)",
+      "name": "Backend (FastAPI + uvicorn)",
       "runtimeExecutable": "uvicorn",
       "runtimeArgs": ["app.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"],
       "port": 8000
