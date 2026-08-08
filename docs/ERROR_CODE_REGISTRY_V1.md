@@ -5,7 +5,7 @@ enforces it: `scripts/ci/check_error_registry.py` fails when a raised code is
 missing from this table, in the same spirit as `EVENT_REGISTRY_V1.md` does for
 event names.
 
-Adopted by [ADR 0010](adr/0010-internationalization-strategy.md). The backend
+Adopted by [ADR 0014](adr/0014-internationalization-strategy.md). The backend
 sends a code plus a developer-facing English message; the frontend maps the code
 to user-facing Spanish. A code the frontend does not know falls back to the
 backend message, so an unregistered mapping degrades to English prose rather
@@ -167,7 +167,7 @@ Notes worth keeping, because each one cost a debugging pass:
   have silently dropped `Retry-After` until `CBOSException` learned to carry
   `headers`.
 - **`accounting` and `hr` wrote user-facing Spanish on the server.** Undoing
-  that was the point of ADR 0010, not a side effect of it.
+  that was the point of ADR 0014, not a side effect of it.
 - **`portal` and `identity` errors carry security weight.** A lookup key can be
   a credential, and a code can become an enumeration oracle. See rules 6 and 7.
 - **The frontend had two silent breakages**, both pre-existing and both only

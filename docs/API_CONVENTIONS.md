@@ -139,7 +139,7 @@ registered codes.
 ### Standard
 
 New and touched code raises `CBOSException`. Adopted by
-[ADR 0010](adr/0010-internationalization-strategy.md):
+[ADR 0014](adr/0014-internationalization-strategy.md):
 
 - **`code` is a stable machine identifier** and must be registered in
   `docs/ERROR_CODE_REGISTRY_V1.md`. CI enforces the parity

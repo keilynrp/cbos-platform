@@ -94,16 +94,21 @@ These may remain partial as long as they do not block the wedge.
 Not capabilities of their own, but constraints every capability has to respect.
 
 - **Internationalization.** Serving more than one language is a core product
-  requirement, confirmed 2026-08-07 and recorded in ADR 0010. The architectural
+  requirement, confirmed 2026-08-07 and recorded in ADR 0014. The architectural
   consequence is that **the backend stays language-neutral**: domain services
   raise registered error codes with structured `detail`, never prose meant for
   a user to read, and the wording lives in the frontend catalogue. That half is
   built and enforced in CI.
 
-  What is committed but not built is the rest: string catalogues for the ~470
-  user-facing strings, a locale on the user or workspace, `Accept-Language`
-  negotiation, and the server-rendered artifacts — invoice PDFs and
-  notification emails — that no frontend catalogue can reach.
+  There is one deliberate exception to language-neutrality, and it is narrow:
+  server-rendered artifacts — invoice PDFs and the 9 email templates — have no
+  client to translate them, so the backend carries its own flat catalogues for
+  them. It still does not *decide* the language; it receives it and renders.
+
+  What is committed but not built is the rest: string catalogues for the 514
+  user-facing strings, the locale columns, and the artifacts above. The decisions
+  that gated it are closed — ADR 0015 promotes `react-i18next` for the frontend
+  tier, ADR 0016 settles where the locale lives and how it resolves.
 
   This belongs here rather than under Future Architecture because it is not a
   candidate to weigh later. It is decided, and it constrains how new surfaces

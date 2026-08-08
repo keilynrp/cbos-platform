@@ -1,8 +1,14 @@
-# ADR 0010 — Internationalization Strategy
+# ADR 0014 — Internationalization Strategy
 
 **Status:** Accepted — Option B implemented, Option C committed
 **Date:** 2026-08-05 (Option B) · 2026-08-07 (product answer, Option C committed)
 **Deciders:** Platform team
+
+> **Renumbered 0010 → 0014 on 2026-08-07.** This ADR was filed as 0010, a number
+> already taken by "Promote Accounting to Tier 1" (2026-04-12). The collision made
+> the phrase "ADR 0010" ambiguous in prose across several documents — it meant
+> accounting in the quarterly plans and i18n in the error-handling docs. Commits
+> and links predating the rename refer to this file as 0010.
 
 ---
 
@@ -174,8 +180,25 @@ Option C.
 
 ---
 
+## Follow-on decisions
+
+Option C left three questions open that code could not answer. All three were
+closed on 2026-08-07 — the same day the product answer landed — across two ADRs:
+
+- **ADR 0015** promotes `react-i18next` for the frontend tier under ADR 0002,
+  and holds the backend to plain dictionaries
+- **ADR 0016** puts the locale on `users` with a workspace default, resolves the
+  external-recipient case through `portal_sessions.locale`, and fixes the
+  resolution order
+
+The sequenced work is in `docs/superpowers/plans/2026-08-07-i18n-full.md`.
+
+---
+
 ## Related
 
+- ADR 0015: react-i18next promotion — the frontend runtime for Option C
+- ADR 0016: Locale ownership and resolution — where the language comes from
 - ADR 0002: Freeze MVP stack — the constraint that makes this ADR necessary
 - ADR 0004: Events as versioned domain contracts — the precedent for treating
   identifiers as a contract with registry enforcement in CI
