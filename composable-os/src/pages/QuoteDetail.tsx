@@ -21,14 +21,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { translateApiError } from "@/lib/errors";
 import { ArrowLeft, Plus, Trash2, Download, Loader2, Share2, Copy, Mail } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import { useFormat } from "@/i18n/useFormat";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtCurrency(n: number) {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "USD" }).format(n);
-}
 
 function calcLineAmount(qty: number, price: number, disc: number, tax: number): number {
   const pretax = qty * price * (1 - disc / 100);
@@ -71,6 +67,8 @@ function EditableCell({ value, lineId, field, disabled, type = "text", className
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function QuoteDetail() {
+  const { formatCurrency, formatDate, formatDateTime } = useFormat();
+  const fmtCurrency = (n: number) => formatCurrency(n, "USD");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -315,7 +313,7 @@ export default function QuoteDetail() {
       {activeSession && (
         <div className="flex items-center justify-between px-4 py-2.5 rounded-lg border border-emerald-300/40 bg-emerald-500/10 text-sm">
           <span className="text-emerald-400 text-xs">
-            ✓ Link activo{activeSession.client_email ? ` — enviado a ${activeSession.client_email}` : ""} · expira {new Date(activeSession.expires_at).toLocaleDateString("es-MX")}
+            ✓ Link activo{activeSession.client_email ? ` — enviado a ${activeSession.client_email}` : ""} · expira {formatDate(activeSession.expires_at, "short")}
           </span>
           <button
             className="text-blue-400 text-xs hover:underline"
@@ -332,7 +330,7 @@ export default function QuoteDetail() {
           <DialogHeader>
             <DialogTitle>Compartir cotización</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              {quote?.quote_number} · {quote?.title} · {quote ? new Intl.NumberFormat("es-MX", { style: "currency", currency: quote.currency }).format(quote.total) : ""}
+              {quote?.quote_number} · {quote?.title} · {quote ? formatCurrency(quote.total, quote.currency) : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-1">
@@ -588,7 +586,7 @@ export default function QuoteDetail() {
               {history.map((ev: QuoteEvent) => (
                 <li key={ev.id} className="flex gap-3 text-sm">
                   <span className="text-muted-foreground text-xs whitespace-nowrap pt-0.5">
-                    {format(new Date(ev.created_at), "dd MMM yyyy HH:mm", { locale: es })}
+                    {formatDateTime(ev.created_at)}
                   </span>
                   <span>{ev.description}</span>
                 </li>

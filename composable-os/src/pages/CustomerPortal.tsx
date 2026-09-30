@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { translateApiError } from "@/lib/errors";
+import { useFormat } from "@/i18n/useFormat";
 
 // ── Public fetch (no auth header) ─────────────────────────────────────────
 const BASE_URL = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:8100/api/v1";
@@ -73,12 +74,6 @@ interface PortalActionResult {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function fmt(n: number, currency: string) {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency", currency, maximumFractionDigits: 2,
-  }).format(n);
-}
-
 function daysUntil(iso: string): number {
   const ms = new Date(iso).getTime() - Date.now();
   return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
@@ -187,6 +182,7 @@ function RejectConfirmationScreen({ workspaceName }: { workspaceName: string }) 
 
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function CustomerPortal() {
+  const { formatCurrency: fmt, formatPercent } = useFormat();
   const { token } = useParams<{ token: string }>();
 
   const [phase, setPhase] = useState<Phase>("view");
@@ -330,7 +326,7 @@ export default function CustomerPortal() {
             )}
             {quote.tax_rate > 0 && (
               <div className="flex justify-between text-[11px] text-[#6c7086] mb-2">
-                <span>IVA ({(quote.tax_rate * 100).toFixed(0)}%)</span>
+                <span>IVA ({formatPercent(quote.tax_rate, { maximumFractionDigits: 0 })})</span>
                 <span>{fmt(quote.tax_amount, quote.currency)}</span>
               </div>
             )}

@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import i18n from "@/i18n";
+import { formatNumber } from "@/i18n/format";
 
 export interface CRMDeal {
   id: string;
@@ -33,7 +35,8 @@ function calcTotal(deals: CRMDeal[]): string {
     const num = Number(d.value.replace(/[^0-9]/g, ""));
     return acc + num;
   }, 0);
-  return `$${sum.toLocaleString()}`;
+  // Fuera de React no hay hook: se lee el idioma activo en el momento de la llamada.
+  return `$${formatNumber(sum, i18n.language)}`;
 }
 
 /** Determine CRM stage from lead score */

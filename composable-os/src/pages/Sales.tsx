@@ -14,14 +14,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { translateApiError } from "@/lib/errors";
+import { useFormat } from "@/i18n/useFormat";
 import {
   Plus, DollarSign, TrendingUp, FileText, ShoppingCart, Loader2, Download,
 } from "lucide-react";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function fmtCurrency(n: number) {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "USD" }).format(n);
+/** Importes de ventas: dolares. */
+function useFmtCurrency() {
+  const { formatCurrency } = useFormat();
+  return (n: number) => formatCurrency(n, "USD");
 }
 
 // ── Status badge helpers ───────────────────────────────────────────────────
@@ -171,6 +174,7 @@ const QUOTE_FILTERS: { label: string; value: string | null }[] = [
 ];
 
 function CotizacionesTab() {
+  const fmtCurrency = useFmtCurrency();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<string | null>(null);
@@ -351,6 +355,7 @@ const ORDER_FILTERS: { label: string; value: string | null }[] = [
 ];
 
 function OrdenesTab() {
+  const fmtCurrency = useFmtCurrency();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<string | null>(null);
 
@@ -500,6 +505,7 @@ function OrdenesTab() {
 // ── Main Page ──────────────────────────────────────────────────────────────
 
 const Sales = () => {
+  const fmtCurrency = useFmtCurrency();
   const [activeTab, setActiveTab] = useState("dashboard");
 
   // Fetch all quotes for KPI calculations (no filter)
@@ -540,7 +546,7 @@ const Sales = () => {
 
   const kpiStats = [
     { label: "Open Quotes", value: String(openQuotes.length), icon: FileText },
-    { label: "Pipeline Value", value: pipelineValue > 0 ? fmtCurrency(pipelineValue) : "$0", icon: DollarSign },
+    { label: "Pipeline Value", value: fmtCurrency(pipelineValue), icon: DollarSign },
     { label: "Conversion Rate", value: conversionRate, icon: TrendingUp },
     { label: "Active Orders", value: String(activeOrders), icon: ShoppingCart },
   ];

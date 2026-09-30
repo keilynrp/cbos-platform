@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { translateApiError } from "@/lib/errors";
+import { useFormat } from "@/i18n/useFormat";
 import {
   contractsService,
   type ContractListItem,
@@ -30,20 +31,6 @@ import {
 } from "@/services/contracts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function fmt(amount: number | null, currency = "USD") {
-  if (amount == null) return "—";
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency", currency, minimumFractionDigits: 2,
-  }).format(amount);
-}
-
-function fmtDate(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso + "T00:00:00").toLocaleDateString("es-MX", {
-    day: "2-digit", month: "short", year: "numeric",
-  });
-}
 
 const STATUS_META: Record<string, {
   label: string;
@@ -186,6 +173,7 @@ function CreateContractDialog({ open, onClose }: { open: boolean; onClose: () =>
 function ContractDetail({
   contractId, onClose,
 }: { contractId: string; onClose: () => void }) {
+  const { formatCurrency: fmt, formatDate: fmtDate } = useFormat();
   const qc = useQueryClient();
   const { toast } = useToast();
   const [addingClause, setAddingClause] = useState(false);
@@ -410,6 +398,7 @@ function ContractDetail({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const Contracts = () => {
+  const { formatCurrency: fmt, formatDate: fmtDate } = useFormat();
   const qc = useQueryClient();
   const { toast } = useToast();
   const [creating, setCreating] = useState(false);

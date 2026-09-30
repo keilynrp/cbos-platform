@@ -102,10 +102,55 @@ su nombre, y `translateApiError` la resuelve con el `detail` como valores.
 
 ## Formateo de fechas, moneda y numeros
 
-**No pasa por i18next.** Usa `Intl` y `date-fns` (ya en el stack) detras de
-helpers que leen el locale activo (tarea 4 del plan). El locale que se les pasa
-es el tag completo (`es-MX`), no el idioma base: el formato varia por region
-aunque el catalogo no (ADR 0016, punto 4).
+**No pasa por i18next.** Usa `Intl`, detras de `src/i18n/format.ts`: funciones
+puras que reciben el locale, y el hook `useFormat()` que las liga al idioma activo
+y re-renderiza el componente al cambiarlo.
+
+```tsx
+const { formatCurrency, formatDate, formatDateTime, formatNumber, formatPercent } = useFormat();
+
+formatCurrency(invoice.total, invoice.currency)         // USD 1,234.50
+formatCurrency(n, "USD", { maximumFractionDigits: 0 })  // sin decimales
+formatDate(contract.end_date)                           // 30 sep 2026   (estilo "medium")
+formatDate(emp.terminated_at, "short")                  // 30/9/2026
+formatDateTime(event.created_at)                        // 30 sep 2026, 03:07 p.m.
+formatPercent(quote.tax_rate)                           // 16%           (recibe la fraccion)
+```
+
+**Una regla de eslint lo hace cumplir** (`no-restricted-syntax`): fuera de
+`src/i18n/format.ts` y de los tests, `toLocaleDateString` / `toLocaleTimeString` /
+`toLocaleString` y `new Intl.NumberFormat` / `new Intl.DateTimeFormat` son un
+error. `Intl.DisplayNames` y similares no estan restringidos.
+
+Lo que los helpers deciden por ti:
+
+- **El tag completo, no el idioma base.** `es-MX` formatea como `es-MX`; el formato
+  varia por region aunque el catalogo no (ADR 0016, punto 4).
+- **Un idioma sin region formatea con la region por defecto del producto**
+  (`es` -> `es-MX`, `en` -> `en-US`). No es un detalle: `es` a secas formatea a la
+  espanola (`1234,50 US$`), y el producto siempre ha formateado como `es-MX`
+  (`USD 1,234.50`). Sin esa tabla, que el locale por defecto sea `es` habria
+  cambiado todos los numeros de la aplicacion. Quien quiera el formato espanol fija
+  `es-ES` y se respeta.
+- **Un valor ausente o invalido** (`null`, `""`, `"not-a-date"`, `NaN`) se pinta
+  como `—`, no como `Invalid Date` ni `NaN`; las paginas no necesitan su propio
+  `if (x == null)`.
+- **Un codigo de moneda que `Intl` no conoce** no lanza: se muestra la cifra con el
+  codigo tal cual. Un `RangeError` por un dato del servidor dejaria la pagina en
+  blanco.
+- **Las fechas de solo dia** (`2026-09-30`, p. ej. `valid_until`) son fechas de
+  calendario y se interpretan a medianoche *local*. `new Date("2026-09-30")` es
+  medianoche UTC, que en Mexico es el 29 por la tarde.
+- **`todayInputValue()`** para el valor por defecto de un `<input type="date">`:
+  `new Date().toISOString().slice(0, 10)` da el dia en UTC y pasadas las 18:00 en
+  Mexico ya es "manana".
+
+Fuera de React no hay hook: usa las funciones puras con `i18n.language`.
+
+Lo que **no** cubre (no son `Intl`/`toLocale*`): el tiempo relativo ("5m", "3h"),
+que son cadenas con unidades y se traducen con la pagina, y los importes compactos
+de los KPI (`$1.2M`, `$12.5k` en `Index` y `Analytics`), que asumen dolares y un
+formato propio y necesitan una decision de producto.
 
 ## Como se decide el idioma
 

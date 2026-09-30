@@ -24,6 +24,30 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Moneda, numeros y fechas se formatean solo a traves de `src/i18n/format.ts`
+      // (`useFormat` en componentes). Antes habia ~28 llamadas sueltas que
+      // decidian el locale cada una por su cuenta —`"es-MX"` cableado, `"en-US"`
+      // o el del navegador— y la misma cifra salia distinta segun la pagina.
+      // Ver docs/I18N_CONVENTIONS.md.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.property.name=/^toLocale(Date|Time)?String$/]",
+          message:
+            "No uses toLocale*String: formatea con useFormat() de '@/i18n/useFormat' (o las funciones de '@/i18n/format').",
+        },
+        {
+          selector: "NewExpression[callee.object.name='Intl'][callee.property.name=/^(NumberFormat|DateTimeFormat)$/]",
+          message:
+            "No construyas Intl.NumberFormat/DateTimeFormat: formatea con useFormat() de '@/i18n/useFormat' (o las funciones de '@/i18n/format').",
+        },
+      ],
     },
+  },
+  // Donde si se construyen los formateadores, y las pruebas que los comparan con
+  // las expresiones antiguas.
+  {
+    files: ["src/i18n/format.ts", "**/*.test.{ts,tsx}"],
+    rules: { "no-restricted-syntax": "off" },
   },
 );
