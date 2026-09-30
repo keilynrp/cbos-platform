@@ -17,6 +17,7 @@ class WorkspaceRead(BaseModel):
     active_modules: list[str]
     feature_flags: dict
     is_active: bool
+    default_locale: str
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -56,12 +57,22 @@ class UserRead(BaseModel):
     role: str
     is_active: bool
     is_owner: bool
+    # Lo guardado, no lo efectivo: `None` significa "sigue al workspace". El
+    # idioma que realmente se usa lo decide `app.core.i18n.resolve_locale`.
+    locale: str | None = None
     created_at: datetime
     # Vive en Person, no en User, y por eso se une al leer. Opcional porque la
     # relacion lo es: un User sin person_id es legal y no tiene nombre que dar.
     full_name: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class LocaleUpdate(BaseModel):
+    # Sin default a proposito: la clave es obligatoria. Ausente ("no toques") y
+    # `null` ("sigue al workspace") significan cosas distintas, y con un cuerpo
+    # vacio no habria forma de saber cual se pidio.
+    locale: str | None
 
 
 class UserUpdate(BaseModel):

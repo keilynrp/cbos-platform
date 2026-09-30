@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -11,8 +11,12 @@ router = APIRouter()
 # ── Auth ───────────────────────────────────────────────────
 
 @router.post("/auth/register", response_model=schemas.TokenResponse, status_code=201)
-async def register(data: schemas.RegisterRequest, db: AsyncSession = Depends(get_db)):
-    return await service.register(data, db)
+async def register(
+    data: schemas.RegisterRequest,
+    accept_language: str | None = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    return await service.register(data, db, accept_language)
 
 
 @router.post("/auth/login", response_model=schemas.TokenResponse)
@@ -31,6 +35,16 @@ async def me(
     db: AsyncSession = Depends(get_db),
 ):
     return await service.read_me(current_user, db)
+
+
+@router.patch("/auth/me", response_model=schemas.UserRead)
+async def update_me_locale(
+    data: schemas.LocaleUpdate,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fija el idioma del usuario. `null` lo devuelve a seguir al workspace."""
+    return await service.update_my_locale(current_user, data, db)
 
 
 # ── Users ──────────────────────────────────────────────────

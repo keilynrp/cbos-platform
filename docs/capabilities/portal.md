@@ -79,6 +79,7 @@ It is the external decision surface of the commercial wedge.
 | `action` | string nullable | `accepted` or `rejected` |
 | `client_name` | string nullable | Optional customer display name |
 | `client_email` | string nullable | Optional customer email |
+| `locale` | string nullable | Language of this share, chosen when the link is created (ADR 0016): a BCP 47 tag, validated against the shipped catalogues (`422 PORTAL_LOCALE_UNSUPPORTED`). `null` = no preference. Read by the two client-facing emails; describes the share, not the client |
 | `client_notes` | string nullable | Optional notes captured during accept |
 | `created_by_id` | UUID string nullable | Internal user who created the session |
 | `created_at` | datetime | Audit timestamp |

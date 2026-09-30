@@ -7,12 +7,14 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import status
 
 from app.core.exceptions import CBOSException
+from app.core.i18n import SUPPORTED_LOCALES, normalize_locale, resolve_locale
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, verify_token
 from app.events.bus import publish as publish_event
 from app.events.types import USER_AUTHENTICATED, USER_REGISTERED, WORKSPACE_CREATED, Event
 from app.modules.identity.models import Workspace, User, Person, Organization, PublicSite
 from app.modules.identity.schemas import (
     RegisterRequest,
+    LocaleUpdate,
     LoginRequest,
     PublicSiteCreate,
     PublicSiteUpdate,
@@ -49,7 +51,11 @@ def _api_key_hint(api_key: str) -> str:
     return f"{api_key[:4]}...{api_key[-4:]}"
 
 
-async def register(data: RegisterRequest, db: AsyncSession) -> TokenResponse:
+async def register(
+    data: RegisterRequest,
+    db: AsyncSession,
+    accept_language: str | None = None,
+) -> TokenResponse:
     # Verificar que el slug no exista
     existing = await db.execute(
         select(Workspace).where(Workspace.slug == data.workspace_slug)
@@ -82,6 +88,11 @@ async def register(data: RegisterRequest, db: AsyncSession) -> TokenResponse:
         slug=data.workspace_slug,
         active_modules=["crm", "sales", "inventory", "portal"],
         feature_flags={"discovery_engine": False, "ai_assistant": False},
+        # El registro es el unico sitio donde Accept-Language decide algo
+        # (ADR 0016): no hay preferencia guardada ni workspace del que heredar,
+        # y la cabecera es la unica senal. El usuario queda con locale nulo y
+        # sigue al workspace.
+        default_locale=resolve_locale(accept_language=accept_language),
     )
     db.add(workspace)
     await db.flush()
@@ -225,6 +236,34 @@ async def read_me(user: User, db: AsyncSession) -> UserRead:
         out.full_name = result.scalar_one_or_none()
 
     return out
+
+
+async def update_my_locale(
+    user: User, data: LocaleUpdate, db: AsyncSession
+) -> UserRead:
+    """Fija el locale del propio usuario, o lo devuelve a "sigue al workspace".
+
+    Se valida contra los catalogos enviados y se rechaza con un codigo
+    registrado en lugar de caer en silencio al idioma por defecto: un ajuste
+    que no hace nada sin explicar por que es como un usuario acaba sin poder
+    entender su propia configuracion (ADR 0016, punto 4).
+    """
+    if data.locale is None:
+        user.locale = None
+    else:
+        locale = normalize_locale(data.locale)
+        if locale is None:
+            raise CBOSException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                code="IDENTITY_LOCALE_UNSUPPORTED",
+                message="Locale is not supported.",
+                detail={"supported": list(SUPPORTED_LOCALES)},
+            )
+        user.locale = locale
+
+    await db.commit()
+    await db.refresh(user)
+    return await read_me(user, db)
 
 
 async def delete_user(

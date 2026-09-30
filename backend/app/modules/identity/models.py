@@ -15,6 +15,11 @@ class Workspace(Base):
     active_modules: Mapped[list] = mapped_column(JSON, default=list)
     feature_flags: Mapped[dict] = mapped_column(JSON, default=dict)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # BCP 47 (`es`, `es-MX`). Es el idioma de quien no expreso preferencia: ver
+    # ADR 0016 y `app.core.i18n.resolve_locale`, el unico que debe leerlo.
+    default_locale: Mapped[str] = mapped_column(
+        String(10), default="es", server_default="es"
+    )
 
     # Relationships
     users: Mapped[list["User"]] = relationship("User", back_populates="workspace")
@@ -63,6 +68,10 @@ class User(Base):
     notification_preferences: Mapped[dict] = mapped_column(
         JSON, default=lambda: {"email_enabled": True, "email_events": {}},
     )
+    # Nulo a proposito: significa "sigue al workspace", no "sin idioma". Asi
+    # cambiar `Workspace.default_locale` mueve a quien nunca eligio. Nadie debe
+    # leerlo directo; se resuelve con `app.core.i18n.resolve_locale`.
+    locale: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     # Relationships
     workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="users")

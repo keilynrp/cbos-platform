@@ -39,6 +39,10 @@ class PortalSession(Base):
     client_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     client_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Idioma de este envio, no del cliente (ADR 0016): se elige al compartir el
+    # enlace. Lo leen los dos correos que salen a clientes externos.
+    locale: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
     # Quién generó el link
     created_by_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("users.id"), nullable=True

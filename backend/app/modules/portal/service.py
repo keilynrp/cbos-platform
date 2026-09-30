@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
+from app.core.i18n import SUPPORTED_LOCALES, normalize_locale
 from app.core.email import (
     client_confirmation_email,
     quote_portal_email,
@@ -47,6 +48,20 @@ logger = logging.getLogger(__name__)
 
 def _portal_url(token: str) -> str:
     return f"{settings.portal_base_url}/portal/{token}"
+
+
+_SESSION_READ_FIELDS = (
+    "id", "workspace_id", "quote_id", "token", "expires_at",
+    "accessed_at", "completed_at", "action",
+    "client_name", "client_email", "locale", "created_by_id", "created_at",
+)
+
+
+def _session_read(session: PortalSession) -> PortalSessionRead:
+    return PortalSessionRead(
+        **{c: getattr(session, c) for c in _SESSION_READ_FIELDS},
+        portal_url=_portal_url(session.token),
+    )
 
 
 async def _load_session(db: AsyncSession, token: str) -> PortalSession:
@@ -144,6 +159,20 @@ async def create_session(
             detail={"status": quote.status},
         )
 
+    # Solo `None` significa "sin preferencia". Una cadena vacia o un idioma sin
+    # catalogo es un error del cliente, no una ausencia: mismo criterio que el
+    # PATCH del locale propio (ADR 0016, punto 4).
+    locale = None
+    if data.locale is not None:
+        locale = normalize_locale(data.locale)
+        if locale is None:
+            raise CBOSException(
+                status_code=422,
+                code="PORTAL_LOCALE_UNSUPPORTED",
+                message="Locale is not supported.",
+                detail={"supported": list(SUPPORTED_LOCALES)},
+            )
+
     expire_hours = data.expire_hours or settings.portal_token_expire_hours
     token = secrets.token_urlsafe(32)
     expires_at = datetime.now(timezone.utc) + timedelta(hours=expire_hours)
@@ -155,6 +184,7 @@ async def create_session(
         expires_at=expires_at,
         client_name=data.client_name,
         client_email=data.client_email,
+        locale=locale,
         created_by_id=actor_id,
     )
     db.add(session)
@@ -176,14 +206,7 @@ async def create_session(
         },
     ))
 
-    return PortalSessionRead(
-        **{c: getattr(session, c) for c in [
-            "id", "workspace_id", "quote_id", "token", "expires_at",
-            "accessed_at", "completed_at", "action",
-            "client_name", "client_email", "created_by_id", "created_at",
-        ]},
-        portal_url=_portal_url(session.token),
-    )
+    return _session_read(session)
 
 
 async def send_session_email(
@@ -241,17 +264,7 @@ async def list_sessions(
     q = q.order_by(PortalSession.created_at.desc())
     result = await db.execute(q)
     sessions = result.scalars().all()
-    return [
-        PortalSessionRead(
-            **{c: getattr(s, c) for c in [
-                "id", "workspace_id", "quote_id", "token", "expires_at",
-                "accessed_at", "completed_at", "action",
-                "client_name", "client_email", "created_by_id", "created_at",
-            ]},
-            portal_url=_portal_url(s.token),
-        )
-        for s in sessions
-    ]
+    return [_session_read(s) for s in sessions]
 
 
 # ── Public portal views ───────────────────────────────────────────────────────

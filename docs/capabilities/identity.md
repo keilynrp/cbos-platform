@@ -48,7 +48,14 @@ The module is expected to own:
   foreign key that blocked it, rather than an opaque `500`. The linked Person
   survives on purpose: it may also be a business contact referenced by quotes,
   orders or contracts
-- `GET /api/v1/workspaces/me`
+- `PATCH /api/v1/auth/me` — sets the caller's own `locale` (ADR 0016). The body
+  must carry the `locale` key: a tag (`"es"`, `"es-MX"`) sets it, `null` returns
+  the user to following the workspace default, and an absent key is a `422`
+  because absent and `null` mean different things. Validated against the shipped
+  catalogues (today only `es`) and rejected with
+  `422 IDENTITY_LOCALE_UNSUPPORTED` rather than silently falling back. Region
+  subtags are kept and canonicalised (`es_mx` → `es-MX`)
+- `GET /api/v1/workspaces/me` — includes `default_locale`
 - `POST /api/v1/persons`
 - `GET /api/v1/organizations`
 - `POST /api/v1/organizations`
@@ -57,10 +64,26 @@ The module is expected to own:
 - `PATCH /api/v1/public-sites/{site_id}`
 - `POST /api/v1/public-sites/{site_id}/rotate-key`
 
+## Locale
+
+Two columns, both resolved only through `app.core.i18n.resolve_locale` — nothing
+reads them directly:
+
+- `users.locale`, nullable. `NULL` means "follow the workspace", not "no
+  language", so changing the workspace default moves everyone who never chose.
+- `workspaces.default_locale`, not null, `"es"`. `POST /auth/register` is the one
+  place `Accept-Language` decides anything: there is no stored preference and no
+  workspace to inherit from yet, so the header seeds the new workspace's default.
+  The new user keeps `locale = NULL`.
+
+Until a second catalogue ships (plan task 12) every valid value resolves to
+`es`, so none of this changes what is rendered.
+
 ## Dependencies
 
 - `core.security`
 - `core.deps`
+- `core.i18n`
 - persistence layer
 
 ## Event Responsibilities

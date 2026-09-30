@@ -94,6 +94,8 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
   PORTAL_QUOTE_NOT_FOUND: () => "Cotizacion no encontrada.",
   PORTAL_ORDER_NOT_FOUND: () =>
     "Todavia no hay una orden. Es posible que la cotizacion aun no se haya aceptado.",
+  PORTAL_LOCALE_UNSUPPORTED: (d) =>
+    `Ese idioma no esta disponible. Idiomas disponibles: ${list(d, "supported", "ninguno")}.`,
   PORTAL_QUOTE_NOT_SHAREABLE: (d) =>
     `No se puede compartir una cotizacion en estado '${str(d, "status")}'.`,
   PORTAL_SESSION_NO_CLIENT_EMAIL: () =>
@@ -150,6 +152,8 @@ const MESSAGES: Record<string, (d: Detail) => string> = {
     "El correo de confirmacion no coincide con el usuario que vas a borrar.",
   IDENTITY_USER_HAS_RECORDS: () =>
     "No se puede borrar: el usuario todavia tiene registros asignados. Reasignalos o desactiva la cuenta.",
+  IDENTITY_LOCALE_UNSUPPORTED: (d) =>
+    `Ese idioma no esta disponible. Idiomas disponibles: ${list(d, "supported", "ninguno")}.`,
   IDENTITY_PUBLIC_SITE_NOT_FOUND: () => "Sitio publico no encontrado.",
   IDENTITY_PUBLIC_SITE_SLUG_TAKEN: (d) =>
     `Ya existe un sitio publico con el identificador '${str(d, "slug")}'.`,
