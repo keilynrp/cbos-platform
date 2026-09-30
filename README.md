@@ -40,7 +40,7 @@ El sistema está construido como un **monolito modular** con límites de dominio
 Discovery → Lead → Opportunity → Quote → Order → Inventory → Portal → Invoice → Payment
 ```
 
-**729 tests** (contrato + integración + e2e) en 41 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
+**733 tests** (contrato + integración + e2e) en 41 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
 
 ---
 
@@ -106,7 +106,7 @@ cbos-platform/
 │   │   │   ├── accounting/         Facturación, pagos, overdue scanner
 │   │   │   └── analytics/          Agregación cross-módulo
 │   │   └── main.py                 Lifespan, routers, CORS, background tasks
-│   ├── tests/                      729 tests (pytest-asyncio)
+│   ├── tests/                      733 tests (pytest-asyncio)
 │   ├── alembic/                    Migraciones de base de datos
 │   └── requirements.txt
 ├── composable-os/                  React 18 + Vite frontend
@@ -232,7 +232,7 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-**729 tests** en 41 archivos. Las categorías no se solapan: cada archivo cuenta
+**733 tests** en 41 archivos. Las categorías no se solapan: cada archivo cuenta
 una sola vez y las filas suman 41.
 
 | Categoría | Archivos | Cobertura |
@@ -346,6 +346,7 @@ docs/
 ├── CAPABILITY_MATRIX_MVP.md            Matriz de capacidades del MVP
 ├── CAPABILITY_MATURITY_SCORECARD.md    Scorecard de madurez por módulo
 ├── API_CONVENTIONS.md                  Convenciones de la API REST
+├── I18N_CONVENTIONS.md                 Cómo escribir y revisar cadenas traducibles
 ├── EVENT_REGISTRY_V1.md                Catálogo de eventos del sistema (14+ tipos)
 ├── Q4_2026_SPRINT_PLAN.md              Sprint plan actual (G2, G6, E1 — cerrado)
 ├── IMPLEMENTATION_ALIGNMENT.md         Alineación entre plan e implementación

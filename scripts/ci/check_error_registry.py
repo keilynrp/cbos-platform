@@ -9,6 +9,11 @@ Falla si:
   - un `code=` que aparece en los modulos no esta en el registro
   - un codigo del registro no lo levanta ningun modulo (entrada muerta)
   - el frontend no traduce un codigo ya registrado
+  - una variante `<CODIGO>_empty` del catalogo no tiene su plantilla base
+
+El "frontend" es el catalogo de errores del idioma de desarrollo,
+`composable-os/src/locales/es/errors.json`. Cuando exista un segundo idioma, la
+paridad entre catalogos es un check aparte (plan de i18n, seccion Verificacion).
 
 El detector es estatico y solo ve literales. Un `code=` armado en runtime pasa
 inadvertido, igual que en el registro de eventos; la alternativa seria importar
@@ -16,6 +21,7 @@ y ejecutar los modulos, que cuesta mucho mas de lo que aporta.
 """
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -23,7 +29,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 REGISTRY = ROOT / "docs" / "ERROR_CODE_REGISTRY_V1.md"
 MODULES = ROOT / "backend" / "app" / "modules"
-FRONTEND_MAP = ROOT / "composable-os" / "src" / "lib" / "errors.ts"
+FRONTEND_MAP = ROOT / "composable-os" / "src" / "locales" / "es" / "errors.json"
 
 # core/deps.py no es un modulo pero levanta los errores de autenticacion que
 # devuelve cualquier ruta protegida. Dejarlo fuera del barrido haria que sus
@@ -36,7 +42,11 @@ GENERIC = {"NOT_FOUND", "CONFLICT", "VALIDATION_ERROR", "FORBIDDEN"}
 
 _REGISTRY_CODE = re.compile(r"^\|\s*`([A-Z][A-Z0-9_]+)`\s*\|", re.M)
 _RAISED_CODE = re.compile(r'code\s*=\s*"([A-Z][A-Z0-9_]+)"')
-_MAPPED_CODE = re.compile(r"^\s{2}([A-Z][A-Z0-9_]+):", re.M)
+# Un codigo es todo en mayusculas. Las variantes de contexto del catalogo
+# (`PROJECT_INVALID_TRANSITION_empty`) llevan un sufijo en minusculas, asi que no
+# se confunden con un codigo.
+_CODE_KEY = re.compile(r"^[A-Z][A-Z0-9_]+$")
+_EMPTY_SUFFIX = "_empty"
 
 
 def main() -> int:
@@ -54,10 +64,16 @@ def main() -> int:
         for code in _RAISED_CODE.findall(path.read_text(encoding="utf-8")):
             raised.setdefault(code, path.relative_to(ROOT).as_posix())
 
-    mapped = set(_MAPPED_CODE.findall(FRONTEND_MAP.read_text(encoding="utf-8"))) \
-        if FRONTEND_MAP.exists() else set()
+    catalogue_keys: set[str] = set()
+    if FRONTEND_MAP.exists():
+        catalogue_keys = set(json.loads(FRONTEND_MAP.read_text(encoding="utf-8")))
+    mapped = {key for key in catalogue_keys if _CODE_KEY.match(key)}
 
     problems: list[str] = []
+
+    for key in sorted(catalogue_keys):
+        if key.endswith(_EMPTY_SUFFIX) and key[: -len(_EMPTY_SUFFIX)] not in catalogue_keys:
+            problems.append(f"  {key} es una variante del catalogo sin su plantilla base")
 
     for code, where in sorted(raised.items()):
         if code in GENERIC:

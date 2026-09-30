@@ -76,6 +76,12 @@ reads them directly:
   workspace to inherit from yet, so the header seeds the new workspace's default.
   The new user keeps `locale = NULL`.
 
+`GET /auth/me` returns both: `locale` (what is stored, `null` = follows the
+workspace) and `effective_locale` (what the client should use, already resolved
+by `resolve_locale` from `users.locale` then `workspaces.default_locale`, with no
+`Accept-Language` — the header only counts at registration). The frontend applies
+`effective_locale` and does not reimplement the chain.
+
 Until a second catalogue ships (plan task 12) every valid value resolves to
 `es`, so none of this changes what is rendered.
 

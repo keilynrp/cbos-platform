@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { healthService, type HealthCheck, type HealthStatus } from "@/services/health";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -576,6 +577,8 @@ const Settings = () => {
                   <Label className="text-xs">Workspace URL</Label>
                   <Input defaultValue="composable-os.app" className="h-9" disabled />
                 </div>
+                {/* Se dibuja solo cuando hay mas de un idioma enviado */}
+                <LanguageSelector />
               </div>
               <Separator />
               <div className="space-y-3">

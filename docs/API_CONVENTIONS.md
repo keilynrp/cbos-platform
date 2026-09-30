@@ -158,8 +158,10 @@ New and touched code raises `CBOSException`. Adopted by
   `Retry-After`. A translated body does not tell an automated client when to
   retry.
 
-Clients read `code` and render their own text; `composable-os/src/lib/errors.ts`
-does this for the Spanish UI. An unmapped code falls back to `message`, so a
+Clients read `code` and render their own text: `composable-os/src/lib/errors.ts`
+resolves it against the `errors` catalogue of the active language
+(`src/locales/<lang>/errors.json`, see `docs/I18N_CONVENTIONS.md`). An unmapped
+code falls back to `message`, so a
 code that reaches the client ahead of its translation degrades to English prose
 rather than to a bare identifier.
 
