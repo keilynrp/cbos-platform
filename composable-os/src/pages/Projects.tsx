@@ -23,23 +23,25 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { projectsService, Project, ProjectTask } from "@/services/projects";
 import { translateApiError } from "@/lib/errors";
+import { useEnumLabel } from "@/i18n/enumLabel";
 import { useFormat } from "@/i18n/useFormat";
+import { useT } from "@/i18n/useT";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  planning:  { label: "Planificación", variant: "secondary" },
-  active:    { label: "Activo",        variant: "default" },
-  on_hold:   { label: "En pausa",      variant: "outline" },
-  completed: { label: "Completado",    variant: "default" },
-  cancelled: { label: "Cancelado",     variant: "destructive" },
+const STATUS_BADGE: Record<string, { variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  planning:  { variant: "secondary" },
+  active:    { variant: "default" },
+  on_hold:   { variant: "outline" },
+  completed: { variant: "default" },
+  cancelled: { variant: "destructive" },
 };
 
-const TASK_STATUS_BADGE: Record<string, { label: string; color: string }> = {
-  todo:        { label: "Pendiente",   color: "bg-gray-100 text-gray-700" },
-  in_progress: { label: "En progreso", color: "bg-blue-100 text-blue-700" },
-  done:        { label: "Completado",  color: "bg-green-100 text-green-700" },
-  cancelled:   { label: "Cancelado",   color: "bg-red-100 text-red-700" },
+const TASK_STATUS_BADGE: Record<string, { color: string }> = {
+  todo:        { color: "bg-gray-100 text-gray-700" },
+  in_progress: { color: "bg-blue-100 text-blue-700" },
+  done:        { color: "bg-green-100 text-green-700" },
+  cancelled:   { color: "bg-red-100 text-red-700" },
 };
 
 // ── KPI Cards ─────────────────────────────────────────────────────────────────
@@ -69,6 +71,7 @@ function KpiCard({ title, value, icon: Icon, color }: {
 function CreateProjectDialog({
   open, onOpenChange,
 }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState({
@@ -88,40 +91,40 @@ function CreateProjectDialog({
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast({ title: "Proyecto creado" });
+      toast({ title: t("projects:toast.created") });
       onOpenChange(false);
       setForm({ title: "", description: "", budget: "", currency: "USD", start_date: "", end_date: "", notes: "" });
     },
-    onError: (e: Error) => toast({ title: "Error al crear proyecto", description: translateApiError(e), variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("projects:toast.createFailed"), description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nuevo proyecto</DialogTitle>
+          <DialogTitle>{t("projects:create.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <Label>Título *</Label>
+            <Label>{t("projects:create.projectTitle")}</Label>
             <Input
               value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-              placeholder="Nombre del proyecto"
+              placeholder={t("projects:create.titlePlaceholder")}
             />
           </div>
           <div>
-            <Label>Descripción</Label>
+            <Label>{t("projects:create.description")}</Label>
             <Textarea
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              placeholder="Descripción del alcance"
+              placeholder={t("projects:create.descriptionPlaceholder")}
               rows={3}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Presupuesto</Label>
+              <Label>{t("projects:create.budget")}</Label>
               <Input
                 type="number"
                 value={form.budget}
@@ -130,17 +133,17 @@ function CreateProjectDialog({
               />
             </div>
             <div>
-              <Label>Moneda</Label>
+              <Label>{t("projects:create.currency")}</Label>
               <Input
                 value={form.currency}
                 onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
-                placeholder="USD"
+                placeholder="USD" // i18n-ok: codigo de moneda
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Fecha inicio</Label>
+              <Label>{t("projects:create.startDate")}</Label>
               <Input
                 type="date"
                 value={form.start_date}
@@ -148,7 +151,7 @@ function CreateProjectDialog({
               />
             </div>
             <div>
-              <Label>Fecha fin</Label>
+              <Label>{t("projects:create.endDate")}</Label>
               <Input
                 type="date"
                 value={form.end_date}
@@ -157,22 +160,22 @@ function CreateProjectDialog({
             </div>
           </div>
           <div>
-            <Label>Notas</Label>
+            <Label>{t("projects:create.notes")}</Label>
             <Textarea
               value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              placeholder="Observaciones adicionales"
+              placeholder={t("projects:create.notesPlaceholder")}
               rows={2}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("projects:create.cancel")}</Button>
           <Button
             onClick={() => createMutation.mutate()}
             disabled={!form.title || createMutation.isPending}
           >
-            Crear proyecto
+            {t("projects:create.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -185,6 +188,7 @@ function CreateProjectDialog({
 function AddTaskDialog({
   projectId, open, onOpenChange,
 }: { projectId: string; open: boolean; onOpenChange: (v: boolean) => void }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState({ title: "", description: "", due_date: "" });
@@ -198,30 +202,30 @@ function AddTaskDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      toast({ title: "Tarea añadida" });
+      toast({ title: t("projects:toast.taskAdded") });
       onOpenChange(false);
       setForm({ title: "", description: "", due_date: "" });
     },
-    onError: (e: Error) => toast({ title: "Error al añadir tarea", description: translateApiError(e), variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("projects:toast.taskAddFailed"), description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nueva tarea</DialogTitle>
+          <DialogTitle>{t("projects:taskDialog.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <Label>Título *</Label>
+            <Label>{t("projects:taskDialog.taskTitle")}</Label>
             <Input
               value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-              placeholder="Descripción de la tarea"
+              placeholder={t("projects:taskDialog.titlePlaceholder")}
             />
           </div>
           <div>
-            <Label>Descripción</Label>
+            <Label>{t("projects:taskDialog.description")}</Label>
             <Textarea
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -229,7 +233,7 @@ function AddTaskDialog({
             />
           </div>
           <div>
-            <Label>Fecha límite</Label>
+            <Label>{t("projects:taskDialog.dueDate")}</Label>
             <Input
               type="date"
               value={form.due_date}
@@ -238,12 +242,12 @@ function AddTaskDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("projects:taskDialog.cancel")}</Button>
           <Button
             onClick={() => addMutation.mutate()}
             disabled={!form.title || addMutation.isPending}
           >
-            Añadir
+            {t("projects:taskDialog.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -254,7 +258,9 @@ function AddTaskDialog({
 // ── Project Detail Panel ──────────────────────────────────────────────────────
 
 function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () => void }) {
-  const { formatCurrency: fmt } = useFormat();
+  const t = useT();
+  const label = useEnumLabel();
+  const { formatCurrency: fmt, formatDate } = useFormat();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [addTaskOpen, setAddTaskOpen] = useState(false);
@@ -269,13 +275,13 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      toast({ title: "Estado actualizado" });
+      toast({ title: t("projects:toast.statusUpdated") });
     },
     // api.ts lanza Error con el detail del backend ya dentro del mensaje. Antes
     // se leia e.response.data.detail, forma de axios que este cliente no usa:
     // siempre daba undefined y el usuario solo veia el texto generico.
     onError: (e: Error) => toast({
-      title: translateApiError(e, "Transición no permitida"),
+      title: translateApiError(e, t("projects:toast.transitionNotAllowed")),
       variant: "destructive",
     }),
   });
@@ -284,7 +290,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
     mutationFn: (taskId: string) => projectsService.deleteTask(projectId, taskId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
-      toast({ title: "Tarea eliminada" });
+      toast({ title: t("projects:toast.taskDeleted") });
     },
   });
 
@@ -295,10 +301,9 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
   });
 
   if (isLoading || !project) {
-    return <div className="p-6 text-sm text-muted-foreground">Cargando...</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{t("projects:detail.loading")}</div>;
   }
 
-  const { label: statusLabel } = STATUS_BADGE[project.status] ?? { label: project.status };
   const terminal = project.status === "completed" || project.status === "cancelled";
 
   return (
@@ -309,7 +314,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
           <p className="text-xs font-mono text-muted-foreground">{project.project_number}</p>
           <h2 className="text-lg font-semibold mt-0.5">{project.title}</h2>
           <Badge variant={STATUS_BADGE[project.status]?.variant ?? "outline"} className="mt-1">
-            {statusLabel}
+            {label("common:projectStatus", project.status)}
           </Badge>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -325,7 +330,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-xs text-muted-foreground">Presupuesto</p>
+                <p className="text-xs text-muted-foreground">{t("projects:detail.budget")}</p>
                 <p className="font-medium">{fmt(project.budget, project.currency)}</p>
               </div>
             </div>
@@ -334,9 +339,9 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
             <div className="flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-xs text-muted-foreground">Período</p>
+                <p className="text-xs text-muted-foreground">{t("projects:detail.period")}</p>
                 <p className="font-medium">
-                  {project.start_date ?? "—"} → {project.end_date ?? "—"}
+                  {t("projects:detail.periodRange", { start: formatDate(project.start_date), end: formatDate(project.end_date) })}
                 </p>
               </div>
             </div>
@@ -346,7 +351,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
         {project.description && (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-              Descripción
+              {t("projects:detail.description")}
             </p>
             <p className="text-sm text-gray-700 dark:text-gray-300">{project.description}</p>
           </div>
@@ -361,7 +366,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
                 onClick={() => transitionMutation.mutate("active")}
                 disabled={transitionMutation.isPending}
               >
-                <Play className="h-3.5 w-3.5 mr-1" /> Activar
+                <Play className="h-3.5 w-3.5 mr-1" /> {t("projects:detail.activate")}
               </Button>
             )}
             {project.status === "active" && (
@@ -372,7 +377,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
                   onClick={() => transitionMutation.mutate("on_hold")}
                   disabled={transitionMutation.isPending}
                 >
-                  <Pause className="h-3.5 w-3.5 mr-1" /> Pausar
+                  <Pause className="h-3.5 w-3.5 mr-1" /> {t("projects:detail.pause")}
                 </Button>
                 <Button
                   size="sm"
@@ -380,7 +385,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
                   onClick={() => transitionMutation.mutate("completed")}
                   disabled={transitionMutation.isPending}
                 >
-                  <Check className="h-3.5 w-3.5 mr-1" /> Completar
+                  <Check className="h-3.5 w-3.5 mr-1" /> {t("projects:detail.complete")}
                 </Button>
               </>
             )}
@@ -390,7 +395,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
                 onClick={() => transitionMutation.mutate("active")}
                 disabled={transitionMutation.isPending}
               >
-                <Play className="h-3.5 w-3.5 mr-1" /> Reanudar
+                <Play className="h-3.5 w-3.5 mr-1" /> {t("projects:detail.resume")}
               </Button>
             )}
             {project.status !== "cancelled" && (
@@ -400,7 +405,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
                 onClick={() => transitionMutation.mutate("cancelled")}
                 disabled={transitionMutation.isPending}
               >
-                <XCircle className="h-3.5 w-3.5 mr-1" /> Cancelar
+                <XCircle className="h-3.5 w-3.5 mr-1" /> {t("projects:detail.cancel")}
               </Button>
             )}
           </div>
@@ -410,16 +415,16 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-              <ListTodo className="h-3.5 w-3.5" /> Tareas ({project.tasks.length})
+              <ListTodo className="h-3.5 w-3.5" /> {t("projects:detail.tasks", { count: project.tasks.length })}
             </p>
             {!terminal && (
               <Button size="sm" variant="outline" onClick={() => setAddTaskOpen(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Añadir
+                <Plus className="h-3.5 w-3.5 mr-1" /> {t("projects:detail.add")}
               </Button>
             )}
           </div>
           {project.tasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Sin tareas</p>
+            <p className="text-sm text-muted-foreground italic">{t("projects:detail.noTasks")}</p>
           ) : (
             <div className="space-y-2">
               {project.tasks.map(task => (
@@ -430,14 +435,14 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{task.title}</p>
                     {task.due_date && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{task.due_date}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{formatDate(task.due_date)}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 ml-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                       TASK_STATUS_BADGE[task.status]?.color ?? "bg-gray-100 text-gray-700"
                     }`}>
-                      {TASK_STATUS_BADGE[task.status]?.label ?? task.status}
+                      {label("common:taskStatus", task.status)}
                     </span>
                     {!terminal && (
                       <DropdownMenu>
@@ -451,28 +456,28 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
                             <DropdownMenuItem
                               onClick={() => updateTaskMutation.mutate({ taskId: task.id, status: "in_progress" })}
                             >
-                              Iniciar
+                              {t("projects:detail.start")}
                             </DropdownMenuItem>
                           )}
                           {task.status === "in_progress" && (
                             <DropdownMenuItem
                               onClick={() => updateTaskMutation.mutate({ taskId: task.id, status: "done" })}
                             >
-                              Marcar completada
+                              {t("projects:detail.markDone")}
                             </DropdownMenuItem>
                           )}
                           {task.status === "done" && (
                             <DropdownMenuItem
                               onClick={() => updateTaskMutation.mutate({ taskId: task.id, status: "todo" })}
                             >
-                              Reabrir
+                              {t("projects:detail.reopen")}
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => deleteTaskMutation.mutate(task.id)}
                           >
-                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Eliminar
+                            <Trash2 className="h-3.5 w-3.5 mr-2" /> {t("projects:detail.delete")}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -486,7 +491,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
 
         {project.notes && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Notas</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">{t("projects:detail.notes")}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{project.notes}</p>
           </div>
         )}
@@ -504,7 +509,9 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function Projects() {
-  const { formatCurrency: fmt } = useFormat();
+  const t = useT();
+  const label = useEnumLabel();
+  const { formatCurrency: fmt, formatDate } = useFormat();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -520,9 +527,9 @@ export default function Projects() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       if (selectedId === id) setSelectedId(null);
-      toast({ title: "Proyecto eliminado" });
+      toast({ title: t("projects:toast.deleted") });
     },
-    onError: (e: Error) => toast({ title: "No se puede eliminar este proyecto", description: translateApiError(e), variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("projects:toast.deleteFailed"), description: translateApiError(e), variant: "destructive" }),
   });
 
   // KPIs
@@ -539,56 +546,56 @@ export default function Projects() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Proyectos</h1>
+              <h1 className="text-2xl font-bold">{t("projects:title")}</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Gestión del ciclo de vida de proyectos
+                {t("projects:subtitle")}
               </p>
             </div>
             <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Nuevo proyecto
+              <Plus className="h-4 w-4 mr-2" /> {t("projects:new")}
             </Button>
           </div>
 
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard title="Total proyectos"  value={total}     icon={FolderKanban} color="bg-blue-50 text-blue-600" />
-            <KpiCard title="Activos"           value={active}    icon={Play}         color="bg-green-50 text-green-600" />
-            <KpiCard title="Completados"       value={completed} icon={CheckCircle2} color="bg-purple-50 text-purple-600" />
-            <KpiCard title="Presupuesto total" value={fmt(totalBudget)} icon={DollarSign} color="bg-amber-50 text-amber-600" />
+            <KpiCard title={t("projects:kpi.total")}  value={total}     icon={FolderKanban} color="bg-blue-50 text-blue-600" />
+            <KpiCard title={t("projects:kpi.active")}     value={active}    icon={Play}         color="bg-green-50 text-green-600" />
+            <KpiCard title={t("projects:kpi.completed")}     value={completed} icon={CheckCircle2} color="bg-purple-50 text-purple-600" />
+            <KpiCard title={t("projects:kpi.budget")} value={fmt(totalBudget)} icon={DollarSign} color="bg-amber-50 text-amber-600" />
           </div>
 
           {/* Table */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Lista de proyectos</CardTitle>
+              <CardTitle className="text-base">{t("projects:list.title")}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (
-                <div className="p-6 text-sm text-muted-foreground">Cargando...</div>
+                <div className="p-6 text-sm text-muted-foreground">{t("projects:list.loading")}</div>
               ) : projects.length === 0 ? (
                 <div className="p-12 text-center text-muted-foreground">
                   <FolderKanban className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>Sin proyectos aún</p>
+                  <p>{t("projects:list.empty")}</p>
                   <Button variant="outline" size="sm" className="mt-3" onClick={() => setCreateOpen(true)}>
-                    Crear primer proyecto
+                    {t("projects:list.createFirst")}
                   </Button>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Número</TableHead>
-                      <TableHead>Título</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Presupuesto</TableHead>
-                      <TableHead>Inicio</TableHead>
-                      <TableHead>Fin</TableHead>
+                      <TableHead>{t("projects:list.number")}</TableHead>
+                      <TableHead>{t("projects:list.projectTitle")}</TableHead>
+                      <TableHead>{t("projects:list.status")}</TableHead>
+                      <TableHead>{t("projects:list.budget")}</TableHead>
+                      <TableHead>{t("projects:list.start")}</TableHead>
+                      <TableHead>{t("projects:list.end")}</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {projects.map(project => {
-                      const { label, variant } = STATUS_BADGE[project.status] ?? { label: project.status, variant: "outline" as const };
+                      const { variant } = STATUS_BADGE[project.status] ?? { variant: "outline" as const };
                       return (
                         <TableRow
                           key={project.id}
@@ -598,11 +605,11 @@ export default function Projects() {
                           <TableCell className="font-mono text-xs">{project.project_number}</TableCell>
                           <TableCell className="font-medium">{project.title}</TableCell>
                           <TableCell>
-                            <Badge variant={variant}>{label}</Badge>
+                            <Badge variant={variant}>{label("common:projectStatus", project.status)}</Badge>
                           </TableCell>
                           <TableCell>{fmt(project.budget, project.currency)}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{project.start_date ?? "—"}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{project.end_date ?? "—"}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{formatDate(project.start_date)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{formatDate(project.end_date)}</TableCell>
                           <TableCell onClick={e => e.stopPropagation()}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -612,14 +619,14 @@ export default function Projects() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => setSelectedId(project.id)}>
-                                  Ver detalle
+                                  {t("projects:list.view")}
                                 </DropdownMenuItem>
                                 {project.status === "planning" && (
                                   <DropdownMenuItem
                                     className="text-destructive"
                                     onClick={() => deleteMutation.mutate(project.id)}
                                   >
-                                    <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                    <Trash2 className="h-4 w-4 mr-2" /> {t("projects:list.delete")}
                                   </DropdownMenuItem>
                                 )}
                               </DropdownMenuContent>

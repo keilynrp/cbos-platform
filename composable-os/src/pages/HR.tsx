@@ -26,23 +26,21 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { translateApiError } from "@/lib/errors";
+import { useEnumLabel } from "@/i18n/enumLabel";
 import { useFormat } from "@/i18n/useFormat";
+import { useT } from "@/i18n/useT";
 import { hrService, Employee, Department } from "@/services/hr";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const STATUS_BADGE: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  active:     { label: "Activo",       variant: "default" },
-  on_leave:   { label: "De permiso",   variant: "outline" },
-  terminated: { label: "Terminado",    variant: "destructive" },
+const STATUS_BADGE: Record<string, { variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  active:     { variant: "default" },
+  on_leave:   { variant: "outline" },
+  terminated: { variant: "destructive" },
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  full_time:  "Tiempo completo",
-  part_time:  "Medio tiempo",
-  contractor: "Contratista",
-  intern:     "Pasante",
-};
+/** Radix no admite un `SelectItem` con valor vacio: abrir el dialogo lo hacia fallar. */
+const NO_DEPARTMENT = "none";
 
 // ── KPI Cards ─────────────────────────────────────────────────────────────────
 
@@ -71,6 +69,8 @@ function KpiCard({ title, value, icon: Icon, color }: {
 function CreateEmployeeDialog({
   open, onOpenChange, departments,
 }: { open: boolean; onOpenChange: (v: boolean) => void; departments: Department[] }) {
+  const t = useT();
+  const label = useEnumLabel();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState({
@@ -94,40 +94,40 @@ function CreateEmployeeDialog({
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
-      toast({ title: "Empleado registrado" });
+      toast({ title: t("hr:toast.created") });
       onOpenChange(false);
       setForm({ full_name: "", email: "", phone: "", position: "", employment_type: "full_time", department_id: "", start_date: "", salary: "", currency: "USD", notes: "" });
     },
-    onError: (e: Error) => toast({ title: "Error al registrar empleado", description: translateApiError(e), variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("hr:toast.createFailed"), description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nuevo empleado</DialogTitle>
+          <DialogTitle>{t("hr:createEmployee.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <Label>Nombre completo *</Label>
+              <Label>{t("hr:createEmployee.fullName")}</Label>
               <Input
                 value={form.full_name}
                 onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
-                placeholder="Ej. Ana Torres"
+                placeholder={t("hr:createEmployee.fullNamePlaceholder")}
               />
             </div>
             <div>
-              <Label>Email</Label>
+              <Label>{t("hr:createEmployee.email")}</Label>
               <Input
                 type="email"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="correo@empresa.com"
+                placeholder={t("hr:createEmployee.emailPlaceholder")}
               />
             </div>
             <div>
-              <Label>Teléfono</Label>
+              <Label>{t("hr:createEmployee.phone")}</Label>
               <Input
                 value={form.phone}
                 onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
@@ -135,37 +135,36 @@ function CreateEmployeeDialog({
               />
             </div>
             <div>
-              <Label>Cargo</Label>
+              <Label>{t("hr:createEmployee.position")}</Label>
               <Input
                 value={form.position}
                 onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
-                placeholder="Ej. Software Engineer"
+                placeholder={t("hr:createEmployee.positionPlaceholder")}
               />
             </div>
             <div>
-              <Label>Tipo de empleo</Label>
+              <Label>{t("hr:createEmployee.employmentType")}</Label>
               <Select
                 value={form.employment_type}
                 onValueChange={v => setForm(f => ({ ...f, employment_type: v }))}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="full_time">Tiempo completo</SelectItem>
-                  <SelectItem value="part_time">Medio tiempo</SelectItem>
-                  <SelectItem value="contractor">Contratista</SelectItem>
-                  <SelectItem value="intern">Pasante</SelectItem>
+                  {(["full_time", "part_time", "contractor", "intern"] as const).map(type => (
+                    <SelectItem key={type} value={type}>{label("common:employmentType", type)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Departamento</Label>
+              <Label>{t("hr:createEmployee.department")}</Label>
               <Select
                 value={form.department_id}
-                onValueChange={v => setForm(f => ({ ...f, department_id: v }))}
+                onValueChange={v => setForm(f => ({ ...f, department_id: v === NO_DEPARTMENT ? "" : v }))}
               >
-                <SelectTrigger><SelectValue placeholder="Sin departamento" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("hr:createEmployee.noDepartment")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin departamento</SelectItem>
+                  <SelectItem value={NO_DEPARTMENT}>{t("hr:createEmployee.noDepartment")}</SelectItem>
                   {departments.map(d => (
                     <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                   ))}
@@ -173,7 +172,7 @@ function CreateEmployeeDialog({
               </Select>
             </div>
             <div>
-              <Label>Fecha de inicio</Label>
+              <Label>{t("hr:createEmployee.startDate")}</Label>
               <Input
                 type="date"
                 value={form.start_date}
@@ -181,7 +180,7 @@ function CreateEmployeeDialog({
               />
             </div>
             <div>
-              <Label>Salario</Label>
+              <Label>{t("hr:createEmployee.salary")}</Label>
               <Input
                 type="number"
                 value={form.salary}
@@ -190,16 +189,16 @@ function CreateEmployeeDialog({
               />
             </div>
             <div>
-              <Label>Moneda</Label>
+              <Label>{t("hr:createEmployee.currency")}</Label>
               <Input
                 value={form.currency}
                 onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
-                placeholder="USD"
+                placeholder="USD" // i18n-ok: codigo de moneda
               />
             </div>
           </div>
           <div>
-            <Label>Notas</Label>
+            <Label>{t("hr:createEmployee.notes")}</Label>
             <Textarea
               value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
@@ -208,12 +207,12 @@ function CreateEmployeeDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("hr:createEmployee.cancel")}</Button>
           <Button
             onClick={() => createMutation.mutate()}
             disabled={!form.full_name || createMutation.isPending}
           >
-            Registrar
+            {t("hr:createEmployee.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -226,6 +225,7 @@ function CreateEmployeeDialog({
 function CreateDepartmentDialog({
   open, onOpenChange,
 }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const t = useT();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState({ name: "", description: "" });
@@ -234,28 +234,28 @@ function CreateDepartmentDialog({
     mutationFn: () => hrService.createDepartment({ name: form.name, description: form.description || undefined }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["departments"] });
-      toast({ title: "Departamento creado" });
+      toast({ title: t("hr:toast.departmentCreated") });
       onOpenChange(false);
       setForm({ name: "", description: "" });
     },
-    onError: (e: Error) => toast({ title: "Error al crear departamento", description: translateApiError(e), variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("hr:toast.departmentCreateFailed"), description: translateApiError(e), variant: "destructive" }),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Nuevo departamento</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{t("hr:createDepartment.title")}</DialogTitle></DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <Label>Nombre *</Label>
+            <Label>{t("hr:createDepartment.name")}</Label>
             <Input
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="Ej. Ingeniería"
+              placeholder={t("hr:createDepartment.namePlaceholder")}
             />
           </div>
           <div>
-            <Label>Descripción</Label>
+            <Label>{t("hr:createDepartment.description")}</Label>
             <Textarea
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -264,9 +264,9 @@ function CreateDepartmentDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("hr:createDepartment.cancel")}</Button>
           <Button onClick={() => createMutation.mutate()} disabled={!form.name || createMutation.isPending}>
-            Crear
+            {t("hr:createDepartment.submit")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -279,6 +279,8 @@ function CreateDepartmentDialog({
 function EmployeeDetail({
   employeeId, departments, onClose,
 }: { employeeId: string; departments: Department[]; onClose: () => void }) {
+  const t = useT();
+  const label = useEnumLabel();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { formatCurrency, formatDate } = useFormat();
@@ -293,21 +295,20 @@ function EmployeeDetail({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
       queryClient.invalidateQueries({ queryKey: ["employee", employeeId] });
-      toast({ title: "Estado actualizado" });
+      toast({ title: t("hr:toast.statusUpdated") });
     },
     // El texto lo decide el cliente a partir del codigo. Antes se leia
     // e.response.data.detail, forma de axios que este cliente no usa, y luego
     // e.message, que traia la prosa que escribiera el backend.
     onError: (e: Error) => toast({
-      title: translateApiError(e, "Transición no permitida"),
+      title: translateApiError(e, t("hr:toast.transitionNotAllowed")),
       variant: "destructive",
     }),
   });
 
-  if (isLoading || !emp) return <div className="p-6 text-sm text-muted-foreground">Cargando...</div>;
+  if (isLoading || !emp) return <div className="p-6 text-sm text-muted-foreground">{t("hr:detail.loading")}</div>;
 
   const dept = departments.find(d => d.id === emp.department_id);
-  const { label: statusLabel } = STATUS_BADGE[emp.status] ?? { label: emp.status };
   const terminal = emp.status === "terminated";
 
   return (
@@ -318,7 +319,7 @@ function EmployeeDetail({
           <h2 className="text-lg font-semibold mt-0.5">{emp.full_name}</h2>
           {emp.position && <p className="text-sm text-muted-foreground">{emp.position}</p>}
           <Badge variant={STATUS_BADGE[emp.status]?.variant ?? "outline"} className="mt-1">
-            {statusLabel}
+            {label("common:employeeStatus", emp.status)}
           </Badge>
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -332,15 +333,15 @@ function EmployeeDetail({
           <div className="flex items-start gap-2">
             <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" />
             <div>
-              <p className="text-xs text-muted-foreground">Tipo</p>
-              <p className="font-medium">{TYPE_LABEL[emp.employment_type] ?? emp.employment_type}</p>
+              <p className="text-xs text-muted-foreground">{t("hr:detail.type")}</p>
+              <p className="font-medium">{label("common:employmentType", emp.employment_type)}</p>
             </div>
           </div>
           {dept && (
             <div className="flex items-start gap-2">
               <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-xs text-muted-foreground">Departamento</p>
+                <p className="text-xs text-muted-foreground">{t("hr:detail.department")}</p>
                 <p className="font-medium">{dept.name}</p>
               </div>
             </div>
@@ -349,7 +350,7 @@ function EmployeeDetail({
             <div className="flex items-start gap-2">
               <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-xs text-muted-foreground">Salario</p>
+                <p className="text-xs text-muted-foreground">{t("hr:detail.salary")}</p>
                 <p className="font-medium">{formatCurrency(emp.salary, emp.currency, { maximumFractionDigits: 0 })}</p>
               </div>
             </div>
@@ -358,8 +359,8 @@ function EmployeeDetail({
             <div className="flex items-start gap-2">
               <CalendarDays className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-xs text-muted-foreground">Ingreso</p>
-                <p className="font-medium">{emp.start_date}</p>
+                <p className="text-xs text-muted-foreground">{t("hr:detail.startDate")}</p>
+                <p className="font-medium">{formatDate(emp.start_date)}</p>
               </div>
             </div>
           )}
@@ -367,7 +368,7 @@ function EmployeeDetail({
 
         {(emp.email || emp.phone) && (
           <div className="text-sm space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contacto</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("hr:detail.contact")}</p>
             {emp.email && <p>{emp.email}</p>}
             {emp.phone && <p>{emp.phone}</p>}
           </div>
@@ -384,7 +385,7 @@ function EmployeeDetail({
                   onClick={() => transitionMutation.mutate("on_leave")}
                   disabled={transitionMutation.isPending}
                 >
-                  <Clock className="h-3.5 w-3.5 mr-1" /> Poner en permiso
+                  <Clock className="h-3.5 w-3.5 mr-1" /> {t("hr:detail.putOnLeave")}
                 </Button>
                 <Button
                   size="sm"
@@ -392,7 +393,7 @@ function EmployeeDetail({
                   onClick={() => transitionMutation.mutate("terminated")}
                   disabled={transitionMutation.isPending}
                 >
-                  <UserX className="h-3.5 w-3.5 mr-1" /> Dar de baja
+                  <UserX className="h-3.5 w-3.5 mr-1" /> {t("hr:detail.terminate")}
                 </Button>
               </>
             )}
@@ -403,7 +404,7 @@ function EmployeeDetail({
                   onClick={() => transitionMutation.mutate("active")}
                   disabled={transitionMutation.isPending}
                 >
-                  <UserCheck className="h-3.5 w-3.5 mr-1" /> Reincorporar
+                  <UserCheck className="h-3.5 w-3.5 mr-1" /> {t("hr:detail.reinstate")}
                 </Button>
                 <Button
                   size="sm"
@@ -411,7 +412,7 @@ function EmployeeDetail({
                   onClick={() => transitionMutation.mutate("terminated")}
                   disabled={transitionMutation.isPending}
                 >
-                  <UserX className="h-3.5 w-3.5 mr-1" /> Dar de baja
+                  <UserX className="h-3.5 w-3.5 mr-1" /> {t("hr:detail.terminate")}
                 </Button>
               </>
             )}
@@ -420,13 +421,13 @@ function EmployeeDetail({
 
         {emp.terminated_at && (
           <p className="text-xs text-muted-foreground">
-            Dado de baja: {formatDate(emp.terminated_at, "short")}
+            {t("hr:detail.terminatedAt", { date: formatDate(emp.terminated_at, "short") })}
           </p>
         )}
 
         {emp.notes && (
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">Notas</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">{t("hr:detail.notes")}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{emp.notes}</p>
           </div>
         )}
@@ -438,6 +439,7 @@ function EmployeeDetail({
 // ── Departments Tab ───────────────────────────────────────────────────────────
 
 function DepartmentsTab() {
+  const t = useT();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
@@ -457,7 +459,7 @@ function DepartmentsTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["departments"] });
       queryClient.invalidateQueries({ queryKey: ["employees"] });
-      toast({ title: "Departamento eliminado" });
+      toast({ title: t("hr:toast.departmentDeleted") });
     },
   });
 
@@ -465,15 +467,15 @@ function DepartmentsTab() {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Button size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Nuevo departamento
+          <Plus className="h-4 w-4 mr-2" /> {t("hr:departments.new")}
         </Button>
       </div>
       {isLoading ? (
-        <p className="text-sm text-muted-foreground p-4">Cargando...</p>
+        <p className="text-sm text-muted-foreground p-4">{t("hr:departments.loading")}</p>
       ) : departments.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <Building2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p>Sin departamentos</p>
+          <p>{t("hr:departments.empty")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -488,7 +490,7 @@ function DepartmentsTab() {
                       {dept.description && (
                         <p className="text-sm text-muted-foreground mt-0.5">{dept.description}</p>
                       )}
-                      <p className="text-xs text-muted-foreground mt-2">{count} empleado{count !== 1 ? "s" : ""}</p>
+                      <p className="text-xs text-muted-foreground mt-2">{t("hr:departments.employees", { count })}</p>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -501,7 +503,7 @@ function DepartmentsTab() {
                           className="text-destructive"
                           onClick={() => deleteMutation.mutate(dept.id)}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                          <Trash2 className="h-4 w-4 mr-2" /> {t("hr:departments.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -520,6 +522,8 @@ function DepartmentsTab() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function HR() {
+  const t = useT();
+  const label = useEnumLabel();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -540,9 +544,9 @@ export default function HR() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
       if (selectedId === id) setSelectedId(null);
-      toast({ title: "Empleado eliminado" });
+      toast({ title: t("hr:toast.deleted") });
     },
-    onError: (e: Error) => toast({ title: "No se puede eliminar este registro", description: translateApiError(e), variant: "destructive" }),
+    onError: (e: Error) => toast({ title: t("hr:toast.deleteFailed"), description: translateApiError(e), variant: "destructive" }),
   });
 
   // KPIs
@@ -562,57 +566,57 @@ export default function HR() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Equipo</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">Gestión de empleados y departamentos</p>
+              <h1 className="text-2xl font-bold">{t("hr:title")}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{t("hr:subtitle")}</p>
             </div>
             <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Nuevo empleado
+              <Plus className="h-4 w-4 mr-2" /> {t("hr:newEmployee")}
             </Button>
           </div>
 
           {/* KPIs */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard title="Total equipo"   value={total}      icon={Users}     color="bg-blue-50 text-blue-600" />
-            <KpiCard title="Activos"         value={active}     icon={UserCheck} color="bg-green-50 text-green-600" />
-            <KpiCard title="De permiso"      value={onLeave}    icon={Clock}     color="bg-amber-50 text-amber-600" />
-            <KpiCard title="Bajas"           value={terminated} icon={UserX}     color="bg-red-50 text-red-600" />
+            <KpiCard title={t("hr:kpi.total")} value={total}      icon={Users}     color="bg-blue-50 text-blue-600" />
+            <KpiCard title={t("hr:kpi.active")} value={active}     icon={UserCheck} color="bg-green-50 text-green-600" />
+            <KpiCard title={t("hr:kpi.onLeave")} value={onLeave}    icon={Clock}     color="bg-amber-50 text-amber-600" />
+            <KpiCard title={t("hr:kpi.terminated")} value={terminated} icon={UserX}     color="bg-red-50 text-red-600" />
           </div>
 
           <Tabs defaultValue="employees">
             <TabsList>
-              <TabsTrigger value="employees">Empleados</TabsTrigger>
-              <TabsTrigger value="departments">Departamentos</TabsTrigger>
+              <TabsTrigger value="employees">{t("hr:tabs.employees")}</TabsTrigger>
+              <TabsTrigger value="departments">{t("hr:tabs.departments")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="employees" className="mt-4">
               <Card>
                 <CardContent className="p-0">
                   {isLoading ? (
-                    <div className="p-6 text-sm text-muted-foreground">Cargando...</div>
+                    <div className="p-6 text-sm text-muted-foreground">{t("hr:list.loading")}</div>
                   ) : employees.length === 0 ? (
                     <div className="p-12 text-center text-muted-foreground">
                       <Users className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                      <p>Sin empleados registrados</p>
+                      <p>{t("hr:list.empty")}</p>
                       <Button variant="outline" size="sm" className="mt-3" onClick={() => setCreateOpen(true)}>
-                        Registrar primer empleado
+                        {t("hr:list.registerFirst")}
                       </Button>
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>No.</TableHead>
-                          <TableHead>Nombre</TableHead>
-                          <TableHead>Cargo</TableHead>
-                          <TableHead>Departamento</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Estado</TableHead>
+                          <TableHead>{t("hr:list.number")}</TableHead>
+                          <TableHead>{t("hr:list.name")}</TableHead>
+                          <TableHead>{t("hr:list.position")}</TableHead>
+                          <TableHead>{t("hr:list.department")}</TableHead>
+                          <TableHead>{t("hr:list.type")}</TableHead>
+                          <TableHead>{t("hr:list.status")}</TableHead>
                           <TableHead className="w-10" />
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {employees.map(emp => {
-                          const { label, variant } = STATUS_BADGE[emp.status] ?? { label: emp.status, variant: "outline" as const };
+                          const { variant } = STATUS_BADGE[emp.status] ?? { variant: "outline" as const };
                           return (
                             <TableRow
                               key={emp.id}
@@ -623,9 +627,9 @@ export default function HR() {
                               <TableCell className="font-medium">{emp.full_name}</TableCell>
                               <TableCell className="text-sm text-muted-foreground">{emp.position ?? "—"}</TableCell>
                               <TableCell className="text-sm text-muted-foreground">{deptName(emp.department_id)}</TableCell>
-                              <TableCell className="text-sm">{TYPE_LABEL[emp.employment_type] ?? emp.employment_type}</TableCell>
+                              <TableCell className="text-sm">{label("common:employmentType", emp.employment_type)}</TableCell>
                               <TableCell>
-                                <Badge variant={variant}>{label}</Badge>
+                                <Badge variant={variant}>{label("common:employeeStatus", emp.status)}</Badge>
                               </TableCell>
                               <TableCell onClick={e => e.stopPropagation()}>
                                 <DropdownMenu>
@@ -636,7 +640,7 @@ export default function HR() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => setSelectedId(emp.id)}>
-                                      Ver detalle
+                                      {t("hr:list.view")}
                                     </DropdownMenuItem>
                                     {emp.status !== "terminated" && (
                                       <>
@@ -645,7 +649,7 @@ export default function HR() {
                                           className="text-destructive"
                                           onClick={() => deleteMutation.mutate(emp.id)}
                                         >
-                                          <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                          <Trash2 className="h-4 w-4 mr-2" /> {t("hr:list.delete")}
                                         </DropdownMenuItem>
                                       </>
                                     )}
