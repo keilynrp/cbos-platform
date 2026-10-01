@@ -40,7 +40,7 @@ El sistema está construido como un **monolito modular** con límites de dominio
 Discovery → Lead → Opportunity → Quote → Order → Inventory → Portal → Invoice → Payment
 ```
 
-**668 tests** (contrato + integración + e2e) en 39 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
+**736 tests** (contrato + integración + e2e) en 41 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
 
 ---
 
@@ -106,7 +106,7 @@ cbos-platform/
 │   │   │   ├── accounting/         Facturación, pagos, overdue scanner
 │   │   │   └── analytics/          Agregación cross-módulo
 │   │   └── main.py                 Lifespan, routers, CORS, background tasks
-│   ├── tests/                      668 tests (pytest-asyncio)
+│   ├── tests/                      736 tests (pytest-asyncio)
 │   ├── alembic/                    Migraciones de base de datos
 │   └── requirements.txt
 ├── composable-os/                  React 18 + Vite frontend
@@ -232,17 +232,18 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-**668 tests** en 39 archivos. Las categorías no se solapan: cada archivo cuenta
-una sola vez y las filas suman 39.
+**736 tests** en 41 archivos. Las categorías no se solapan: cada archivo cuenta
+una sola vez y las filas suman 41.
 
 | Categoría | Archivos | Cobertura |
 |-----------|----------|-----------|
 | Contract tests | 11 archivos (`test_*_contract.py`) | Auth guards, lifecycle, workspace isolation y forma del error por módulo |
-| Integration tests | 17 archivos | Flows de servicio y lógica de negocio, incluidos contracts, projects y HR |
+| Integration tests | 18 archivos | Flows de servicio y lógica de negocio, incluidos contracts, projects y HR |
 | E2E cross-module | 5 archivos (`test_e2e_*.py`) | Sales→Accounting, Portal→WS, Discovery→Blueprint, Notification pipeline |
 | Consumer / scanner | 3 archivos | Workflow consumer, invoice consumer, overdue scanner |
 | Analytics | 2 archivos | Summary, revenue, pipeline: auth, shape, workspace isolation, empty state |
 | Smoke | 1 archivo (`test_wedge_smoke.py`) | Funnel completo: CRM→Sales→Inventory→Portal→Accounting (7 módulos) |
+| Unit (funciones puras) | 1 archivo (`test_locale_resolution.py`) | Resolución de locale (ADR 0016): normalización, orden de resolución y `Accept-Language`; no toca base ni HTTP |
 
 ```bash
 # Cobertura detallada

@@ -9,6 +9,9 @@ class PortalSessionCreate(BaseModel):
     quote_id: str
     client_name: str | None = None
     client_email: str | None = None
+    # Idioma de este envio (ADR 0016). `None` = sin preferencia: los correos al
+    # cliente seguiran la cadena de resolucion. Se valida en el servicio.
+    locale: str | None = None
     expire_hours: int = 72  # override default
 
 
@@ -23,6 +26,7 @@ class PortalSessionRead(BaseModel):
     action: str | None
     client_name: str | None
     client_email: str | None
+    locale: str | None = None
     created_by_id: str | None
     portal_url: str  # computed full URL for sharing
     created_at: datetime

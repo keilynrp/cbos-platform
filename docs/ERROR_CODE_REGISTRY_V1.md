@@ -94,6 +94,7 @@ auth errors every protected route returns.
 | `PORTAL_SESSION_NOT_FOUND` | 404 | portal | The portal session does not exist | `id` — omitted on token lookup, see below |
 | `PORTAL_LINK_EXPIRED` | 410 | portal | The portal link is past its expiry | `expires_at` |
 | `PORTAL_QUOTE_NOT_FOUND` | 404 | portal | The quote behind the session or request does not exist | `id` |
+| `PORTAL_LOCALE_UNSUPPORTED` | 422 | portal | Session creation set a locale that is malformed or has no shipped catalogue. Only `null` means "no preference" (ADR 0016) | `supported` |
 | `PORTAL_QUOTE_NOT_SHAREABLE` | 409 | portal | Session creation attempted on a quote past draft/sent | `status` |
 | `PORTAL_SESSION_NO_CLIENT_EMAIL` | 422 | portal | Link email requested for a session with no client email | `id` |
 | `PORTAL_QUOTE_ACCEPT_INVALID_STATUS` | 409 | portal | Client accept attempted from a status that does not allow it | `status` |
@@ -122,6 +123,7 @@ auth errors every protected route returns.
 | `IDENTITY_CANNOT_DELETE_OWNER` | 409 | identity | Deleting the workspace owner would leave the workspace without one | `email` |
 | `IDENTITY_DELETE_CONFIRMATION_MISMATCH` | 422 | identity | `confirm_email` did not match the target user. No `detail`: whoever does not know who they are deleting should not learn it by guessing | — |
 | `IDENTITY_USER_HAS_RECORDS` | 409 | identity | The user still owns records that block the delete. `constraint` is the Postgres foreign key that refused, which names the table to look at | `constraint` |
+| `IDENTITY_LOCALE_UNSUPPORTED` | 422 | identity | `PATCH /auth/me` set a locale that is malformed or has no shipped catalogue. Rejected rather than silently falling back, so a language setting that does nothing is never unexplained (ADR 0016) | `supported` |
 | `IDENTITY_PUBLIC_SITE_NOT_FOUND` | 404 | identity | The public site does not exist in this workspace | `id` |
 | `IDENTITY_PUBLIC_SITE_SLUG_TAKEN` | 409 | identity | A public site with that slug already exists | `slug` |
 | `AUTH_TOKEN_INVALID` | 401 | core (`deps.py`) | Bearer token missing, invalid, expired, or its user is gone/inactive (sends `WWW-Authenticate`) | — |
