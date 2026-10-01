@@ -51,9 +51,10 @@ def normalize_locale(
     pero sin catalogo— porque quien llama hace lo mismo en ambos: rechazar, o
     seguir la cadena de resolucion.
 
-    Solo admite `idioma` o `idioma-REGION`. Los subtags de escritura
-    (`zh-Hant`) o variantes no se necesitan hoy, y aceptarlos sin uso es
-    aceptar entrada que nadie ha probado.
+    Solo admite `idioma` o `idioma-REGION`, donde la region son dos letras
+    (`MX`) o tres cifras (`419`, UN M.49: el espanol de Latinoamerica). Los
+    subtags de escritura (`zh-Hant`) o variantes no se necesitan hoy, y
+    aceptarlos sin uso es aceptar entrada que nadie ha probado.
     """
     if not isinstance(raw, str):
         return None
@@ -73,9 +74,12 @@ def normalize_locale(
         return language
 
     region = parts[1]
-    if not _is_alpha(region, (2,)):
-        return None
-    return f"{language}-{region.upper()}"
+    if _is_alpha(region, (2,)):
+        return f"{language}-{region.upper()}"
+    # isascii(): `str.isdigit` acepta cifras de otros alfabetos.
+    if len(region) == 3 and region.isascii() and region.isdigit():
+        return f"{language}-{region}"
+    return None
 
 
 def catalogue_for(
@@ -121,8 +125,8 @@ def _from_accept_language(header: str, supported: Sequence[str]) -> str | None:
     for tag in _parse_accept_language(header):
         match = normalize_locale(tag, supported=supported)
         if match is None:
-            # `es-419` no es una region de dos letras, pero el idioma si se
-            # sirve: mejor el catalogo base que ninguno.
+            # Un tag que no sabemos leer entero (`es-Latn-419`, con escritura)
+            # tiene aun un idioma que se sirve: mejor el catalogo base que ninguno.
             match = normalize_locale(tag.replace("_", "-").split("-")[0], supported=supported)
         if match is not None:
             return match

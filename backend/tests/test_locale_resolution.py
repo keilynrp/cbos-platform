@@ -33,6 +33,10 @@ TWO = ("es", "en")
         ("es-MX", "es-MX"),
         ("es-mx", "es-MX"),
         ("es_MX", "es-MX"),
+        # Region numerica UN M.49 (tres cifras): `es-419` es el espanol de
+        # Latinoamerica y es un tag habitual en Accept-Language.
+        ("es-419", "es-419"),
+        ("ES_419", "es-419"),
     ],
 )
 async def test_normalize_canonicalises_case_and_separator(raw, expected):
@@ -41,7 +45,11 @@ async def test_normalize_canonicalises_case_and_separator(raw, expected):
 
 @pytest.mark.parametrize(
     "raw",
-    [None, "", "   ", "fr", "xx", "spanish", "es-MX-extra", "es-", "-MX", "e", "es-M"],
+    [
+        None, "", "   ", "fr", "xx", "spanish", "es-MX-extra", "es-", "-MX", "e", "es-M",
+        # Una region numerica son exactamente tres cifras, ni mas ni menos ni mezcladas.
+        "es-41", "es-4190", "es-4a9", "es-41M",
+    ],
 )
 async def test_normalize_rejects_unsupported_or_malformed(raw):
     assert normalize_locale(raw) is None
@@ -155,9 +163,16 @@ async def test_accept_language_with_nothing_shipped_falls_to_workspace():
     assert got == "es"
 
 
-async def test_accept_language_reduces_unknown_region_to_base_language():
-    # `es-419` no es un tag de region de dos letras, pero el idioma si esta.
-    assert resolve_locale(accept_language="es-419") == "es"
+async def test_accept_language_keeps_a_numeric_region():
+    # `es-419` es valido y la region importa para el formato: antes se reducia a
+    # `es` en el registro mientras el PATCH del locale propio lo rechazaba.
+    assert resolve_locale(accept_language="es-419") == "es-419"
+    assert resolve_locale(accept_language="es-419,en;q=0.5", supported=TWO) == "es-419"
+
+
+async def test_accept_language_reduces_a_tag_it_cannot_parse_to_the_base_language():
+    # Escritura + region (`es-Latn-419`) no se admite hoy, pero el idioma si esta.
+    assert resolve_locale(accept_language="es-Latn-419") == "es"
 
 
 @pytest.mark.parametrize("header", ["*", "", "   ", "q=0.9", ";;;", "es;q=abc,", "🙂"])
