@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { translateApiError } from "@/lib/errors";
+import { todayInputValue } from "@/i18n/format";
+import { useFormat } from "@/i18n/useFormat";
 import {
   accountingService,
   type InvoiceListItem,
@@ -34,13 +36,6 @@ import {
 } from "@/services/accounting";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-function fmt(amount: number, currency = "USD") {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency, minimumFractionDigits: 2 }).format(amount);
-}
-
-function fmtDate(iso: string) {
-  return new Date(iso + "T00:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
-}
 
 const STATUS_META: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.FC<{ className?: string }> }> = {
   draft:      { label: "Borrador",  variant: "secondary",    icon: FileText },
@@ -64,7 +59,8 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Invoice Detail Sheet ─────────────────────────────────────────────────────
 function InvoiceDetail({ invoice, onClose }: { invoice: Invoice; onClose: () => void }) {
-  const [payForm, setPayForm] = useState({ amount: String(invoice.amount_due), method: "transfer", reference: "", date: new Date().toISOString().slice(0, 10) });
+  const { formatCurrency: fmt, formatDate: fmtDate } = useFormat();
+  const [payForm, setPayForm] = useState({ amount: String(invoice.amount_due), method: "transfer", reference: "", date: todayInputValue() });
   const [payOpen, setPayOpen] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -232,7 +228,8 @@ function InvoiceDetail({ invoice, onClose }: { invoice: Invoice; onClose: () => 
 
 // ── New Invoice Dialog ────────────────────────────────────────────────────────
 function NewInvoiceDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const { formatCurrency: fmt } = useFormat();
+  const today = todayInputValue();
   const [form, setForm] = useState({
     issue_date: today,
     due_date: "",
@@ -402,6 +399,7 @@ function NewInvoiceDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
 
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function Invoicing() {
+  const { formatCurrency: fmt, formatDate: fmtDate } = useFormat();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);

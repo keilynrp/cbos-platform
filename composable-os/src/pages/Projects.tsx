@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { projectsService, Project, ProjectTask } from "@/services/projects";
 import { translateApiError } from "@/lib/errors";
+import { useFormat } from "@/i18n/useFormat";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -40,11 +41,6 @@ const TASK_STATUS_BADGE: Record<string, { label: string; color: string }> = {
   done:        { label: "Completado",  color: "bg-green-100 text-green-700" },
   cancelled:   { label: "Cancelado",   color: "bg-red-100 text-red-700" },
 };
-
-function fmt(val: number | null | undefined, currency = "USD") {
-  if (val == null) return "—";
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(val);
-}
 
 // ── KPI Cards ─────────────────────────────────────────────────────────────────
 
@@ -258,6 +254,7 @@ function AddTaskDialog({
 // ── Project Detail Panel ──────────────────────────────────────────────────────
 
 function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () => void }) {
+  const { formatCurrency: fmt } = useFormat();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [addTaskOpen, setAddTaskOpen] = useState(false);
@@ -507,6 +504,7 @@ function ProjectDetail({ projectId, onClose }: { projectId: string; onClose: () 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function Projects() {
+  const { formatCurrency: fmt } = useFormat();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);

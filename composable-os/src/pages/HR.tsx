@@ -26,6 +26,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { translateApiError } from "@/lib/errors";
+import { useFormat } from "@/i18n/useFormat";
 import { hrService, Employee, Department } from "@/services/hr";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -42,11 +43,6 @@ const TYPE_LABEL: Record<string, string> = {
   contractor: "Contratista",
   intern:     "Pasante",
 };
-
-function fmt(val: number | null | undefined, currency = "USD") {
-  if (val == null) return "—";
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency, maximumFractionDigits: 0 }).format(val);
-}
 
 // ── KPI Cards ─────────────────────────────────────────────────────────────────
 
@@ -285,6 +281,7 @@ function EmployeeDetail({
 }: { employeeId: string; departments: Department[]; onClose: () => void }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { formatCurrency, formatDate } = useFormat();
 
   const { data: emp, isLoading } = useQuery({
     queryKey: ["employee", employeeId],
@@ -353,7 +350,7 @@ function EmployeeDetail({
               <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
                 <p className="text-xs text-muted-foreground">Salario</p>
-                <p className="font-medium">{fmt(emp.salary, emp.currency)}</p>
+                <p className="font-medium">{formatCurrency(emp.salary, emp.currency, { maximumFractionDigits: 0 })}</p>
               </div>
             </div>
           )}
@@ -423,7 +420,7 @@ function EmployeeDetail({
 
         {emp.terminated_at && (
           <p className="text-xs text-muted-foreground">
-            Dado de baja: {new Date(emp.terminated_at).toLocaleDateString("es-MX")}
+            Dado de baja: {formatDate(emp.terminated_at, "short")}
           </p>
         )}
 

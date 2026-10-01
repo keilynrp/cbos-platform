@@ -8,6 +8,7 @@
  * este disable sobra.
  */
 import { useState, useCallback, useRef } from "react";
+import { useFormat } from "@/i18n/useFormat";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { portalService, CreateSessionDto } from "@/services/portal";
 import { salesService } from "@/services/sales";
@@ -956,6 +957,7 @@ const PortalBuilder = () => {
 // ── Portal Sessions component ─────────────────────────────────────────────────
 
 function PortalSessions() {
+  const { formatDate } = useFormat();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<CreateSessionDto>({ quote_id: "", client_name: "", client_email: "", expire_hours: 72 });
@@ -1069,7 +1071,7 @@ function PortalSessions() {
                       {statusLabel(s.action, s.accessed_at)}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {s.client_email ?? "sin email"} · expira {new Date(s.expires_at).toLocaleDateString()}
+                      {s.client_email ?? "sin email"} · expira {formatDate(s.expires_at, "short")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

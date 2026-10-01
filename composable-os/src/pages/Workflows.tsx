@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { translateApiError } from "@/lib/errors";
+import { useFormat } from "@/i18n/useFormat";
 import {
   Zap, Plus, Play, Trash2, ToggleLeft, CheckCircle2, XCircle,
   Clock, BarChart3, ChevronRight, Loader2,
@@ -38,6 +39,7 @@ function WorkflowCard({
   onViewRuns: (id: string) => void;
   toggling: boolean;
 }) {
+  const { formatDate } = useFormat();
   return (
     <Card className="border border-border/60 hover:border-primary/20 transition-colors">
       <CardContent className="p-5 space-y-3">
@@ -102,7 +104,7 @@ function WorkflowCard({
             {wf.last_triggered_at && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {new Date(wf.last_triggered_at).toLocaleDateString()}
+                {formatDate(wf.last_triggered_at, "short")}
               </span>
             )}
           </div>
@@ -224,6 +226,7 @@ function CreateWorkflowDialog({ open, onClose }: { open: boolean; onClose: () =>
 
 // ── Runs Dialog ────────────────────────────────────────────────────────────
 function RunsDialog({ workflowId, onClose }: { workflowId: string | null; onClose: () => void }) {
+  const { formatDateTime } = useFormat();
   const { data: runs, isLoading } = useQuery({
     queryKey: ["workflow-runs", workflowId],
     queryFn: () => workflowsService.getRuns(workflowId!),
@@ -255,7 +258,7 @@ function RunsDialog({ workflowId, onClose }: { workflowId: string | null; onClos
                     {run.status}
                   </Badge>
                   <span className="text-[11px] text-muted-foreground">
-                    {new Date(run.created_at).toLocaleString()}
+                    {formatDateTime(run.created_at)}
                   </span>
                 </div>
                 {run.trigger_event_type && (

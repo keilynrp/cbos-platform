@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { translateApiError } from "@/lib/errors";
+import { useFormat } from "@/i18n/useFormat";
 import {
   Plus, MoreHorizontal, Building2, Users, DollarSign, TrendingUp,
   Phone, Mail, Calendar, ChevronRight, ArrowRight, FolderKanban,
@@ -26,8 +27,10 @@ function initials(name: string) {
   return name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 }
 
-function fmtCurrency(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+/** Importes del pipeline: dolares, sin decimales. */
+function useFmtCurrency() {
+  const { formatCurrency } = useFormat();
+  return (n: number) => formatCurrency(n, "USD", { maximumFractionDigits: 0 });
 }
 
 // Pipeline stages config — IDs match backend VALID_STAGES
@@ -58,6 +61,8 @@ type ActivityCtx = { entity_type: "lead" | "opportunity"; entity_id: string; nam
 // ── Sub-Components ─────────────────────────────────────────────────────────
 
 function DealCard({ opp, onStageClick }: { opp: Opportunity; onStageClick: (opp: Opportunity) => void }) {
+  const fmtCurrency = useFmtCurrency();
+  const { formatDate } = useFormat();
   return (
     <Card
       className="group cursor-pointer border border-border/60 shadow-sm hover:shadow-md transition-all hover:border-primary/30 bg-card"
@@ -80,7 +85,7 @@ function DealCard({ opp, onStageClick }: { opp: Opportunity; onStageClick: (opp:
           <div className="flex items-center gap-2">
             {opp.close_date && (
               <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-                <Clock className="h-3 w-3" /> {new Date(opp.close_date).toLocaleDateString()}
+                <Clock className="h-3 w-3" /> {formatDate(opp.close_date, "short")}
               </span>
             )}
             {opp.probability != null && (
@@ -96,6 +101,7 @@ function DealCard({ opp, onStageClick }: { opp: Opportunity; onStageClick: (opp:
 }
 
 function Pipeline({ opportunities, onStageClick }: { opportunities: Opportunity[]; onStageClick: (opp: Opportunity) => void }) {
+  const fmtCurrency = useFmtCurrency();
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
       {STAGES.map((stage) => {
@@ -245,6 +251,7 @@ function OrganizationsList({ organizations }: { organizations: Organization[] })
 }
 
 function ActivityList({ activities }: { activities: Activity[] }) {
+  const { formatDate } = useFormat();
   return (
     <div className="space-y-1">
       {activities.map((a, i) => {
@@ -267,7 +274,7 @@ function ActivityList({ activities }: { activities: Activity[] }) {
                   <p className="text-[11px] text-muted-foreground mt-0.5 capitalize">{a.activity_type} · {a.entity_type}</p>
                 </div>
                 <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0">
-                  {new Date(a.created_at).toLocaleDateString()}
+                  {formatDate(a.created_at, "short")}
                 </span>
               </div>
             </div>
@@ -625,6 +632,7 @@ function NewOpportunityDialog({ open, onClose }: { open: boolean; onClose: () =>
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 const CRM = () => {
+  const fmtCurrency = useFmtCurrency();
   const [activeTab, setActiveTab] = useState("pipeline");
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [newOppOpen, setNewOppOpen] = useState(false);

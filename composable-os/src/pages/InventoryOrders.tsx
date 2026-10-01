@@ -18,10 +18,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useFormat } from "@/i18n/useFormat";
 
-function fmtCurrency(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
-}
 
 const statusBadge = (status: string) => {
   const map: Record<string, string> = {
@@ -33,6 +31,8 @@ const statusBadge = (status: string) => {
 };
 
 const InventoryOrders = () => {
+  const { formatCurrency } = useFormat();
+  const fmtCurrency = (n: number) => formatCurrency(n, "USD", { maximumFractionDigits: 0 });
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["inventory-items"],
     queryFn: inventoryService.getItems,
