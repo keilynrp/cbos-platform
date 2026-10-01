@@ -94,7 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (data: RegisterData) => {
-    const resp = await api.post<{ access_token: string }>("/auth/register", data);
+    // El registro es el unico sitio donde `Accept-Language` decide algo (ADR
+    // 0016): con el, el backend siembra el idioma del workspace nuevo. Se manda
+    // el idioma *activo*, no el del navegador, para que lo que el visitante
+    // eligio en el login llegue hasta aqui y `effective_locale` no lo deshaga.
+    const resp = await api.post<{ access_token: string }>("/auth/register", data, {
+      headers: { "Accept-Language": i18n.language },
+    });
     setToken(resp.access_token);
     const me = await api.get<User>("/auth/me");
     setUser(me);

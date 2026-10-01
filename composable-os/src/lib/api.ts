@@ -77,8 +77,12 @@ export const api = {
   get: <T>(path: string) =>
     request<T>(path, { method: "GET" }),
 
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: body != null ? JSON.stringify(body) : undefined }),
+  post: <T>(path: string, body?: unknown, options?: { headers?: Record<string, string> }) =>
+    request<T>(path, {
+      method: "POST",
+      body: body != null ? JSON.stringify(body) : undefined,
+      headers: options?.headers,
+    }),
 
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),

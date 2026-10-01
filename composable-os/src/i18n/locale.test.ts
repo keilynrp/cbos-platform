@@ -17,11 +17,18 @@ describe("normalizeLocale", () => {
     ["es-MX", "es-MX"],
     ["es-mx", "es-MX"],
     ["es_MX", "es-MX"],
+    // Region numerica UN M.49 (tres cifras): `es-419`, espanol de Latinoamerica.
+    ["es-419", "es-419"],
+    ["ES_419", "es-419"],
   ])("canonicalises %j to %j", (raw, expected) => {
     expect(normalizeLocale(raw, TWO)).toBe(expected);
   });
 
-  it.each([null, undefined, "", "   ", "fr", "xx", "spanish", "es-MX-extra", "es-", "-MX", "e", "es-M"])(
+  it.each([
+    null, undefined, "", "   ", "fr", "xx", "spanish", "es-MX-extra", "es-", "-MX", "e", "es-M",
+    // Una region numerica son exactamente tres cifras.
+    "es-41", "es-4190", "es-4a9", "es-41M",
+  ])(
     "rejects %j",
     (raw) => {
       expect(normalizeLocale(raw as string | null | undefined, TWO)).toBeNull();
@@ -58,8 +65,13 @@ describe("detectLocale", () => {
     expect(detectLocale({ stored: null, navigatorLanguages: ["fr-FR", "en-GB", "es"], supported: TWO })).toBe("en-GB");
   });
 
-  it("reduces an unknown region to the base language", () => {
-    expect(detectLocale({ stored: null, navigatorLanguages: ["es-419"], supported: TWO })).toBe("es");
+  it("keeps a numeric region, which the backend accepts too", () => {
+    expect(detectLocale({ stored: null, navigatorLanguages: ["es-419"], supported: TWO })).toBe("es-419");
+  });
+
+  it("reduces a tag it cannot read whole to the base language", () => {
+    // Escritura + region (`es-Latn-419`) no se admite hoy, pero el idioma si esta.
+    expect(detectLocale({ stored: null, navigatorLanguages: ["es-Latn-419"], supported: TWO })).toBe("es");
   });
 
   it("falls back to the deployment default when nothing matches", () => {
