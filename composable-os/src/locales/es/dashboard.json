@@ -1,0 +1,52 @@
+{
+  "title": "Dashboard",
+  "greeting": "Hola, {{name}}",
+  "subtitle": "Resumen del negocio en tiempo real.",
+  "kpi": {
+    "invoiced": "Total facturado",
+    "invoicedSub": "ingresos acumulados",
+    "openDeals": "Deals abiertos",
+    "openDealsSub": "valor: {{value}}",
+    "pendingOrders": "Órdenes pendientes",
+    "pendingOrdersSub_one": "{{count}} workflow activo",
+    "pendingOrdersSub_other": "{{count}} workflows activos",
+    "stockAlerts": "Alertas de stock",
+    "stockAlertsSub": "ítems bajo mínimo"
+  },
+  "revenue": {
+    "title": "Facturación — últimos {{months}} meses",
+    "series": "Facturado"
+  },
+  "pipeline": {
+    "title": "Pipeline CRM",
+    "empty": "Sin oportunidades aún.",
+    "create": "Crear una"
+  },
+  "inventory": {
+    "title": "Alertas de inventario",
+    "viewAll": "Ver todo",
+    "allGood": "Todo el inventario en niveles óptimos.",
+    "available_one": "{{count}} disponible",
+    "available_other": "{{count}} disponibles"
+  },
+  "activity": {
+    "title": "Actividad reciente",
+    "crm": "CRM",
+    "empty": "Sin actividad registrada aún."
+  },
+  "insights": {
+    "title": "Insights de IA",
+    "sales": {
+      "agent": "Asistente de ventas",
+      "text": "Revisa tus cotizaciones abiertas — algunas pueden estar próximas a vencer."
+    },
+    "inventory": {
+      "agent": "Agente de inventario",
+      "text": "Verifica los artículos con stock bajo antes de hacer nuevos pedidos."
+    },
+    "workflows": {
+      "agent": "Motor de workflows",
+      "text": "Automatiza seguimientos repetitivos con un workflow disparado por eventos."
+    }
+  }
+}

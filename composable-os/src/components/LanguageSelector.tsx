@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { SUPPORTED_LOCALES } from "@/i18n";
 import { catalogueFor } from "@/i18n/locale";
+import { useT } from "@/i18n/useT";
 import { useAuth } from "@/lib/auth";
 import { translateApiError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,8 @@ interface Props {
  * ella se recuerda en este navegador.
  */
 export function LanguageSelector({ locales = SUPPORTED_LOCALES, className }: Props) {
-  const { t, i18n } = useTranslation();
+  const t = useT();
+  const { i18n } = useTranslation();
   const { changeLocale } = useAuth();
   const { toast } = useToast();
 

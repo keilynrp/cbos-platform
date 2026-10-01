@@ -1,0 +1,83 @@
+{
+  "title": "Discovery AI",
+  "newSessionButton": "Nueva sesión",
+  "sessions": {
+    "empty": "Sin sesiones. Inicia una nueva.",
+    "untitled": "Sesión #{{id}}"
+  },
+  "welcome": {
+    "title": "Solution Discovery AI",
+    "intro": "Cuéntame sobre tu negocio y te ayudaré a identificar qué módulos de Composable OS necesitas. El proceso toma 2–3 minutos.",
+    "newSession": "Nueva sesión de discovery"
+  },
+  "starter": {
+    "retail": "Tengo una tienda de ropa y necesito organizar mis ventas y clientes",
+    "consulting": "Soy consultor y necesito gestionar propuestas y facturación",
+    "manufacturing": "Tenemos una empresa de manufactura con inventario y distribución",
+    "clinic": "Somos una clínica que necesita agendar citas y gestionar pacientes"
+  },
+  "chat": {
+    "closeSession": "Cerrar conversación",
+    "generateBlueprint": "Generar blueprint",
+    "analyzing": "Analizando…",
+    "firstMessage": "Escribe tu primer mensaje…",
+    "greeting": "Hola, soy el AI de Solution Discovery. He registrado tu contexto inicial. Cuéntame más sobre los principales desafíos que enfrenta tu negocio. ¿Cuál es el proceso que más tiempo te consume?",
+    "placeholder": "Cuéntame sobre tu negocio o proceso… (Enter para enviar)",
+    "send": "Enviar mensaje",
+    "sessionCompleted": "Sesión completada.",
+    "viewBlueprint": "Ver blueprint"
+  },
+  "blueprint": {
+    "title": "Blueprint",
+    "perMonth": "{{price}}/mes",
+    "painPoints": "Pain points detectados",
+    "capabilities": "Capacidades recomendadas",
+    "modules": "Módulos incluidos",
+    "activated": "¡Workspace activado!",
+    "goToCrm": "Ir al CRM",
+    "apply": "Aplicar blueprint",
+    "applying": "Aplicando…"
+  },
+  "newSession": {
+    "title": "Nueva sesión de discovery",
+    "description": "Describe tu negocio (opcional)",
+    "descriptionPlaceholder": "Ej: Tengo una empresa de retail con 3 tiendas, manejo inventario y necesito digitalizar mis ventas...",
+    "industry": "Industria",
+    "size": "Tamaño",
+    "select": "Seleccionar…",
+    "cancel": "Cancelar",
+    "creating": "Creando…",
+    "start": "Iniciar discovery"
+  },
+  "toast": {
+    "createFailed": "Error al crear sesión",
+    "sendFailed": "Error al enviar mensaje",
+    "blueprintReady": "Blueprint generado",
+    "recommendedPackage": "Paquete recomendado: {{name}}"
+  },
+  "sessionStatus": {
+    "active": "Activa",
+    "completed": "Completada"
+  },
+  "packageName": {
+    "starter": "Starter",
+    "growth": "Growth",
+    "operations_plus": "Operations+"
+  },
+  "industry": {
+    "retail": "Retail / Comercio",
+    "manufacturing": "Manufactura",
+    "services": "Servicios / Consultoría",
+    "technology": "Tecnología / Software",
+    "healthcare": "Salud / Farmacia",
+    "education": "Educación / Capacitación",
+    "food": "Alimentos / Restaurantes",
+    "construction": "Construcción / Inmobiliaria"
+  },
+  "size": {
+    "nano": "1 persona (solopreneur)",
+    "small": "Pequeña (2–20 personas)",
+    "medium": "Mediana (20–100 personas)",
+    "large": "Grande (+100 personas)"
+  }
+}

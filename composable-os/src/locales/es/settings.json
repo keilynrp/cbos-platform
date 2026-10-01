@@ -1,0 +1,131 @@
+{
+  "title": "Ajustes",
+  "subtitle": "Configuración de la plataforma, arquitectura y estado del sistema.",
+  "tabs": {
+    "architecture": "Arquitectura",
+    "health": "Estado del sistema",
+    "notifications": "Notificaciones",
+    "general": "General",
+    "team": "Equipo"
+  },
+  "architecture": {
+    "title": "Arquitectura de la plataforma",
+    "hint": "Pasa el cursor sobre los componentes para seguir las rutas del flujo de datos.",
+    "layers": {
+      "presentation": "PRESENTACIÓN",
+      "api": "CAPA DE API",
+      "microservices": "MICROSERVICIOS",
+      "messaging": "MENSAJERÍA",
+      "data": "CAPA DE DATOS"
+    },
+    "nodes": {
+      "client": { "label": "Aplicaciones cliente", "sublabel": "React SPA / Móvil" },
+      "gateway": { "label": "API Gateway", "sublabel": "Auth · Rate Limit · Routing" },
+      "projects": { "label": "Proyectos", "sublabel": "Microservicio" },
+      "crm": { "label": "CRM", "sublabel": "Microservicio" },
+      "docs": { "label": "Documentos", "sublabel": "Microservicio" },
+      "knowledge": { "label": "Conocimiento", "sublabel": "Microservicio" },
+      "analytics": { "label": "Analítica", "sublabel": "Microservicio" },
+      "ai": { "label": "Agentes de IA", "sublabel": "Microservicio" },
+      "eventbus": { "label": "Event Bus", "sublabel": "Mensajería asíncrona · Pub/Sub" },
+      "postgres": { "label": "PostgreSQL", "sublabel": "Almacén de datos principal" },
+      "graph": { "label": "Base de datos de grafos", "sublabel": "Neo4j · Relaciones" },
+      "vector": { "label": "Base de datos vectorial", "sublabel": "Embeddings · Búsqueda semántica" }
+    },
+    "cards": {
+      "gateway": {
+        "title": "API Gateway",
+        "description": "Gestiona la autenticación, el límite de peticiones, la validación y el enrutamiento inteligente hacia los microservicios. Admite REST y GraphQL."
+      },
+      "eventbus": {
+        "title": "Event Bus",
+        "description": "La mensajería pub/sub asíncrona permite un acoplamiento débil entre módulos. Cuando se cierra un deal en el CRM, los eventos crean el proyecto automáticamente."
+      },
+      "data": {
+        "title": "Capa de datos",
+        "description": "PostgreSQL para datos estructurados, Neo4j para las relaciones del grafo de conocimiento y una base vectorial para la búsqueda semántica y los embeddings de IA."
+      }
+    }
+  },
+  "health": {
+    "loading": "Cargando estado del sistema...",
+    "updated": "Actualizado {{when}}",
+    "refresh": "Actualizar",
+    "error": "No se pudo conectar con el sistema. Verifica que el backend esté activo.",
+    "latency": "Latencia",
+    "overall": "Estado general:",
+    "version": "v{{version}}",
+    "services": {
+      "api": "API Gateway",
+      "postgres": "PostgreSQL"
+    },
+    "status": {
+      "healthy": "saludable",
+      "degraded": "degradado",
+      "unhealthy": "con fallos"
+    }
+  },
+  "notifications": {
+    "title": "Notificaciones por correo",
+    "saving": "Guardando...",
+    "intro": "Controla qué eventos de negocio envían alertas por correo. Los cambios se guardan automáticamente.",
+    "loading": "Cargando preferencias...",
+    "master": "Notificaciones por correo",
+    "masterHint": "Interruptor general — desactívalo para detener todas las alertas por correo",
+    "eventTypes": "Tipos de evento",
+    "summaryOn": "{{active}} de {{total}} tipos de evento activos",
+    "summaryOff": "Todas las notificaciones por correo están desactivadas",
+    "realtimeTitle": "Notificaciones en tiempo real",
+    "realtimeBody": "Las notificaciones dentro de la app se entregan por WebSocket y están siempre activas mientras estás conectado. Cubren 13 tipos de eventos, entre ellos el estado de los workflows, la actividad de ventas, las alertas de inventario, las interacciones del portal y las novedades de contabilidad. Usa el icono de campana del encabezado para verlas.",
+    "events": {
+      "QuoteAccepted": {
+        "label": "Cotizaciones aceptadas",
+        "desc": "Cuando un cliente acepta una cotizacion"
+      },
+      "SalesOrderCreated": {
+        "label": "Ordenes de venta creadas",
+        "desc": "Cuando se genera una nueva orden de venta"
+      },
+      "WorkflowFailed": {
+        "label": "Workflows fallidos",
+        "desc": "Cuando un workflow automatizado falla"
+      },
+      "InventoryLowThresholdDetected": {
+        "label": "Stock bajo",
+        "desc": "Cuando un producto alcanza el umbral minimo de inventario"
+      },
+      "InvoiceOverdue": {
+        "label": "Facturas vencidas",
+        "desc": "Cuando una factura supera su fecha de vencimiento sin pago"
+      }
+    }
+  },
+  "general": {
+    "title": "Ajustes del workspace",
+    "name": "Nombre del workspace",
+    "url": "URL del workspace",
+    "preferences": "Preferencias",
+    "prefs": {
+      "ai": {
+        "label": "Activar recomendaciones de IA",
+        "desc": "Muestra sugerencias de IA en todos los módulos"
+      },
+      "projects": {
+        "label": "Crear proyectos automáticamente desde los deals",
+        "desc": "Genera un proyecto de forma automática cuando se cierra un deal del CRM"
+      },
+      "graph": {
+        "label": "Enlazado automático del grafo de conocimiento",
+        "desc": "Detecta y enlaza entidades en los documentos de forma automática"
+      }
+    }
+  },
+  "team": {
+    "title": "Miembros del equipo",
+    "invite": "Invitar",
+    "role": {
+      "admin": "Administrador",
+      "member": "Miembro"
+    }
+  }
+}

@@ -3,11 +3,15 @@ import { useTranslation } from "react-i18next";
 
 import {
   type DateStyle,
+  formatCompactCurrency,
   formatCurrency,
   formatDate,
   formatDateTime,
+  formatMilliseconds,
+  formatMonthShort,
   formatNumber,
   formatPercent,
+  formatRelativeTime,
   formattingLocale,
 } from "./format";
 
@@ -41,6 +45,12 @@ export function useFormat() {
         formatDate(value, language, style),
       formatDateTime: (value: Parameters<typeof formatDateTime>[0]) =>
         formatDateTime(value, language),
+      formatMilliseconds: (value: number | null | undefined) => formatMilliseconds(value, language),
+      formatCompactCurrency: (value: number | null | undefined, currency?: string | null) =>
+        formatCompactCurrency(value, currency, language),
+      formatMonthShort: (yearMonth: string | null | undefined) => formatMonthShort(yearMonth, language),
+      formatRelativeTime: (value: Parameters<typeof formatRelativeTime>[0]) =>
+        formatRelativeTime(value, language),
     }),
     [language],
   );

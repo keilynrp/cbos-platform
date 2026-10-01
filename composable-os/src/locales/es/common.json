@@ -1,8 +1,33 @@
 {
+  "close": "Cerrar",
   "error": {
-    "generic": "Ocurrio un error"
+    "generic": "Ocurrio un error",
+    "title": "Error"
   },
   "language": {
     "label": "Idioma"
+  },
+  "sidebar": {
+    "toggle": "Alternar barra lateral"
+  },
+  "crmStage": {
+    "new": "Nueva",
+    "qualified": "Calificada",
+    "proposal": "Propuesta",
+    "negotiation": "Negociación",
+    "won": "Ganada",
+    "lost": "Perdida"
+  },
+  "inventoryStatus": {
+    "in_stock": "en stock",
+    "low_stock": "stock bajo",
+    "out_of_stock": "agotado"
+  },
+  "activityType": {
+    "call": "llamada",
+    "email": "correo",
+    "meeting": "reunión",
+    "note": "nota",
+    "task": "tarea"
   }
 }
