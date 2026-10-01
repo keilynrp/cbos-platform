@@ -28,16 +28,28 @@ mantener: `SUPPORTED_LOCALES` y `supportedLngs` salen de las carpetas.
 
 ## Dominios (namespaces)
 
-Un fichero por dominio, no uno por idioma: 514 cadenas en un JSON no se revisan
-en un diff. Hoy: `common`, `auth`, `errors`. Cada pagina migrada aporta el suyo
-(`crm`, `sales`, ...). Lo que usan varias paginas va a `common`.
+Un fichero por dominio, no uno por idioma: unos mil textos en un JSON no se
+revisan en un diff. Hoy: `common`, `auth`, `errors`, `workflows`, `dashboard`,
+`discovery`, `settings`. Cada pagina migrada aporta el suyo (`crm`, `sales`, ...).
+Lo que usan varias paginas va a `common`: el texto de cerrar, y los **enums
+compartidos** (`crmStage`, `inventoryStatus`, `activityType`), para que `CRM`,
+`Index` e `InventoryOrders` no los traduzcan cada una a su manera.
 
-## Claves: siempre cualificadas
+Un dominio nuevo hay que registrarlo tambien en `src/i18n/i18next.d.ts`, o sus
+claves no se validan en compilacion.
+
+## Claves: siempre cualificadas, con `useT()`
 
 ```tsx
-const { t } = useTranslation();
-t("auth:login.title")            // si
+const t = useT();                                   // de "@/i18n/useT"
+t("auth:login.title")                               // si
+t("workflows:card.runs", { count: n })              // con opciones, tambien
 ```
+
+Usa `useT()`, **no** `useTranslation().t`. Con `strict: false` el tipo de
+`useTranslation().t` no admite una llamada con opciones (interpolacion, `count`)
+aunque la clave exista; `i18n.t` si, y `useT()` lo devuelve ya ligado y
+suscrito al idioma (el componente se re-renderiza al cambiarlo).
 
 **No** `useTranslation("auth")` + `t("login.title")`. El proyecto compila con
 `strict: false`, y con `strictNullChecks` apagado el tipo de i18next colapsa el
@@ -79,6 +91,24 @@ Nunca `n === 1 ? "" : "s"`: son los cuatro bugs de plural que motivaron el ADR
 0015. Un idioma con mas formas plurales anade las suyas en su catalogo sin tocar
 codigo.
 
+## Valores que llegan como identificador (estados, tipos, etapas)
+
+El backend manda `completed`, `low_stock`, `call`... y hasta ahora se pintaban
+crudos, en ingles. `useEnumLabel()` los traduce y, si el catalogo no tiene la
+entrada, muestra el valor tal cual: un estado nuevo en el backend no debe dejar un
+hueco ni una clave a la vista.
+
+```tsx
+const label = useEnumLabel();
+label("workflows:runStatus", run.status)        // "completada"
+label("common:inventoryStatus", item.status)    // "stock bajo"
+```
+
+El primer argumento es la ruta cualificada del grupo en el catalogo. Las claves de
+un grupo de enums no se validan en compilacion (el valor llega en runtime), asi que
+las cubre el test de la pagina: un valor sin entrada cae al valor crudo, y eso es
+lo que se comprueba.
+
 ## Errores del backend
 
 El backend manda un `code` estable; el texto sale del catalogo `errors` del idioma
@@ -115,6 +145,10 @@ formatDate(contract.end_date)                           // 30 sep 2026   (estilo
 formatDate(emp.terminated_at, "short")                  // 30/9/2026
 formatDateTime(event.created_at)                        // 30 sep 2026, 03:07 p.m.
 formatPercent(quote.tax_rate)                           // 16%           (recibe la fraccion)
+formatCompactCurrency(12500)                            // USD 12.5 k    (KPI y ejes de graficos)
+formatMonthShort("2026-04")                             // abr           (desde YYYY-MM)
+formatRelativeTime(activity.created_at)                 // hace 5 min, ayer, ahora
+formatMilliseconds(step.duration_ms)                    // 12ms
 ```
 
 **Una regla de eslint lo hace cumplir** (`no-restricted-syntax`): fuera de
@@ -147,10 +181,11 @@ Lo que los helpers deciden por ti:
 
 Fuera de React no hay hook: usa las funciones puras con `i18n.language`.
 
-Lo que **no** cubre (no son `Intl`/`toLocale*`): el tiempo relativo ("5m", "3h"),
-que son cadenas con unidades y se traducen con la pagina, y los importes compactos
-de los KPI (`$1.2M`, `$12.5k` en `Index` y `Analytics`), que asumen dolares y un
-formato propio y necesitan una decision de producto.
+Las unidades (`ms`, `k`, `M`), los nombres de mes y el tiempo relativo ("hace 5
+min") son formato de `Intl`, no cadenas del catalogo: no los escribas a mano.
+
+Todavia sin migrar: los importes compactos de `Analytics`, que siguen siendo
+`$` + `toFixed` + `k`/`M` a mano.
 
 ## Como se decide el idioma
 
@@ -166,16 +201,45 @@ formato propio y necesitan una decision de producto.
 ## Que exige una pagina migrada
 
 Una pantalla a medio traducir se lee como rota y es peor que ninguna. La unidad de
-entrega es la pagina completa, y su test la comprueba:
+entrega es la pagina completa, y dos comprobaciones complementarias la vigilan:
 
-1. **Sin cadenas cableadas.** Se renderiza con un catalogo `en` pseudo-localizado
-   (`createPseudoInstance("en")` en `src/test/i18n.tsx`), donde cada cadena es
-   `EN(<original>)`. Todo texto visible debe llevar ese prefijo; lo que no, es una
-   cadena que se escapo. `Login.test.tsx` es el modelo.
-2. **Comportamiento en espanol intacto.** Los mismos tests contra el catalogo real.
-3. **`npm run typecheck`, `npm run lint` y `npm test`** en verde.
+1. **El escaner estatico** (`src/test/hardcoded.ts`) lee el *codigo* y busca texto
+   visible cableado: texto en JSX, atributos que el usuario lee (`placeholder`,
+   `title`, `aria-label`...), literales devueltos por una expresion JSX, argumentos
+   de `toast` / `setError` / `translateApiError` y etiquetas de tablas de datos.
+   Cubre lo que un render no alcanza: toasts de error, dialogos cerrados, ramas.
+   **Al migrar una pagina se anade a `MIGRATED` en `src/test/migrated-pages.test.ts`**
+   y desde ese momento no puede volver a tener texto cableado. Lo que no es de
+   ningun idioma (una unidad, un nombre propio) se marca con un comentario
+   `i18n-ok` en la misma linea, con el motivo.
+2. **El render con catalogo pseudo-localizado** ve lo que el escaner no: lo que se
+   *pinta*. `createPseudoInstance("en")` (`src/test/i18n.tsx`) da un idioma donde
+   cada cadena es `EN(<original>)`; todo texto visible debe llevar ese prefijo. Se
+   renderiza cada estado donde hay texto (la pagina, cada dialogo, cada pestana) y
+   se pasa por `notFromCatalogue`, que descarta lo que no viene del catalogo:
+   datos del backend sembrados en el test, fechas y numeros ya formateados
+   (`FORMATTED_CURRENCY`, `FORMATTED_RELATIVE`) e iniciales de avatar.
 
-Se ignoran las cadenas sin ninguna letra (`••••••••`) y el nombre del producto.
+Ademas: **el comportamiento en espanol intacto** (los mismos tests contra el
+catalogo real, incluidos los valores que el catalogo no conoce) y `npm run
+typecheck`, `npm run lint` y `npm test` en verde.
+
+`Login.test.tsx` es el modelo de una pagina sencilla; `Workflows.test.tsx`,
+`Index.test.tsx`, `Discovery.test.tsx` y `Settings.test.tsx` lo son de paginas con
+datos, dialogos y pestanas (servicios mockeados, `renderPageWithI18n`).
+
+Dos cosas de jsdom que los tests de pagina dan por hechas y estan en
+`src/test/setup.ts`: `ResizeObserver` y `scrollIntoView` (los usan los graficos de
+recharts y los chats). El `testTimeout` es de 15 s: estas pruebas tardan 2-3 s en una
+maquina holgada y bastante mas en el runner de CI.
+
+Se ignoran las cadenas sin ninguna letra (`••••••••`).
+
+### Al encontrar texto en inglés en una pagina en español
+
+No es parte "ya traducida": es un bug (el ADR 0015 ya lo cuenta asi). Se traduce al
+catalogo `es` en la misma migracion. Las paginas heredadas mezclan idiomas y la
+migracion es el momento de arreglarlo, no de conservarlo.
 
 ## Anadir un idioma
 

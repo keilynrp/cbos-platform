@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useT } from "@/i18n/useT";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Eye, EyeOff, Loader2, Zap } from "lucide-react";
 import { translateApiError } from "@/lib/errors";
 
 export default function Login() {
-  const { t } = useTranslation();
+  const t = useT();
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -42,7 +42,7 @@ export default function Login() {
           <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-primary text-primary-foreground">
             <Zap className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">CBOS Platform</h1>
+          <h1 className="text-2xl font-bold tracking-tight">CBOS Platform</h1> {/* i18n-ok: nombre del producto */}
           <p className="text-sm text-muted-foreground">{t("auth:login.tagline")}</p>
         </div>
 

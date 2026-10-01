@@ -2,11 +2,15 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   EMPTY,
+  formatCompactCurrency,
   formatCurrency,
   formatDate,
   formatDateTime,
+  formatMilliseconds,
+  formatMonthShort,
   formatNumber,
   formatPercent,
+  formatRelativeTime,
   formattingLocale,
   todayInputValue,
 } from "@/i18n/format";
@@ -187,6 +191,97 @@ describe("formatDateTime", () => {
   it("shows a placeholder for a missing or invalid value", () => {
     expect(formatDateTime(null, "es")).toBe(EMPTY);
     expect(formatDateTime("nope", "es")).toBe(EMPTY);
+  });
+});
+
+describe("formatCompactCurrency", () => {
+  // `\s` cubre el espacio de no separacion que ICU pone entre el codigo y la cifra.
+  it("abbreviates thousands and millions, as the KPI cards always did", () => {
+    expect(formatCompactCurrency(850, "USD", "es")).toMatch(/^USD\s850$/);
+    expect(formatCompactCurrency(12500, "USD", "es")).toMatch(/^USD\s12\.5\sk$/);
+    expect(formatCompactCurrency(1200000, "USD", "es")).toMatch(/^USD\s1\.2\sM$/);
+  });
+
+  it("does not pad a round number with a decimal", () => {
+    expect(formatCompactCurrency(0, "USD", "es")).toMatch(/^USD\s0$/);
+    expect(formatCompactCurrency(1000000, "USD", "es")).toMatch(/^USD\s1\sM$/);
+  });
+
+  it("follows the locale", () => {
+    expect(formatCompactCurrency(12500, "USD", "en-US")).toBe("$12.5K");
+  });
+
+  it("shows a placeholder for a missing value and survives a bad currency", () => {
+    expect(formatCompactCurrency(null, "USD", "es")).toBe(EMPTY);
+    expect(formatCompactCurrency(12500, "XX", "es")).toBe("12,500.00 XX");
+  });
+});
+
+describe("formatMonthShort", () => {
+  it("names the month in the locale, from a YYYY-MM value", () => {
+    expect(formatMonthShort("2026-01", "es")).toBe("ene");
+    expect(formatMonthShort("2026-04", "es")).toBe("abr");
+    expect(formatMonthShort("2026-12", "en-US")).toBe("Dec");
+  });
+
+  it("shows a placeholder for anything that is not a month", () => {
+    expect(formatMonthShort("garbage", "es")).toBe(EMPTY);
+    expect(formatMonthShort("2026-13", "es")).toBe(EMPTY);
+    expect(formatMonthShort("2026-00", "es")).toBe(EMPTY);
+    expect(formatMonthShort(null, "es")).toBe(EMPTY);
+  });
+});
+
+describe("formatRelativeTime", () => {
+  const now = new Date(2026, 8, 30, 12, 0, 0).getTime();
+  const ago = (ms: number) => formatRelativeTime(now - ms, "es", now);
+  const MIN = 60_000;
+  const HOUR = 60 * MIN;
+  const DAY = 24 * HOUR;
+
+  it("picks the unit from the size of the gap", () => {
+    expect(ago(0)).toBe("ahora");
+    expect(ago(30_000)).toBe("hace 30 s");
+    expect(ago(5 * MIN)).toBe("hace 5 min");
+    expect(ago(3 * HOUR)).toBe("hace 3 h");
+    expect(ago(DAY)).toBe("ayer");
+    expect(ago(10 * DAY)).toMatch(/^hace 10 d/);
+  });
+
+  it("truncates instead of rounding up, like the old helpers", () => {
+    expect(ago(59 * MIN + 59_000)).toBe("hace 59 min");
+    expect(ago(23 * HOUR + 59 * MIN)).toBe("hace 23 h");
+  });
+
+  it("speaks about the future too", () => {
+    expect(formatRelativeTime(now + 5 * MIN, "es", now)).toMatch(/5 min/);
+  });
+
+  it("follows the locale", () => {
+    expect(formatRelativeTime(now - 5 * MIN, "en-US", now)).toBe("5m ago");
+  });
+
+  it("accepts an ISO string and shows a placeholder for a bad value", () => {
+    expect(formatRelativeTime(new Date(now - 3 * HOUR).toISOString(), "es", now)).toBe("hace 3 h");
+    expect(formatRelativeTime(null, "es", now)).toBe(EMPTY);
+    expect(formatRelativeTime("nope", "es", now)).toBe(EMPTY);
+  });
+});
+
+describe("formatMilliseconds", () => {
+  it("formats a duration as a unit, as the page printed it before", () => {
+    // Antes era `{ms}ms` a mano: la unidad es de Intl, no una cadena de la pagina.
+    expect(formatMilliseconds(12, "es")).toBe("12ms");
+    expect(formatMilliseconds(1234.5, "es")).toBe("1,234.5ms");
+  });
+
+  it("follows the locale's number format", () => {
+    expect(formatMilliseconds(1234.5, "es-ES")).toBe("1234,5ms");
+  });
+
+  it("shows a placeholder for a missing value", () => {
+    expect(formatMilliseconds(null, "es")).toBe(EMPTY);
+    expect(formatMilliseconds(undefined, "es")).toBe(EMPTY);
   });
 });
 

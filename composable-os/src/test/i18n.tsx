@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import i18next, { type i18n as I18n } from "i18next";
 import type { ReactElement } from "react";
@@ -49,6 +50,56 @@ export function renderWithI18n(ui: ReactElement, instance: I18n) {
 }
 
 /**
+ * Como `renderWithI18n`, y ademas con un `QueryClient` sin reintentos: las
+ * paginas que piden datos con React Query (los servicios se mockean en el test).
+ */
+export function renderPageWithI18n(ui: ReactElement, instance: I18n) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 }, mutations: { retry: false } },
+  });
+
+  return render(
+    <I18nextProvider i18n={instance}>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </QueryClientProvider>
+    </I18nextProvider>,
+  );
+}
+
+/**
+ * Lo que una pagina pinta sin que venga del catalogo de la app: texto que llega
+ * del backend (nombres, descripciones) y fechas o numeros ya formateados. La
+ * comprobacion "no queda nada cableado" los descarta para no dar falsos
+ * positivos; lo que cuenta es el texto *de la interfaz*.
+ *
+ * - `data`: valores del backend que el test sembro (se descartan si el texto los contiene).
+ * - se descarta tambien todo texto con un ano de cuatro cifras (una fecha formateada)
+ *   y los numeros con unidad abreviada (`12ms`, `1,234.5ms`), que los produce `Intl`.
+ */
+export function notFromCatalogue(
+  texts: string[],
+  data: string[] = [],
+  ignore: RegExp[] = [],
+  prefix = "EN(",
+): string[] {
+  return texts.filter(
+    (text) =>
+      !text.startsWith(prefix) &&
+      !data.some((value) => text.includes(value)) &&
+      !/\d{4}/.test(text) &&
+      !/^\d[\d.,]*\s?[a-zA-Zµ]{0,3}$/.test(text) &&
+      !ignore.some((pattern) => pattern.test(text)),
+  );
+}
+
+/** Importes ya formateados por `Intl` (`USD 12.5 k`, `$12.5K`): no son texto del catalogo. */
+export const FORMATTED_CURRENCY = /^[A-Z$€£]{1,3}\s?[\d.,\s]+\s?[kKM]?$/;
+
+/** Tiempo relativo ya formateado por `Intl` (`hace 5 min`, `5m ago`, `yesterday`). */
+export const FORMATTED_RELATIVE = /^(hace\s|ahora$|ayer$|anteayer$|now$|yesterday$)|\bago$/;
+
+/**
  * Textos visibles de un arbol: los nodos de texto y los atributos que el
  * usuario lee (`placeholder`, `aria-label`, `title`, `alt`).
  *
@@ -62,7 +113,14 @@ export function visibleStrings(root: HTMLElement): string[] {
     if (text && /\p{L}/u.test(text)) found.push(text);
   };
 
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  // `<style>` y `<script>` guardan codigo, no texto visible (el ScrollArea de Radix
+  // inyecta un `<style>`).
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) =>
+      ["STYLE", "SCRIPT", "NOSCRIPT"].includes((node.parentElement?.tagName ?? "").toUpperCase())
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT,
+  });
   for (let node = walker.nextNode(); node; node = walker.nextNode()) add(node.textContent);
 
   root.querySelectorAll("[placeholder],[aria-label],[title],[alt]").forEach((element) => {

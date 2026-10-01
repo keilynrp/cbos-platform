@@ -106,6 +106,20 @@ export function formatPercent(
   return numberFormat(formattingLocale(locale), { style: "percent", ...options }).format(value);
 }
 
+/**
+ * Una duracion en milisegundos, con la unidad de `Intl` ("12ms"). La unidad
+ * abreviada es la misma en los idiomas que usa el producto, pero su posicion y
+ * el separador decimal no, y no es texto que deba vivir en una pagina.
+ */
+export function formatMilliseconds(value: number | null | undefined, locale: string): string {
+  if (isMissing(value)) return EMPTY;
+  return numberFormat(formattingLocale(locale), {
+    style: "unit",
+    unit: "millisecond",
+    unitDisplay: "narrow",
+  }).format(value);
+}
+
 export function formatCurrency(
   value: number | null | undefined,
   currency: string | null | undefined,
@@ -113,8 +127,35 @@ export function formatCurrency(
   options: Intl.NumberFormatOptions = {},
 ): string {
   if (isMissing(value)) return EMPTY;
+  return currencyText(value, currency || "USD", locale, options);
+}
 
-  const code = currency || "USD";
+/**
+ * Importe abreviado para tarjetas de KPI y ejes de graficos: `USD 12.5 k`,
+ * `USD 1.2 M`. La abreviatura (k, M, mil) la pone `Intl` segun el locale; antes
+ * eran `$`, `k` y `M` escritos a mano.
+ */
+export function formatCompactCurrency(
+  value: number | null | undefined,
+  currency: string | null | undefined,
+  locale: string,
+): string {
+  if (isMissing(value)) return EMPTY;
+  return currencyText(value, currency || "USD", locale, {
+    notation: "compact",
+    compactDisplay: "short",
+    // Sin esto la moneda impone dos decimales ("USD 850.00") y un 0 sale "USD 0.0".
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  });
+}
+
+function currencyText(
+  value: number,
+  code: string,
+  locale: string,
+  options: Intl.NumberFormatOptions,
+): string {
   const tag = formattingLocale(locale);
   try {
     return numberFormat(tag, { style: "currency", currency: code, ...options }).format(value);
@@ -179,6 +220,51 @@ export function formatDateTime(value: DateInput, locale: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+/**
+ * El nombre corto de un mes a partir de `YYYY-MM` (lo que devuelve la API de
+ * analitica): "2026-04" -> "abr". Antes salia de un array de abreviaturas en
+ * ingles escrito a mano, asi que un dashboard en espanol mostraba "Apr".
+ */
+export function formatMonthShort(yearMonth: string | null | undefined, locale: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(yearMonth ?? "");
+  if (!match) return EMPTY;
+
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return EMPTY;
+
+  return dateFormat(formattingLocale(locale), { month: "short" }).format(
+    new Date(Number(match[1]), month - 1, 1),
+  );
+}
+
+const relativeFormats = new Map<string, Intl.RelativeTimeFormat>();
+
+/**
+ * "hace 5 min", "ayer", "ahora": la distancia a `now` en la unidad que toca.
+ *
+ * Trunca en vez de redondear (59 min 59 s es "hace 59 min", no "hace 1 h"),
+ * como los tres helpers `timeAgo` a los que sustituye, que ademas pintaban
+ * "5m ago" en ingles en una interfaz en espanol.
+ */
+export function formatRelativeTime(value: DateInput, locale: string, now: number = Date.now()): string {
+  const date = toDate(value);
+  if (!date) return EMPTY;
+
+  const tag = formattingLocale(locale);
+  let format = relativeFormats.get(tag);
+  if (!format) {
+    format = new Intl.RelativeTimeFormat(tag, { numeric: "auto", style: "narrow" });
+    relativeFormats.set(tag, format);
+  }
+
+  const seconds = Math.trunc((date.getTime() - now) / 1000);
+  const abs = Math.abs(seconds);
+  if (abs < 60) return format.format(seconds, "second");
+  if (abs < 3600) return format.format(Math.trunc(seconds / 60), "minute");
+  if (abs < 86_400) return format.format(Math.trunc(seconds / 3600), "hour");
+  return format.format(Math.trunc(seconds / 86_400), "day");
 }
 
 /**

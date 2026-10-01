@@ -1,0 +1,58 @@
+{
+  "title": "Workflows",
+  "subtitle": "Automatización event-driven — triggers, conditions y actions.",
+  "new": "Nuevo Workflow",
+  "deleted": "Workflow eliminado",
+  "kpi": {
+    "total": "Total",
+    "active": "Activos",
+    "runs": "Ejecuciones"
+  },
+  "empty": {
+    "title": "Sin workflows todavía",
+    "createFirst": "Crear el primero"
+  },
+  "card": {
+    "conditions_one": "{{count}} condición",
+    "conditions_other": "{{count}} condiciones",
+    "moreActions": "+{{count}} más",
+    "runs_one": "{{count}} ejecución",
+    "runs_other": "{{count}} ejecuciones",
+    "toggle": "Activar o desactivar {{name}}",
+    "viewRuns": "Ver ejecuciones",
+    "delete": "Eliminar workflow"
+  },
+  "create": {
+    "title": "Nuevo Workflow",
+    "name": "Nombre",
+    "namePlaceholder": "Ej: Notificar lead nuevo",
+    "description": "Descripción (opcional)",
+    "descriptionPlaceholder": "Qué hace este workflow",
+    "event": "Evento disparador",
+    "eventPlaceholder": "Ej: LeadCaptured, QuoteAccepted",
+    "availableEvents": "Eventos disponibles: {{events}}",
+    "actionMessage": "Mensaje de acción (log)",
+    "actionMessagePlaceholder": "Usa {field} para valores del evento",
+    "defaultMessage": "Workflow ejecutado",
+    "cancel": "Cancelar",
+    "submit": "Crear",
+    "created": "Workflow creado"
+  },
+  "runs": {
+    "title": "Historial de ejecuciones",
+    "empty": "Sin ejecuciones aún",
+    "event": "Evento: {{type}}"
+  },
+  "runStatus": {
+    "completed": "completada",
+    "failed": "fallida",
+    "running": "en curso",
+    "skipped": "omitida"
+  },
+  "triggerType": {
+    "event": "evento"
+  },
+  "actionType": {
+    "log": "log"
+  }
+}

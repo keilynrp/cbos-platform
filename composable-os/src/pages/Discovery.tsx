@@ -21,6 +21,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useEnumLabel } from "@/i18n/enumLabel";
+import { useFormat } from "@/i18n/useFormat";
+import { useT } from "@/i18n/useT";
 import { translateApiError } from "@/lib/errors";
 import {
   discoveryService,
@@ -29,49 +32,28 @@ import {
 } from "@/services/discovery";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60_000);
-  if (m < 1) return "ahora";
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
-}
 
-const PACKAGE_LABELS: Record<string, { label: string; color: string; price: string }> = {
-  starter:        { label: "Starter",      color: "bg-blue-500/10 text-blue-700 border-blue-200",   price: "$49/mes" },
-  growth:         { label: "Growth",       color: "bg-green-500/10 text-green-700 border-green-200", price: "$149/mes" },
-  operations_plus:{ label: "Operations+", color: "bg-purple-500/10 text-purple-700 border-purple-200", price: "$349/mes" },
+/** Estilo y precio mensual (USD) de cada paquete; el nombre vive en el catalogo. */
+const PACKAGE_STYLE: Record<string, { color: string; price: number }> = {
+  starter:         { color: "bg-blue-500/10 text-blue-700 border-blue-200",       price: 49 },
+  growth:          { color: "bg-green-500/10 text-green-700 border-green-200",     price: 149 },
+  operations_plus: { color: "bg-purple-500/10 text-purple-700 border-purple-200", price: 349 },
 };
 
-const INDUSTRY_OPTIONS = [
-  { value: "retail",        label: "Retail / Comercio" },
-  { value: "manufacturing", label: "Manufactura" },
-  { value: "services",      label: "Servicios / Consultoría" },
-  { value: "technology",    label: "Tecnología / Software" },
-  { value: "healthcare",    label: "Salud / Farmacia" },
-  { value: "education",     label: "Educación / Capacitación" },
-  { value: "food",          label: "Alimentos / Restaurantes" },
-  { value: "construction",  label: "Construcción / Inmobiliaria" },
-];
+const INDUSTRY_VALUES = [
+  "retail", "manufacturing", "services", "technology",
+  "healthcare", "education", "food", "construction",
+] as const;
 
-const SIZE_OPTIONS = [
-  { value: "nano",   label: "1 persona (solopreneur)" },
-  { value: "small",  label: "Pequeña (2–20 personas)" },
-  { value: "medium", label: "Mediana (20–100 personas)" },
-  { value: "large",  label: "Grande (+100 personas)" },
-];
+const SIZE_VALUES = ["nano", "small", "medium", "large"] as const;
 
-const STARTER_PROMPTS = [
-  "Tengo una tienda de ropa y necesito organizar mis ventas y clientes",
-  "Soy consultor y necesito gestionar propuestas y facturación",
-  "Tenemos una empresa de manufactura con inventario y distribución",
-  "Somos una clínica que necesita agendar citas y gestionar pacientes",
-];
+const STARTER_PROMPTS = ["retail", "consulting", "manufacturing", "clinic"] as const;
 
 // ── Main Component ───────────────────────────────────────────────────────────
 export default function Discovery() {
+  const t = useT();
+  const label = useEnumLabel();
+  const { formatCurrency, formatRelativeTime } = useFormat();
   const [selectedSession, setSelectedSession] = useState<DiscoverySession | null>(null);
   const [messages, setMessages] = useState<DiscoveryMessage[]>([]);
   const [inputText, setInputText] = useState("");
@@ -94,6 +76,16 @@ export default function Discovery() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  /**
+   * Nombre visible de una sesion: su descripcion recortada a `max` caracteres
+   * (con "…" si se pidio y se recorto), o un titulo generico.
+   */
+  const sessionTitle = (session: DiscoverySession, max: number, ellipsis: boolean) => {
+    const description = session.business_description;
+    if (!description) return t("discovery:sessions.untitled", { id: session.id.slice(0, 8) });
+    return description.slice(0, max) + (ellipsis && description.length > max ? "…" : "");
+  };
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const createSession = useMutation({
@@ -121,7 +113,7 @@ export default function Discovery() {
         }]);
       }
     },
-    onError: (err: Error) => toast({ title: "Error al crear sesión", description: translateApiError(err), variant: "destructive" }),
+    onError: (err: Error) => toast({ title: t("discovery:toast.createFailed"), description: translateApiError(err), variant: "destructive" }),
   });
 
   const sendMessage = useMutation({
@@ -146,7 +138,7 @@ export default function Discovery() {
     onError: (err: Error) => {
       // Remove optimistic message
       setMessages((prev) => prev.filter((m) => !m.id.startsWith("opt-")));
-      toast({ title: "Error al enviar mensaje", description: translateApiError(err), variant: "destructive" });
+      toast({ title: t("discovery:toast.sendFailed"), description: translateApiError(err), variant: "destructive" });
     },
   });
 
@@ -156,9 +148,14 @@ export default function Discovery() {
       setBlueprintData(data);
       setSelectedSession((s) => s ? { ...s, status: "completed", recommended_package: data.recommended_package } : s);
       qc.invalidateQueries({ queryKey: ["discovery-sessions"] });
-      toast({ title: "Blueprint generado", description: `Paquete recomendado: ${data.recommended_package}` });
+      toast({
+        title: t("discovery:toast.blueprintReady"),
+        description: t("discovery:toast.recommendedPackage", {
+          name: label("discovery:packageName", data.recommended_package),
+        }),
+      });
     },
-    onError: (err: Error) => toast({ title: "Error", description: translateApiError(err), variant: "destructive" }),
+    onError: (err: Error) => toast({ title: t("common:error.title"), description: translateApiError(err), variant: "destructive" }),
   });
 
   const applyBlueprint = useMutation({
@@ -167,7 +164,7 @@ export default function Discovery() {
       setApplyResult(result);
       qc.invalidateQueries({ queryKey: ["discovery-sessions"] });
     },
-    onError: (err: Error) => toast({ title: "Error", description: translateApiError(err), variant: "destructive" }),
+    onError: (err: Error) => toast({ title: t("common:error.title"), description: translateApiError(err), variant: "destructive" }),
   });
 
   // ── Handlers ──────────────────────────────────────────────────────────────
@@ -203,7 +200,7 @@ export default function Discovery() {
     blueprint: { pain_points?: string[]; modules?: string[] };
   } | null;
 
-  const pkgInfo = bp ? PACKAGE_LABELS[bp.recommended_package] : null;
+  const pkgStyle = bp ? PACKAGE_STYLE[bp.recommended_package] : null;
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)] -m-6 overflow-hidden">
@@ -212,9 +209,15 @@ export default function Discovery() {
         <div className="p-3 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">Discovery AI</span>
+            <span className="text-sm font-semibold">{t("discovery:title")}</span>
           </div>
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setNewSessionOpen(true)}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            aria-label={t("discovery:newSessionButton")}
+            onClick={() => setNewSessionOpen(true)}
+          >
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -224,7 +227,7 @@ export default function Discovery() {
             <div className="p-4 text-center"><Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" /></div>
           ) : sessions.length === 0 ? (
             <div className="p-4 text-xs text-muted-foreground text-center">
-              Sin sesiones. Inicia una nueva.
+              {t("discovery:sessions.empty")}
             </div>
           ) : (
             <div className="p-2 space-y-1">
@@ -239,20 +242,16 @@ export default function Discovery() {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <span className="text-xs font-medium truncate">
-                      {s.business_description
-                        ? s.business_description.slice(0, 30) + (s.business_description.length > 30 ? "…" : "")
-                        : `Sesión #${s.id.slice(0, 8)}`}
-                    </span>
+                    <span className="text-xs font-medium truncate">{sessionTitle(s, 30, true)}</span>
                     {s.status === "completed"
                       ? <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
                       : <Clock className="h-3 w-3 text-muted-foreground shrink-0" />}
                   </div>
                   <div className="flex items-center gap-1.5">
                     {s.industry && (
-                      <span className="text-[10px] text-muted-foreground capitalize">{s.industry}</span>
+                      <span className="text-[10px] text-muted-foreground">{label("discovery:industry", s.industry)}</span>
                     )}
-                    <span className="text-[10px] text-muted-foreground ml-auto">{timeAgo(s.created_at)}</span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">{formatRelativeTime(s.created_at)}</span>
                   </div>
                 </button>
               ))}
@@ -269,23 +268,26 @@ export default function Discovery() {
             <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               <Sparkles className="h-7 w-7 text-primary" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Solution Discovery AI</h2>
+            <h2 className="text-xl font-bold mb-2">{t("discovery:welcome.title")}</h2>
             <p className="text-muted-foreground text-sm max-w-md mb-8">
-              Cuéntame sobre tu negocio y te ayudaré a identificar qué módulos de Composable OS necesitas. El proceso toma 2–3 minutos.
+              {t("discovery:welcome.intro")}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mb-6">
-              {STARTER_PROMPTS.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => handleStarterPrompt(p)}
-                  className="text-left p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/50 transition-colors text-xs text-muted-foreground"
-                >
-                  "{p}"
-                </button>
-              ))}
+              {STARTER_PROMPTS.map((key) => {
+                const prompt = t(`discovery:starter.${key}`);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleStarterPrompt(prompt)}
+                    className="text-left p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/50 transition-colors text-xs text-muted-foreground"
+                  >
+                    "{prompt}"
+                  </button>
+                );
+              })}
             </div>
             <Button onClick={() => setNewSessionOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Nueva sesión de discovery
+              <Plus className="h-4 w-4 mr-2" /> {t("discovery:welcome.newSession")}
             </Button>
           </div>
         ) : (
@@ -294,27 +296,29 @@ export default function Discovery() {
             <div className="h-12 border-b px-4 flex items-center justify-between bg-card shrink-0">
               <div className="flex items-center gap-2 min-w-0">
                 <Bot className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-sm font-medium truncate">
-                  {selectedSession.business_description
-                    ? selectedSession.business_description.slice(0, 50)
-                    : `Sesión #${selectedSession.id.slice(0, 8)}`}
-                </span>
+                <span className="text-sm font-medium truncate">{sessionTitle(selectedSession, 50, false)}</span>
                 <Badge variant={selectedSession.status === "completed" ? "default" : "secondary"} className="text-[10px] shrink-0">
-                  {selectedSession.status === "completed" ? "Completada" : "Activa"}
+                  {label("discovery:sessionStatus", selectedSession.status)}
                 </Badge>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {selectedSession.status === "active" && messages.length >= 2 && !generateBlueprint.isPending && (
                   <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => generateBlueprint.mutate()}>
-                    <Sparkles className="h-3.5 w-3.5 mr-1" /> Generar blueprint
+                    <Sparkles className="h-3.5 w-3.5 mr-1" /> {t("discovery:chat.generateBlueprint")}
                   </Button>
                 )}
                 {generateBlueprint.isPending && (
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Analizando…
+                    <Loader2 className="h-3 w-3 animate-spin" /> {t("discovery:chat.analyzing")}
                   </span>
                 )}
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setSelectedSession(null)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  aria-label={t("discovery:chat.closeSession")}
+                  onClick={() => setSelectedSession(null)}
+                >
                   <X className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -326,7 +330,7 @@ export default function Discovery() {
                 {messages.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-32 text-muted-foreground text-sm gap-2">
                     <Bot className="h-8 w-8 opacity-30" />
-                    <span>Escribe tu primer mensaje…</span>
+                    <span>{t("discovery:chat.firstMessage")}</span>
                   </div>
                 )}
 
@@ -338,7 +342,7 @@ export default function Discovery() {
                         <Bot className="h-3.5 w-3.5 text-primary" />
                       </div>
                       <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 text-sm max-w-xl">
-                        Hola, soy el AI de Solution Discovery. He registrado tu contexto inicial. Cuéntame más sobre los principales desafíos que enfrenta tu negocio. ¿Cuál es el proceso que más tiempo te consume?
+                        {t("discovery:chat.greeting")}
                       </div>
                     </div>
                   )}
@@ -387,25 +391,29 @@ export default function Discovery() {
                 <div className="w-72 shrink-0 border-l flex flex-col bg-card">
                   <div className="p-3 border-b">
                     <h3 className="text-sm font-semibold flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-primary" /> Blueprint
+                      <Sparkles className="h-4 w-4 text-primary" /> {t("discovery:blueprint.title")}
                     </h3>
                   </div>
                   <ScrollArea className="flex-1 p-3 space-y-4">
                     {/* Package recommendation */}
-                    {pkgInfo && (
-                      <div className={`p-3 rounded-lg border ${pkgInfo.color} mb-3`}>
+                    {pkgStyle && (
+                      <div className={`p-3 rounded-lg border ${pkgStyle.color} mb-3`}>
                         <div className="flex items-center gap-2 mb-1">
                           <Package className="h-4 w-4" />
-                          <span className="text-sm font-semibold">{pkgInfo.label}</span>
+                          <span className="text-sm font-semibold">{label("discovery:packageName", bp.recommended_package)}</span>
                         </div>
-                        <p className="text-xs opacity-80">{pkgInfo.price}</p>
+                        <p className="text-xs opacity-80">
+                          {t("discovery:blueprint.perMonth", {
+                            price: formatCurrency(pkgStyle.price, "USD", { maximumFractionDigits: 0 }),
+                          })}
+                        </p>
                       </div>
                     )}
 
                     {/* Pain points */}
                     {bp.blueprint.pain_points && (bp.blueprint.pain_points as string[]).length > 0 && (
                       <div className="mb-3">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5">Pain points detectados</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("discovery:blueprint.painPoints")}</p>
                         <div className="flex flex-wrap gap-1">
                           {(bp.blueprint.pain_points as string[]).map((p) => (
                             <Badge key={p} variant="outline" className="text-[10px]">{p}</Badge>
@@ -417,7 +425,7 @@ export default function Discovery() {
                     {/* Capabilities */}
                     {bp.matched_capabilities.length > 0 && (
                       <div className="mb-3">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5">Capacidades recomendadas</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("discovery:blueprint.capabilities")}</p>
                         <div className="space-y-1.5">
                           {bp.matched_capabilities.map((cap) => (
                             <div key={cap.id} className="flex items-start gap-2 p-2 rounded-md bg-muted/50">
@@ -435,7 +443,7 @@ export default function Discovery() {
                     {/* Modules */}
                     {bp.blueprint.modules && (bp.blueprint.modules as string[]).length > 0 && (
                       <div className="mb-3">
-                        <p className="text-xs font-medium text-muted-foreground mb-1.5">Módulos incluidos</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("discovery:blueprint.modules")}</p>
                         <div className="flex flex-wrap gap-1">
                           {(bp.blueprint.modules as string[]).map((m) => (
                             <Badge key={m} variant="secondary" className="text-[10px] capitalize">{m}</Badge>
@@ -450,7 +458,7 @@ export default function Discovery() {
                       <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-200 p-4 space-y-3">
                         <div className="flex items-center gap-2 text-emerald-800">
                           <CheckCircle2 className="h-4 w-4 shrink-0" />
-                          <span className="font-semibold text-sm">¡Workspace activado!</span>
+                          <span className="font-semibold text-sm">{t("discovery:blueprint.activated")}</span>
                         </div>
                         {applyResult.activated_modules.length > 0 && (
                           <div className="flex flex-wrap gap-1.5">
@@ -461,7 +469,7 @@ export default function Discovery() {
                         )}
                         <p className="text-xs text-emerald-700">{applyResult.message}</p>
                         <Button size="sm" className="w-full" onClick={() => navigate("/crm")}>
-                          Ir al CRM <ArrowRight className="h-3.5 w-3.5 ml-2" />
+                          {t("discovery:blueprint.goToCrm")} <ArrowRight className="h-3.5 w-3.5 ml-2" />
                         </Button>
                       </div>
                     ) : (
@@ -471,8 +479,8 @@ export default function Discovery() {
                         disabled={applyBlueprint.isPending}
                       >
                         {applyBlueprint.isPending
-                          ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> Aplicando…</>
-                          : <><Rocket className="h-3.5 w-3.5 mr-2" /> Aplicar blueprint</>}
+                          ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> {t("discovery:blueprint.applying")}</>
+                          : <><Rocket className="h-3.5 w-3.5 mr-2" /> {t("discovery:blueprint.apply")}</>}
                       </Button>
                     )}
                   </ScrollArea>
@@ -488,7 +496,7 @@ export default function Discovery() {
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Cuéntame sobre tu negocio o proceso… (Enter para enviar)"
+                    placeholder={t("discovery:chat.placeholder")}
                     className="min-h-[44px] max-h-32 resize-none text-sm"
                     rows={1}
                     disabled={sendMessage.isPending}
@@ -497,6 +505,7 @@ export default function Discovery() {
                     size="icon"
                     onClick={handleSend}
                     disabled={!inputText.trim() || sendMessage.isPending}
+                    aria-label={t("discovery:chat.send")}
                     className="h-11 w-11 shrink-0"
                   >
                     <Send className="h-4 w-4" />
@@ -507,13 +516,13 @@ export default function Discovery() {
 
             {selectedSession.status === "completed" && !bp && (
               <div className="border-t p-3 bg-card shrink-0 text-center text-sm text-muted-foreground">
-                Sesión completada.{" "}
+                {t("discovery:chat.sessionCompleted")}{" "}
                 <button
                   className="text-primary hover:underline"
                   onClick={() => generateBlueprint.mutate()}
                   disabled={generateBlueprint.isPending}
                 >
-                  Ver blueprint
+                  {t("discovery:chat.viewBlueprint")}
                 </button>
               </div>
             )}
@@ -526,17 +535,17 @@ export default function Discovery() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-primary" /> Nueva sesión de discovery
+              <Search className="h-5 w-5 text-primary" /> {t("discovery:newSession.title")}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                Describe tu negocio (opcional)
+                {t("discovery:newSession.description")}
               </label>
               <Textarea
-                placeholder="Ej: Tengo una empresa de retail con 3 tiendas, manejo inventario y necesito digitalizar mis ventas..."
+                placeholder={t("discovery:newSession.descriptionPlaceholder")}
                 rows={3}
                 value={newForm.business_description}
                 onChange={(e) => setNewForm((f) => ({ ...f, business_description: e.target.value }))}
@@ -546,18 +555,20 @@ export default function Discovery() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1">
-                  <Building2 className="h-3 w-3" /> Industria
+                  <Building2 className="h-3 w-3" /> {t("discovery:newSession.industry")}
                 </label>
                 <Select
                   value={newForm.industry}
                   onValueChange={(v) => setNewForm((f) => ({ ...f, industry: v }))}
                 >
                   <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Seleccionar…" />
+                    <SelectValue placeholder={t("discovery:newSession.select")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {INDUSTRY_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                    {INDUSTRY_VALUES.map((value) => (
+                      <SelectItem key={value} value={value} className="text-xs">
+                        {label("discovery:industry", value)}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -565,18 +576,20 @@ export default function Discovery() {
 
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1">
-                  <Users className="h-3 w-3" /> Tamaño
+                  <Users className="h-3 w-3" /> {t("discovery:newSession.size")}
                 </label>
                 <Select
                   value={newForm.company_size}
                   onValueChange={(v) => setNewForm((f) => ({ ...f, company_size: v }))}
                 >
                   <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Seleccionar…" />
+                    <SelectValue placeholder={t("discovery:newSession.select")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {SIZE_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                    {SIZE_VALUES.map((value) => (
+                      <SelectItem key={value} value={value} className="text-xs">
+                        {label("discovery:size", value)}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -585,11 +598,11 @@ export default function Discovery() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewSessionOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setNewSessionOpen(false)}>{t("discovery:newSession.cancel")}</Button>
             <Button onClick={() => createSession.mutate()} disabled={createSession.isPending}>
               {createSession.isPending
-                ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> Creando…</>
-                : <><BarChart3 className="h-3.5 w-3.5 mr-2" /> Iniciar discovery</>}
+                ? <><Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> {t("discovery:newSession.creating")}</>
+                : <><BarChart3 className="h-3.5 w-3.5 mr-2" /> {t("discovery:newSession.start")}</>}
             </Button>
           </DialogFooter>
         </DialogContent>
