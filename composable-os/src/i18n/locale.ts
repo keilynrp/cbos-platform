@@ -15,8 +15,9 @@ const isAlpha = (value: string, lengths: number[]) =>
 
 /**
  * Tag canonico (`es`, `es-MX`), o `null` si esta mal formado o no tiene
- * catalogo. Solo admite `idioma` o `idioma-REGION`: los subtags de escritura no
- * se necesitan hoy y aceptarlos sin uso es aceptar entrada que nadie probo.
+ * catalogo. Solo admite `idioma` o `idioma-REGION` (dos letras o tres cifras): los
+ * subtags de escritura no se necesitan hoy y aceptarlos sin uso es aceptar entrada
+ * que nadie probo.
  */
 export function normalizeLocale(
   raw: string | null | undefined,
@@ -33,8 +34,10 @@ export function normalizeLocale(
   if (!supported.includes(base)) return null;
 
   if (parts.length === 1) return base;
-  if (!isAlpha(region, [2])) return null;
-  return `${base}-${region.toUpperCase()}`;
+  if (isAlpha(region, [2])) return `${base}-${region.toUpperCase()}`;
+  // Region numerica UN M.49: tres cifras (`419`, el espanol de Latinoamerica).
+  if (/^\d{3}$/.test(region)) return `${base}-${region}`;
+  return null;
 }
 
 /** Catalogo que sirve a un locale: el idioma base, o el de reserva. */
@@ -67,7 +70,8 @@ export function detectLocale({ stored, navigatorLanguages, supported }: DetectIn
   for (const tag of navigatorLanguages) {
     const match =
       normalizeLocale(tag, supported) ??
-      // `es-419` no es una region de dos letras, pero el idioma si se sirve.
+      // Un tag que no sabemos leer entero (`es-Latn-419`, con escritura) tiene
+      // aun un idioma que se sirve.
       normalizeLocale(tag.replace(/_/g, "-").split("-")[0], supported);
     if (match) return match;
   }
