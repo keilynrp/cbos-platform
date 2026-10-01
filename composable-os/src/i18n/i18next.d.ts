@@ -3,11 +3,14 @@ import "i18next";
 import analytics from "../locales/es/analytics.json";
 import auth from "../locales/es/auth.json";
 import common from "../locales/es/common.json";
+import contracts from "../locales/es/contracts.json";
+import crm from "../locales/es/crm.json";
 import companyProfile from "../locales/es/companyProfile.json";
 import customerPortal from "../locales/es/customerPortal.json";
 import dashboard from "../locales/es/dashboard.json";
 import discovery from "../locales/es/discovery.json";
 import errors from "../locales/es/errors.json";
+import sales from "../locales/es/sales.json";
 import settings from "../locales/es/settings.json";
 import workflows from "../locales/es/workflows.json";
 
@@ -27,6 +30,8 @@ declare module "i18next" {
     defaultNS: "common";
     resources: {
       common: typeof common;
+      contracts: typeof contracts;
+      crm: typeof crm;
       analytics: typeof analytics;
       companyProfile: typeof companyProfile;
       customerPortal: typeof customerPortal;
@@ -34,6 +39,7 @@ declare module "i18next" {
       discovery: typeof discovery;
       auth: typeof auth;
       errors: typeof errors;
+      sales: typeof sales;
       settings: typeof settings;
       workflows: typeof workflows;
     };

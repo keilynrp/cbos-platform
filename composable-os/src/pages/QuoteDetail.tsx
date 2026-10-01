@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { translateApiError } from "@/lib/errors";
 import { ArrowLeft, Plus, Trash2, Download, Loader2, Share2, Copy, Mail } from "lucide-react";
 import { useFormat } from "@/i18n/useFormat";
+import { useT } from "@/i18n/useT";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -67,7 +68,8 @@ function EditableCell({ value, lineId, field, disabled, type = "text", className
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function QuoteDetail() {
-  const { formatCurrency, formatDate, formatDateTime } = useFormat();
+  const t = useT();
+  const { formatCurrency, formatDate, formatDateTime, formatUnit } = useFormat();
   const fmtCurrency = (n: number) => formatCurrency(n, "USD");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -96,13 +98,13 @@ export default function QuoteDetail() {
     mutationFn: ({ lineId, data }: { lineId: string; data: QuoteLineUpdateDto }) =>
       salesService.updateLine(id!, lineId, data),
     onSuccess: invalidateQuote,
-    onError: (e: Error) => toast.error(`Error al guardar: ${translateApiError(e)}`),
+    onError: (e: Error) => toast.error(t("sales:detail.toast.saveFailed", { message: translateApiError(e) })),
   });
 
   const addLineMutation = useMutation({
     mutationFn: () =>
       salesService.addLine(id!, {
-        description: "Nueva línea",
+        description: t("sales:detail.lines.newLine"),
         quantity: 1,
         unit_price: 0,
         discount_percent: 0,
@@ -129,7 +131,7 @@ export default function QuoteDetail() {
 
   const sendMutation = useMutation({
     mutationFn: () => salesService.sendQuote(id!),
-    onSuccess: () => { invalidateQuote(); toast.success("Cotización enviada"); },
+    onSuccess: () => { invalidateQuote(); toast.success(t("sales:toast.quoteSent")); },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
@@ -139,14 +141,14 @@ export default function QuoteDetail() {
       invalidateQuote();
       qc.invalidateQueries({ queryKey: ["sales-quotes"] });
       qc.invalidateQueries({ queryKey: ["sales-orders"] });
-      toast.success("Cotización aceptada — orden creada");
+      toast.success(t("sales:toast.quoteAccepted"));
     },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const rejectMutation = useMutation({
     mutationFn: () => salesService.rejectQuote(id!),
-    onSuccess: () => { invalidateQuote(); toast.success("Cotización rechazada"); },
+    onSuccess: () => { invalidateQuote(); toast.success(t("sales:toast.quoteRejected")); },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
@@ -188,9 +190,9 @@ export default function QuoteDetail() {
     onSuccess: (s) => {
       if (!activeSession) qc.invalidateQueries({ queryKey: ["portal-sessions", id] });
       navigator.clipboard.writeText(s.portal_url).catch(() => {
-        toast.warning("No se pudo copiar automáticamente");
+        toast.warning(t("sales:detail.toast.copyFailed"));
       });
-      toast.success("Link copiado");
+      toast.success(t("sales:detail.toast.linkCopied"));
     },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
@@ -207,7 +209,7 @@ export default function QuoteDetail() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["portal-sessions", id] });
-      toast.success(`Email enviado a ${shareEmail}`);
+      toast.success(t("sales:detail.toast.emailSent", { email: shareEmail }));
       setShareOpen(false);
     },
     onError: (e: Error) => toast.error(translateApiError(e)),
@@ -230,9 +232,9 @@ export default function QuoteDetail() {
   if (error || !quote) {
     return (
       <div className="p-6 text-center space-y-4">
-        <p className="text-muted-foreground">Cotización no encontrada.</p>
+        <p className="text-muted-foreground">{t("sales:detail.notFound")}</p>
         <Button variant="outline" onClick={() => navigate("/sales")}>
-          <ArrowLeft className="h-4 w-4 mr-2" /> Volver a Ventas
+          <ArrowLeft className="h-4 w-4 mr-2" /> {t("sales:detail.backToSales")}
         </Button>
       </div>
     );
@@ -247,7 +249,7 @@ export default function QuoteDetail() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate("/sales")}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Cotizaciones
+            <ArrowLeft className="h-4 w-4 mr-1" /> {t("sales:detail.back")}
           </Button>
           <div>
             <div className="flex items-center gap-2">
@@ -265,7 +267,7 @@ export default function QuoteDetail() {
               onClick={() => sendMutation.mutate()}
             >
               {sendMutation.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-              Enviar
+              {t("sales:detail.send")}
             </Button>
           )}
           {quote.status === "sent" && (
@@ -277,7 +279,7 @@ export default function QuoteDetail() {
                 disabled={acceptMutation.isPending}
                 onClick={() => acceptMutation.mutate()}
               >
-                Aceptar
+                {t("sales:detail.accept")}
               </Button>
               <Button
                 size="sm"
@@ -286,7 +288,7 @@ export default function QuoteDetail() {
                 disabled={rejectMutation.isPending}
                 onClick={() => rejectMutation.mutate()}
               >
-                Rechazar
+                {t("sales:detail.reject")}
               </Button>
             </>
           )}
@@ -295,16 +297,16 @@ export default function QuoteDetail() {
             variant="outline"
             onClick={() => window.open(salesService.getQuotePdfUrl(id!), "_blank")}
           >
-            <Download className="h-3 w-3 mr-1" /> PDF
+            <Download className="h-3 w-3 mr-1" /> {t("sales:detail.pdf")}
           </Button>
           <Button
             size="sm"
             variant={canShare ? "default" : "outline"}
             disabled={!canShare}
-            title={!canShare ? "Cotización ya procesada" : undefined}
+            title={!canShare ? t("sales:detail.alreadyProcessed") : undefined}
             onClick={() => setShareOpen(true)}
           >
-            <Share2 className="h-3 w-3 mr-1" /> Compartir
+            <Share2 className="h-3 w-3 mr-1" /> {t("sales:detail.share")}
           </Button>
         </div>
       </div>
@@ -313,13 +315,15 @@ export default function QuoteDetail() {
       {activeSession && (
         <div className="flex items-center justify-between px-4 py-2.5 rounded-lg border border-emerald-300/40 bg-emerald-500/10 text-sm">
           <span className="text-emerald-400 text-xs">
-            ✓ Link activo{activeSession.client_email ? ` — enviado a ${activeSession.client_email}` : ""} · expira {formatDate(activeSession.expires_at, "short")}
+            {activeSession.client_email
+              ? t("sales:detail.activeLinkSentTo", { email: activeSession.client_email, date: formatDate(activeSession.expires_at, "short") })
+              : t("sales:detail.activeLink", { date: formatDate(activeSession.expires_at, "short") })}
           </span>
           <button
             className="text-blue-400 text-xs hover:underline"
             onClick={() => setShareOpen(true)}
           >
-            Reenviar / nuevo link
+            {t("sales:detail.resend")}
           </button>
         </div>
       )}
@@ -328,37 +332,37 @@ export default function QuoteDetail() {
       <Dialog open={shareOpen} onOpenChange={(o) => { setShareOpen(o); if (!o) { setShareEmail(""); setShareName(""); setShareDays(14); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Compartir cotización</DialogTitle>
+            <DialogTitle>{t("sales:detail.shareDialog.title")}</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
               {quote?.quote_number} · {quote?.title} · {quote ? formatCurrency(quote.total, quote.currency) : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <Label htmlFor="share-name" className="text-xs">Nombre del cliente</Label>
+              <Label htmlFor="share-name" className="text-xs">{t("sales:detail.shareDialog.clientName")}</Label>
               <Input
                 id="share-name"
                 value={shareName}
                 onChange={(e) => setShareName(e.target.value)}
-                placeholder="Juan Pérez"
+                placeholder={t("sales:detail.shareDialog.namePlaceholder")}
                 className="h-8 text-sm"
               />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="share-email" className="text-xs">
-                Email del cliente <span className="text-red-400">*</span>
+                {t("sales:detail.shareDialog.clientEmail")} <span className="text-red-400">*</span>
               </Label>
               <Input
                 id="share-email"
                 type="email"
                 value={shareEmail}
                 onChange={(e) => setShareEmail(e.target.value)}
-                placeholder="juan@empresa.com"
+                placeholder={t("sales:detail.shareDialog.emailPlaceholder")}
                 className="h-8 text-sm"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Válida por</Label>
+              <Label className="text-xs">{t("sales:detail.shareDialog.validFor")}</Label>
               <div className="flex gap-2">
                 {([7, 14, 30] as const).map((d) => (
                   <button
@@ -370,7 +374,7 @@ export default function QuoteDetail() {
                         : "border-border text-muted-foreground hover:bg-accent"
                     }`}
                   >
-                    {d}d
+                    {formatUnit(d, "day")}
                   </button>
                 ))}
               </div>
@@ -385,7 +389,7 @@ export default function QuoteDetail() {
               >
                 {copyLinkMutation.isPending
                   ? <Loader2 className="h-3 w-3 animate-spin" />
-                  : <><Copy className="h-3 w-3 mr-1" /> Copiar link</>
+                  : <><Copy className="h-3 w-3 mr-1" /> {t("sales:detail.shareDialog.copyLink")}</>
                 }
               </Button>
               <Button
@@ -396,7 +400,7 @@ export default function QuoteDetail() {
               >
                 {sendPortalEmailMutation.isPending
                   ? <Loader2 className="h-3 w-3 animate-spin" />
-                  : <><Mail className="h-3 w-3 mr-1" /> Enviar email</>
+                  : <><Mail className="h-3 w-3 mr-1" /> {t("sales:detail.shareDialog.sendEmail")}</>
                 }
               </Button>
             </div>
@@ -407,23 +411,23 @@ export default function QuoteDetail() {
       {/* Lines table */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Líneas</CardTitle>
+          <CardTitle className="text-base">{t("sales:detail.lines.title")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="text-xs">
-                  <TableHead className="w-8">#</TableHead>
-                  <TableHead className="w-24">SKU</TableHead>
-                  <TableHead className="min-w-[180px]">Descripción</TableHead>
-                  <TableHead className="w-20">Unidad</TableHead>
-                  <TableHead className="w-20 text-right">Cant.</TableHead>
-                  <TableHead className="w-24 text-right">P. Unit</TableHead>
-                  <TableHead className="w-16 text-right">Desc%</TableHead>
-                  <TableHead className="w-16 text-right">IVA%</TableHead>
-                  <TableHead className="w-28 text-right">Total línea</TableHead>
-                  <TableHead className="min-w-[120px]">Notas</TableHead>
+                  <TableHead className="w-8">{t("sales:detail.lines.index")}</TableHead>
+                  <TableHead className="w-24">{t("sales:detail.lines.sku")}</TableHead>
+                  <TableHead className="min-w-[180px]">{t("sales:detail.lines.description")}</TableHead>
+                  <TableHead className="w-20">{t("sales:detail.lines.unit")}</TableHead>
+                  <TableHead className="w-20 text-right">{t("sales:detail.lines.quantity")}</TableHead>
+                  <TableHead className="w-24 text-right">{t("sales:detail.lines.unitPrice")}</TableHead>
+                  <TableHead className="w-16 text-right">{t("sales:detail.lines.discount")}</TableHead>
+                  <TableHead className="w-16 text-right">{t("sales:detail.lines.tax")}</TableHead>
+                  <TableHead className="w-28 text-right">{t("sales:detail.lines.lineTotal")}</TableHead>
+                  <TableHead className="min-w-[120px]">{t("sales:detail.lines.notes")}</TableHead>
                   {isDraft && <TableHead className="w-8" />}
                 </TableRow>
               </TableHeader>
@@ -479,7 +483,7 @@ export default function QuoteDetail() {
                 {quote.lines.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={isDraft ? 11 : 10} className="text-center text-muted-foreground text-sm py-8">
-                      Sin líneas. {isDraft && "Agrega una para comenzar."}
+                      {isDraft ? t("sales:detail.lines.emptyDraft") : t("sales:detail.lines.empty")}
                     </TableCell>
                   </TableRow>
                 )}
@@ -498,7 +502,7 @@ export default function QuoteDetail() {
                 {addLineMutation.isPending
                   ? <Loader2 className="h-3 w-3 animate-spin" />
                   : <Plus className="h-3 w-3" />}
-                Agregar línea
+                {t("sales:detail.lines.add")}
               </Button>
             </div>
           )}
@@ -510,21 +514,21 @@ export default function QuoteDetail() {
         <Card className="w-72">
           <CardContent className="pt-4 space-y-1.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
+              <span className="text-muted-foreground">{t("sales:detail.totals.subtotal")}</span>
               <span>{fmtCurrency(quote.subtotal)}</span>
             </div>
             {quote.discount_amount > 0 && (
               <div className="flex justify-between text-red-600">
-                <span>Descuento</span>
+                <span>{t("sales:detail.totals.discount")}</span>
                 <span>-{fmtCurrency(quote.discount_amount)}</span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Impuestos</span>
+              <span className="text-muted-foreground">{t("sales:detail.totals.taxes")}</span>
               <span>{fmtCurrency(quote.tax_amount)}</span>
             </div>
             <div className="flex justify-between font-semibold text-base border-t pt-1.5 mt-1">
-              <span>Total</span>
+              <span>{t("sales:detail.totals.total")}</span>
               <span>{fmtCurrency(quote.total)}</span>
             </div>
           </CardContent>
@@ -535,7 +539,7 @@ export default function QuoteDetail() {
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Notas generales</CardTitle>
+            <CardTitle className="text-base">{t("sales:detail.notes.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Textarea
@@ -543,7 +547,7 @@ export default function QuoteDetail() {
               defaultValue={quote.notes ?? ""}
               disabled={!isDraft}
               rows={4}
-              placeholder="Notas visibles al cliente..."
+              placeholder={t("sales:detail.notes.placeholder")}
               onBlur={(e) => {
                 if (e.target.value !== (quote.notes ?? "")) {
                   updateQuoteMutation.mutate({ notes: e.target.value });
@@ -554,7 +558,7 @@ export default function QuoteDetail() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Términos y condiciones</CardTitle>
+            <CardTitle className="text-base">{t("sales:detail.terms.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <Textarea
@@ -562,7 +566,7 @@ export default function QuoteDetail() {
               defaultValue={quote.terms ?? ""}
               disabled={!isDraft}
               rows={4}
-              placeholder="Términos de la cotización..."
+              placeholder={t("sales:detail.terms.placeholder")}
               onBlur={(e) => {
                 if (e.target.value !== (quote.terms ?? "")) {
                   updateQuoteMutation.mutate({ terms: e.target.value });
@@ -576,11 +580,11 @@ export default function QuoteDetail() {
       {/* History */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Historial</CardTitle>
+          <CardTitle className="text-base">{t("sales:detail.history.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           {!history || history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin eventos registrados.</p>
+            <p className="text-sm text-muted-foreground">{t("sales:detail.history.empty")}</p>
           ) : (
             <ul className="space-y-2">
               {history.map((ev: QuoteEvent) => (

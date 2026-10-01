@@ -130,7 +130,9 @@ describe("the scanner against a real migrated page", () => {
 
   it("does find the strings in a page that is not migrated yet", () => {
     // Control positivo sobre codigo real: si esto pasa a 0, el escaner esta roto.
-    const source = readFileSync(resolve(__dirname, "../pages/Contracts.tsx"), "utf8");
+    // Hay que apuntarlo a la pagina sin migrar que quede mas tarde (hoy, la ultima
+    // del plan): al migrarla, este test falla y recuerda cambiarla.
+    const source = readFileSync(resolve(__dirname, "../pages/PortalBuilder.tsx"), "utf8");
 
     expect(find(source).length).toBeGreaterThan(20);
   });
