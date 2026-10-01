@@ -54,7 +54,8 @@ The module is expected to own:
   because absent and `null` mean different things. Validated against the shipped
   catalogues (today only `es`) and rejected with
   `422 IDENTITY_LOCALE_UNSUPPORTED` rather than silently falling back. Region
-  subtags are kept and canonicalised (`es_mx` → `es-MX`)
+  subtags are kept and canonicalised (`es_mx` → `es-MX`); a region is two letters
+  or three digits, so `es-419` (Latin American Spanish) is valid
 - `GET /api/v1/workspaces/me` — includes `default_locale`
 - `POST /api/v1/persons`
 - `GET /api/v1/organizations`
