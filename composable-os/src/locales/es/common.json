@@ -10,6 +10,31 @@
   "sidebar": {
     "toggle": "Alternar barra lateral"
   },
+  "notFound": {
+    "message": "¡Vaya! Página no encontrada",
+    "home": "Volver al inicio"
+  },
+  "projectStatus": {
+    "planning": "Planificación",
+    "active": "Activo",
+    "on_hold": "En pausa",
+    "completed": "Completado",
+    "cancelled": "Cancelado"
+  },
+  "contractStatus": {
+    "draft": "Borrador",
+    "sent": "Enviado",
+    "signed": "Firmado",
+    "executed": "Ejecutado",
+    "expired": "Vencido",
+    "terminated": "Terminado"
+  },
+  "employmentType": {
+    "full_time": "Tiempo completo",
+    "part_time": "Tiempo parcial",
+    "contractor": "Contratista",
+    "intern": "Pasante"
+  },
   "crmStage": {
     "new": "Nueva",
     "qualified": "Calificada",

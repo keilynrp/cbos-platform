@@ -1,7 +1,10 @@
 import "i18next";
 
+import analytics from "../locales/es/analytics.json";
 import auth from "../locales/es/auth.json";
 import common from "../locales/es/common.json";
+import companyProfile from "../locales/es/companyProfile.json";
+import customerPortal from "../locales/es/customerPortal.json";
 import dashboard from "../locales/es/dashboard.json";
 import discovery from "../locales/es/discovery.json";
 import errors from "../locales/es/errors.json";
@@ -24,6 +27,9 @@ declare module "i18next" {
     defaultNS: "common";
     resources: {
       common: typeof common;
+      analytics: typeof analytics;
+      companyProfile: typeof companyProfile;
+      customerPortal: typeof customerPortal;
       dashboard: typeof dashboard;
       discovery: typeof discovery;
       auth: typeof auth;

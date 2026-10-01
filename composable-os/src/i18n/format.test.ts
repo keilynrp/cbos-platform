@@ -8,9 +8,11 @@ import {
   formatDateTime,
   formatMilliseconds,
   formatMonthShort,
+  formatMonthYear,
   formatNumber,
   formatPercent,
   formatRelativeTime,
+  formatUnit,
   formattingLocale,
   todayInputValue,
 } from "@/i18n/format";
@@ -229,6 +231,36 @@ describe("formatMonthShort", () => {
     expect(formatMonthShort("2026-13", "es")).toBe(EMPTY);
     expect(formatMonthShort("2026-00", "es")).toBe(EMPTY);
     expect(formatMonthShort(null, "es")).toBe(EMPTY);
+  });
+});
+
+describe("formatMonthYear", () => {
+  it("names the month and the two-digit year, from a YYYY-MM value", () => {
+    // Antes salia "Apr '26" de un array de abreviaturas en ingles.
+    expect(formatMonthYear("2026-04", "es")).toBe("abr 26");
+    expect(formatMonthYear("2026-12", "en-US")).toBe("Dec 26");
+  });
+
+  it("shows a placeholder for anything that is not a month", () => {
+    expect(formatMonthYear("garbage", "es")).toBe(EMPTY);
+    expect(formatMonthYear("2026-13", "es")).toBe(EMPTY);
+    expect(formatMonthYear(undefined, "es")).toBe(EMPTY);
+  });
+});
+
+describe("formatUnit", () => {
+  it("formats a number with an abbreviated unit, as the countdown printed it", () => {
+    expect(formatUnit(3, "day", "es")).toBe("3d");
+    expect(formatUnit(12, "millisecond", "es")).toBe("12ms");
+  });
+
+  it("follows the locale's number format", () => {
+    expect(formatUnit(1234.5, "kilobyte", "es-ES")).toMatch(/^1234,5\s?kB$/);
+  });
+
+  it("shows a placeholder for a missing value", () => {
+    expect(formatUnit(null, "day", "es")).toBe(EMPTY);
+    expect(formatUnit(undefined, "day", "es")).toBe(EMPTY);
   });
 });
 

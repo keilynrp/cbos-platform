@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { translateApiError } from "@/lib/errors";
 import { useFormat } from "@/i18n/useFormat";
+import { useT } from "@/i18n/useT";
 
 // ── Public fetch (no auth header) ─────────────────────────────────────────
 const BASE_URL = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:8100/api/v1";
@@ -86,17 +87,19 @@ function initials(name: string): string {
 // ── Sub-screens ────────────────────────────────────────────────────────────
 
 function LoadingScreen() {
+  const t = useT();
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: "#1e1e2e" }}>
       <div className="flex items-center gap-3 text-[#6c7086]">
         <Loader2 className="h-5 w-5 animate-spin" />
-        <span className="text-sm">Cargando propuesta…</span>
+        <span className="text-sm">{t("customerPortal:loading")}</span>
       </div>
     </div>
   );
 }
 
 function ErrorScreen({ isExpired, workspaceName }: { isExpired: boolean; workspaceName?: string }) {
+  const t = useT();
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#1e1e2e" }}>
       <div className="bg-[#1e1e2e] border border-[#45475a] rounded-2xl p-8 max-w-sm w-full text-center space-y-3">
@@ -104,12 +107,12 @@ function ErrorScreen({ isExpired, workspaceName }: { isExpired: boolean; workspa
           {isExpired ? "⏰" : "❌"}
         </div>
         <p className="text-[#cdd6f4] font-semibold">
-          {isExpired ? "Este link expiró" : "Link inválido"}
+          {isExpired ? t("customerPortal:error.expiredTitle") : t("customerPortal:error.invalidTitle")}
         </p>
         <p className="text-[#6c7086] text-sm">
           {isExpired
-            ? `Contacta a ${workspaceName ?? "la empresa"} para solicitar uno nuevo.`
-            : "Verifica que hayas copiado la URL completa."}
+            ? t("customerPortal:error.expiredBody", { name: workspaceName ?? t("customerPortal:error.theCompany") })
+            : t("customerPortal:error.invalidBody")}
         </p>
       </div>
     </div>
@@ -123,6 +126,7 @@ function AcceptConfirmationScreen({
   workspaceName: string;
   orderNumber: string | null;
 }) {
+  const t = useT();
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#1e1e2e" }}>
       <div className="max-w-sm w-full space-y-4">
@@ -130,31 +134,31 @@ function AcceptConfirmationScreen({
           <div className="w-14 h-14 bg-[#a6e3a1]/10 border-2 border-[#a6e3a1] rounded-full flex items-center justify-center text-2xl">
             ✓
           </div>
-          <p className="text-[#cdd6f4] text-lg font-bold">¡Propuesta aceptada!</p>
-          <p className="text-[#6c7086] text-sm">Hemos recibido tu confirmación.</p>
+          <p className="text-[#cdd6f4] text-lg font-bold">{t("customerPortal:accepted.title")}</p>
+          <p className="text-[#6c7086] text-sm">{t("customerPortal:accepted.received")}</p>
         </div>
 
         <div className="bg-[#313244] rounded-xl p-5 text-center">
-          <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-2">Tu número de orden</p>
+          <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-2">{t("customerPortal:accepted.orderNumber")}</p>
           {orderNumber ? (
             <p className="text-[#89b4fa] text-3xl font-bold font-mono">{orderNumber}</p>
           ) : (
-            <p className="text-[#6c7086] text-sm">Revisa tu email de confirmación</p>
+            <p className="text-[#6c7086] text-sm">{t("customerPortal:accepted.checkEmail")}</p>
           )}
-          <p className="text-[#6c7086] text-[11px] mt-2">Guarda este número para consultas</p>
+          <p className="text-[#6c7086] text-[11px] mt-2">{t("customerPortal:accepted.keepNumber")}</p>
         </div>
 
         <div className="bg-[#313244] rounded-xl p-4 space-y-2">
-          <p className="text-[#6c7086] text-[11px] font-semibold">Próximos pasos</p>
+          <p className="text-[#6c7086] text-[11px] font-semibold">{t("customerPortal:accepted.nextSteps")}</p>
           <p className="text-[#cdd6f4] text-xs leading-relaxed">
-            📧 Recibirás un email de confirmación<br />
-            📞 {workspaceName} se pondrá en contacto<br />
-            {orderNumber && <>🗂️ Referencia: <span className="text-[#89b4fa]">{orderNumber}</span></>}
+            {t("customerPortal:accepted.emailStep")}<br />
+            {t("customerPortal:accepted.contactStep", { name: workspaceName })}<br />
+            {orderNumber && <>{t("customerPortal:accepted.referenceStep")} <span className="text-[#89b4fa]">{orderNumber}</span></>}
           </p>
         </div>
 
         <p className="text-[#6c7086] text-[10px] text-center">
-          Este link ya no está disponible para más acciones
+          {t("customerPortal:closed")}
         </p>
       </div>
     </div>
@@ -162,18 +166,19 @@ function AcceptConfirmationScreen({
 }
 
 function RejectConfirmationScreen({ workspaceName }: { workspaceName: string }) {
+  const t = useT();
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "#1e1e2e" }}>
       <div className="max-w-sm w-full space-y-4 text-center">
         <div className="w-14 h-14 bg-[#f38ba8]/10 border-2 border-[#f38ba8] rounded-full flex items-center justify-center text-2xl mx-auto">
           ✗
         </div>
-        <p className="text-[#cdd6f4] text-lg font-bold">Propuesta rechazada</p>
+        <p className="text-[#cdd6f4] text-lg font-bold">{t("customerPortal:rejected.title")}</p>
         <p className="text-[#6c7086] text-sm">
-          Si cambias de opinión, contacta a {workspaceName}.
+          {t("customerPortal:rejected.changedMind", { name: workspaceName })}
         </p>
         <p className="text-[#6c7086] text-[10px]">
-          Este link ya no está disponible para más acciones
+          {t("customerPortal:closed")}
         </p>
       </div>
     </div>
@@ -182,7 +187,8 @@ function RejectConfirmationScreen({ workspaceName }: { workspaceName: string }) 
 
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function CustomerPortal() {
-  const { formatCurrency: fmt, formatPercent } = useFormat();
+  const t = useT();
+  const { formatCurrency: fmt, formatPercent, formatUnit } = useFormat();
   const { token } = useParams<{ token: string }>();
 
   const [phase, setPhase] = useState<Phase>("view");
@@ -274,7 +280,7 @@ export default function CustomerPortal() {
             {initials(quote.workspace_name)}
           </div>
           <p className="text-white font-semibold text-sm">{quote.workspace_name}</p>
-          <p className="text-white/70 text-xs mt-0.5">Te envió una propuesta</p>
+          <p className="text-white/70 text-xs mt-0.5">{t("customerPortal:quote.sentYou")}</p>
         </div>
 
         {/* Quote body */}
@@ -294,19 +300,19 @@ export default function CustomerPortal() {
               }`}
             >
               <p className={`text-[10px] font-semibold ${days < 3 ? "text-red-400" : "text-[#f38ba8]"}`}>
-                ⏰ Expira
+                {t("customerPortal:quote.expires")}
               </p>
               <p className={`text-sm font-bold ${days < 3 ? "text-red-400" : "text-[#f38ba8]"}`}>
-                {days}d
+                {formatUnit(days, "day")}
               </p>
             </div>
           </div>
 
           {/* Line items + breakdown */}
           <div className="bg-[#313244] rounded-xl p-3">
-            <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-2">Detalle</p>
+            <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-2">{t("customerPortal:quote.details")}</p>
             {quote.lines.length === 0 ? (
-              <p className="text-[#6c7086] text-xs">Sin líneas de detalle</p>
+              <p className="text-[#6c7086] text-xs">{t("customerPortal:quote.noLines")}</p>
             ) : quote.lines.map((line, i) => (
               <div key={i} className="flex justify-between text-xs text-[#cdd6f4] mb-1.5">
                 <span className="truncate pr-2">{line.description}</span>
@@ -315,23 +321,23 @@ export default function CustomerPortal() {
             ))}
             <div className="h-px bg-[#45475a] my-2" />
             <div className="flex justify-between text-[11px] text-[#6c7086] mb-1">
-              <span>Subtotal</span>
+              <span>{t("customerPortal:quote.subtotal")}</span>
               <span>{fmt(quote.subtotal, quote.currency)}</span>
             </div>
             {quote.discount_amount > 0 && (
               <div className="flex justify-between text-[11px] text-[#6c7086] mb-1">
-                <span>Descuento</span>
+                <span>{t("customerPortal:quote.discount")}</span>
                 <span>-{fmt(quote.discount_amount, quote.currency)}</span>
               </div>
             )}
             {quote.tax_rate > 0 && (
               <div className="flex justify-between text-[11px] text-[#6c7086] mb-2">
-                <span>IVA ({formatPercent(quote.tax_rate, { maximumFractionDigits: 0 })})</span>
+                <span>{t("customerPortal:quote.tax", { rate: formatPercent(quote.tax_rate, { maximumFractionDigits: 0 }) })}</span>
                 <span>{fmt(quote.tax_amount, quote.currency)}</span>
               </div>
             )}
             <div className="flex justify-between text-sm font-bold text-[#a6e3a1]">
-              <span>Total</span>
+              <span>{t("customerPortal:quote.total")}</span>
               <span>{fmt(quote.total, quote.currency)}</span>
             </div>
           </div>
@@ -346,7 +352,7 @@ export default function CustomerPortal() {
           {/* Terms */}
           {quote.terms && (
             <div className="bg-[#313244] rounded-xl p-3">
-              <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-1">Términos y condiciones</p>
+              <p className="text-[#6c7086] text-[10px] uppercase tracking-wide mb-1">{t("customerPortal:quote.terms")}</p>
               <p className="text-[#6c7086] text-[11px] leading-relaxed">{quote.terms}</p>
             </div>
           )}
@@ -358,16 +364,16 @@ export default function CustomerPortal() {
                 className="w-full bg-[#a6e3a1] text-[#1e1e2e] rounded-xl py-3 text-sm font-bold active:opacity-80"
                 onClick={() => setPhase("accept-form")}
               >
-                ✓ Aceptar y firmar propuesta
+                {t("customerPortal:quote.accept")}
               </button>
               <button
                 className="w-full bg-[#313244] text-[#cdd6f4] rounded-xl py-2.5 text-xs"
                 onClick={() => setPhase("reject-form")}
               >
-                ✗ Rechazar propuesta
+                {t("customerPortal:quote.reject")}
               </button>
               <p className="text-center text-[10px] text-[#6c7086]">
-                ¿Preguntas? Contacta a {quote.workspace_name}
+                {t("customerPortal:quote.questions", { name: quote.workspace_name })}
               </p>
             </div>
           )}
@@ -375,26 +381,26 @@ export default function CustomerPortal() {
           {/* Inline accept form */}
           {phase === "accept-form" && (
             <div className="bg-[#313244] rounded-xl p-4 space-y-3">
-              <p className="text-[#cdd6f4] text-sm font-semibold">Confirmar aceptación</p>
+              <p className="text-[#cdd6f4] text-sm font-semibold">{t("customerPortal:acceptForm.title")}</p>
               <div>
                 <label className="block text-[10px] text-[#6c7086] uppercase tracking-wide mb-1">
-                  Tu nombre
+                  {t("customerPortal:acceptForm.name")}
                 </label>
                 <input
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Tu nombre completo"
+                  placeholder={t("customerPortal:acceptForm.namePlaceholder")}
                   className="w-full bg-[#1e1e2e] border border-[#45475a] rounded-lg px-3 py-2 text-xs text-[#cdd6f4] outline-none focus:border-[#89b4fa]"
                 />
               </div>
               <div>
                 <label className="block text-[10px] text-[#6c7086] uppercase tracking-wide mb-1">
-                  Notas (opcional)
+                  {t("customerPortal:acceptForm.notes")}
                 </label>
                 <textarea
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="Instrucciones adicionales..."
+                  placeholder={t("customerPortal:acceptForm.notesPlaceholder")}
                   rows={2}
                   className="w-full bg-[#1e1e2e] border border-[#45475a] rounded-lg px-3 py-2 text-xs text-[#cdd6f4] outline-none focus:border-[#89b4fa] resize-none"
                 />
@@ -404,14 +410,14 @@ export default function CustomerPortal() {
                   className="flex-1 bg-[#45475a] text-[#cdd6f4] rounded-lg py-2 text-xs"
                   onClick={() => setPhase("view")}
                 >
-                  Cancelar
+                  {t("customerPortal:acceptForm.cancel")}
                 </button>
                 <button
                   disabled={accept.isPending}
                   onClick={() => accept.mutate()}
                   className="flex-1 bg-[#a6e3a1] text-[#1e1e2e] rounded-lg py-2 text-xs font-bold disabled:opacity-50"
                 >
-                  {accept.isPending ? "…" : "Confirmar aceptación"}
+                  {accept.isPending ? "…" : t("customerPortal:acceptForm.confirm")}
                 </button>
               </div>
               {accept.isError && (
@@ -423,15 +429,15 @@ export default function CustomerPortal() {
           {/* Inline reject form */}
           {phase === "reject-form" && (
             <div className="bg-[#313244] rounded-xl p-4 space-y-3">
-              <p className="text-[#cdd6f4] text-sm font-semibold">Confirmar rechazo</p>
+              <p className="text-[#cdd6f4] text-sm font-semibold">{t("customerPortal:rejectForm.title")}</p>
               <div>
                 <label className="block text-[10px] text-[#6c7086] uppercase tracking-wide mb-1">
-                  Motivo (opcional)
+                  {t("customerPortal:rejectForm.reason")}
                 </label>
                 <textarea
                   value={formReason}
                   onChange={(e) => setFormReason(e.target.value)}
-                  placeholder="Razón del rechazo..."
+                  placeholder={t("customerPortal:rejectForm.reasonPlaceholder")}
                   rows={3}
                   className="w-full bg-[#1e1e2e] border border-[#45475a] rounded-lg px-3 py-2 text-xs text-[#cdd6f4] outline-none focus:border-[#89b4fa] resize-none"
                 />
@@ -441,14 +447,14 @@ export default function CustomerPortal() {
                   className="flex-1 bg-[#45475a] text-[#cdd6f4] rounded-lg py-2 text-xs"
                   onClick={() => setPhase("view")}
                 >
-                  Cancelar
+                  {t("customerPortal:rejectForm.cancel")}
                 </button>
                 <button
                   disabled={reject.isPending}
                   onClick={() => reject.mutate()}
                   className="flex-1 bg-[#f38ba8]/20 text-[#f38ba8] border border-[#f38ba8]/30 rounded-lg py-2 text-xs font-medium disabled:opacity-50"
                 >
-                  {reject.isPending ? "…" : "Confirmar rechazo"}
+                  {reject.isPending ? "…" : t("customerPortal:rejectForm.confirm")}
                 </button>
               </div>
               {reject.isError && (

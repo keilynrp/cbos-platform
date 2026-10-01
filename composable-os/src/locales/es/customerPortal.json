@@ -1,0 +1,56 @@
+{
+  "loading": "Cargando propuesta…",
+  "closed": "Este link ya no está disponible para más acciones",
+  "error": {
+    "expiredTitle": "Este link expiró",
+    "invalidTitle": "Link inválido",
+    "expiredBody": "Contacta a {{name}} para solicitar uno nuevo.",
+    "theCompany": "la empresa",
+    "invalidBody": "Verifica que hayas copiado la URL completa."
+  },
+  "accepted": {
+    "title": "¡Propuesta aceptada!",
+    "received": "Hemos recibido tu confirmación.",
+    "orderNumber": "Tu número de orden",
+    "checkEmail": "Revisa tu email de confirmación",
+    "keepNumber": "Guarda este número para consultas",
+    "nextSteps": "Próximos pasos",
+    "emailStep": "📧 Recibirás un email de confirmación",
+    "contactStep": "📞 {{name}} se pondrá en contacto",
+    "referenceStep": "🗂️ Referencia:"
+  },
+  "rejected": {
+    "title": "Propuesta rechazada",
+    "changedMind": "Si cambias de opinión, contacta a {{name}}."
+  },
+  "quote": {
+    "sentYou": "Te envió una propuesta",
+    "expires": "⏰ Expira",
+    "details": "Detalle",
+    "noLines": "Sin líneas de detalle",
+    "subtotal": "Subtotal",
+    "discount": "Descuento",
+    "tax": "IVA ({{rate}})",
+    "total": "Total",
+    "terms": "Términos y condiciones",
+    "accept": "✓ Aceptar y firmar propuesta",
+    "reject": "✗ Rechazar propuesta",
+    "questions": "¿Preguntas? Contacta a {{name}}"
+  },
+  "acceptForm": {
+    "title": "Confirmar aceptación",
+    "name": "Tu nombre",
+    "namePlaceholder": "Tu nombre completo",
+    "notes": "Notas (opcional)",
+    "notesPlaceholder": "Instrucciones adicionales...",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar aceptación"
+  },
+  "rejectForm": {
+    "title": "Confirmar rechazo",
+    "reason": "Motivo (opcional)",
+    "reasonPlaceholder": "Razón del rechazo...",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar rechazo"
+  }
+}
