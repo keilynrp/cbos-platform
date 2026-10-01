@@ -27,6 +27,13 @@ describe("formattingLocale", () => {
     expect(formattingLocale("es-ES")).toBe("es-ES");
   });
 
+  it("keeps a numeric region too, as the backend and the locale helpers accept it", () => {
+    // `es-419` (espanol de Latinoamerica) es un tag BCP 47 valido; reducirlo a la
+    // region por defecto perderia justo la preferencia regional que guarda.
+    expect(formattingLocale("es-419")).toBe("es-419");
+    expect(formatDate("2026-09-30", "es-419", "short")).toBe("30/9/2026");
+  });
+
   it("gives a bare language the region the product already formats with", () => {
     // `es` a secas formatea a la espanola ("1234,50\u00a0US$"), y el locale por
     // defecto del producto es `es`: sin esta region por defecto, adoptar el
@@ -133,6 +140,27 @@ describe("formatDate", () => {
     process.env.TZ = "America/Mexico_City";
 
     expect(formatDate("2026-09-30T03:30:00Z", "es", "short")).toBe("29/9/2026");
+  });
+
+  it("does not reuse a formatter built for another time zone", () => {
+    // `Intl.DateTimeFormat` captura la zona al construirse: una cache que solo
+    // mire locale y opciones devuelve la hora de la zona anterior. Pasaba en CI
+    // (UTC) y no en una maquina en otra zona, y tambien si la zona del sistema
+    // cambia con la SPA abierta.
+    const instant = "2026-09-30T03:30:00Z";
+
+    process.env.TZ = "UTC";
+    expect(formatDate(instant, "es", "short")).toBe("30/9/2026");
+
+    process.env.TZ = "America/Mexico_City";
+    expect(formatDate(instant, "es", "short")).toBe("29/9/2026");
+
+    process.env.TZ = "Asia/Tokyo";
+    expect(formatDate(instant, "es", "short")).toBe("30/9/2026");
+    expect(formatDateTime(instant, "es")).toContain("12:30");
+
+    process.env.TZ = "UTC";
+    expect(formatDate(instant, "es", "short")).toBe("30/9/2026");
   });
 
   it("shows a placeholder instead of 'Invalid Date'", () => {

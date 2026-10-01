@@ -32,7 +32,8 @@ const FALLBACK_FORMATTING_LOCALE = "es-MX";
 export function formattingLocale(locale: string): string {
   const tag = (locale ?? "").trim().replace(/_/g, "-");
 
-  const withRegion = /^([A-Za-z]{2,3})-([A-Za-z]{2})$/.exec(tag);
+  // Region de dos letras (`MX`) o numerica UN M.49 de tres cifras (`419`).
+  const withRegion = /^([A-Za-z]{2,3})-([A-Za-z]{2}|\d{3})$/.exec(tag);
   if (withRegion) return `${withRegion[1].toLowerCase()}-${withRegion[2].toUpperCase()}`;
 
   const base = tag.split("-")[0].toLowerCase();
@@ -53,8 +54,26 @@ function numberFormat(locale: string, options: Intl.NumberFormatOptions): Intl.N
   return format;
 }
 
+// `Intl.DateTimeFormat` captura la zona horaria al construirse. Una cache que solo
+// mirase locale y opciones seguiria dando la hora de la zona anterior si esta
+// cambia (un entorno UTC y otro no, o el sistema cambiando de zona con la SPA
+// abierta). La zona entra en la clave, pero resolverla cuesta construir un
+// formateador, asi que solo se vuelve a resolver cuando cambia el desfase respecto
+// de UTC (que es tambien lo que pasa en un cambio de horario de verano).
+let lastOffset: number | null = null;
+let lastZone = "";
+
+function currentTimeZone(): string {
+  const offset = new Date().getTimezoneOffset();
+  if (offset !== lastOffset) {
+    lastOffset = offset;
+    lastZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
+  return lastZone;
+}
+
 function dateFormat(locale: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
-  const key = `${locale}|${JSON.stringify(options)}`;
+  const key = `${locale}|${currentTimeZone()}|${JSON.stringify(options)}`;
   let format = dateFormats.get(key);
   if (!format) {
     format = new Intl.DateTimeFormat(locale, options);
