@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { api, clearToken, setToken, getToken } from "@/lib/api";
+import i18n, { setLocale } from "@/i18n";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export interface User {
@@ -10,6 +11,10 @@ export interface User {
   workspace_id: string;
   is_active?: boolean;
   is_owner?: boolean;
+  /** Lo guardado: `null` significa "sigue al workspace". */
+  locale?: string | null;
+  /** Lo que se debe usar, ya resuelto por el servidor (ADR 0016). */
+  effective_locale?: string | null;
 }
 
 interface AuthState {
@@ -18,6 +23,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
+  /** Cambia el idioma y, con sesion, lo guarda en el servidor. */
+  changeLocale: (locale: string) => Promise<void>;
 }
 
 export interface RegisterData {
@@ -35,6 +42,7 @@ const AuthContext = createContext<AuthState>({
   login: async () => {},
   register: async () => {},
   logout: () => {},
+  changeLocale: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -53,6 +61,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // Con sesion manda el servidor. `/auth/me` devuelve el locale efectivo ya
+  // resuelto (ADR 0016), asi que el cliente no reimplementa esa cadena: solo la
+  // aplica. Sin usuario (login) vale lo detectado al arrancar.
+  useEffect(() => {
+    if (user?.effective_locale) void setLocale(user.effective_locale);
+  }, [user?.effective_locale]);
+
+  const changeLocale = async (locale: string) => {
+    const previous = i18n.language;
+    const applied = await setLocale(locale);
+    if (!user) return;
+
+    try {
+      setUser(await api.patch<User>("/auth/me", { locale: applied }));
+    } catch (err) {
+      // El servidor la rechazo o no respondio: la interfaz no debe quedarse
+      // en un idioma que no quedo guardado.
+      await setLocale(previous);
+      throw err;
+    }
+  };
+
   const login = async (email: string, password: string) => {
     const data = await api.post<{ access_token: string }>(
       "/auth/login",
@@ -64,7 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (data: RegisterData) => {
-    const resp = await api.post<{ access_token: string }>("/auth/register", data);
+    // El registro es el unico sitio donde `Accept-Language` decide algo (ADR
+    // 0016): con el, el backend siembra el idioma del workspace nuevo. Se manda
+    // el idioma *activo*, no el del navegador, para que lo que el visitante
+    // eligio en el login llegue hasta aqui y `effective_locale` no lo deshaga.
+    const resp = await api.post<{ access_token: string }>("/auth/register", data, {
+      headers: { "Accept-Language": i18n.language },
+    });
     setToken(resp.access_token);
     const me = await api.get<User>("/auth/me");
     setUser(me);
@@ -77,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, changeLocale }}>
       {children}
     </AuthContext.Provider>
   );

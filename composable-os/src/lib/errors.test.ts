@@ -84,4 +84,47 @@ describe("translateApiError", () => {
     expect(text).not.toContain("PORTAL_LINK_EXPIRED");
     expect(text).toContain("caducado");
   });
+
+  it("uses the _empty variant when a transition has nowhere to go", () => {
+    // El texto de este caso vive en el catalogo (`*_empty`), no en el codigo:
+    // asi un traductor lo redacta a su manera.
+    const error = new ApiError("Invalid transition.", "CONTRACT_INVALID_TRANSITION", { from: "terminated", to: "active", allowed: [] }, 422);
+
+    expect(translateApiError(error)).toContain("ninguno (estado final)");
+  });
+
+  it("falls back to the base template when a code has no _empty variant", () => {
+    const error = new ApiError("Invalid stage.", "CRM_OPPORTUNITY_INVALID_STAGE", { stage: "bogus", allowed: [] }, 422);
+
+    const text = translateApiError(error);
+
+    expect(text).toContain("'bogus'");
+    expect(text).not.toContain("{{");
+  });
+
+  it("does not let a detail key steer i18next's own options", () => {
+    // `count` activaria la pluralizacion y `context` elegiria variante: los
+    // valores del servidor entran solo como datos a interpolar.
+    const error = new ApiError("Cannot delete.", "PROJECT_DELETE_NOT_PLANNING", { status: "active", count: 3, context: "empty" }, 409);
+
+    expect(translateApiError(error)).toContain("'active'");
+  });
+
+  it("never shows a raw {{placeholder}} when the backend omits a documented key", () => {
+    const error = new ApiError("Cannot delete.", "PROJECT_DELETE_NOT_PLANNING", undefined, 409);
+
+    expect(translateApiError(error)).not.toContain("{{");
+  });
+
+  it("does not HTML-escape interpolated values", () => {
+    // React ya escapa al pintar; con escapeValue activo el `'` llegaria como
+    // `&#39;` y la frase se veria rota.
+    const error = new ApiError("Slug taken.", "IDENTITY_WORKSPACE_SLUG_TAKEN", { slug: "o'brien & co" }, 409);
+
+    expect(translateApiError(error)).toContain("o'brien & co");
+  });
+
+  it("takes the generic fallback from the catalogue", () => {
+    expect(translateApiError(undefined)).toBe("Ocurrio un error");
+  });
 });

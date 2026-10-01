@@ -60,6 +60,10 @@ class UserRead(BaseModel):
     # Lo guardado, no lo efectivo: `None` significa "sigue al workspace". El
     # idioma que realmente se usa lo decide `app.core.i18n.resolve_locale`.
     locale: str | None = None
+    # Lo efectivo: el idioma que el cliente debe usar, ya resuelto con la cadena
+    # del ADR 0016 (user.locale -> workspace.default_locale -> "es"). El frontend
+    # no reimplementa esa cadena, la lee de aqui.
+    effective_locale: str | None = None
     created_at: datetime
     # Vive en Person, no en User, y por eso se une al leer. Opcional porque la
     # relacion lo es: un User sin person_id es legal y no tiene nombre que dar.

@@ -229,6 +229,17 @@ async def read_me(user: User, db: AsyncSession) -> UserRead:
     """
     out = UserRead.model_validate(user)
 
+    # Sin `accept_language`: con un usuario autenticado ya hay preferencia
+    # guardada o workspace del que heredar, y la cabecera solo cuenta en el
+    # registro (ADR 0016, punto 3).
+    workspace_default = await db.execute(
+        select(Workspace.default_locale).where(Workspace.id == user.workspace_id)
+    )
+    out.effective_locale = resolve_locale(
+        user_locale=user.locale,
+        workspace_default=workspace_default.scalar_one_or_none(),
+    )
+
     if user.person_id:
         result = await db.execute(
             select(Person.full_name).where(Person.id == user.person_id)

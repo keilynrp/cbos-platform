@@ -45,6 +45,59 @@ async def test_workspace_default_locale_is_es(client: AsyncClient, auth_headers:
     assert resp.json()["default_locale"] == "es"
 
 
+# ── effective_locale: lo que el cliente debe usar ────────────────────────────
+#
+# El frontend no reimplementa la cadena del ADR 0016: `/auth/me` devuelve el
+# idioma ya resuelto. Sin `Accept-Language` en la cadena: con un usuario
+# autenticado ya hay preferencia guardada o workspace del que heredar, y la
+# cabecera solo importa en el registro.
+
+
+async def _set_workspace_default(db, workspace, locale: str) -> None:
+    from sqlalchemy import update
+
+    from app.modules.identity.models import Workspace
+
+    await db.execute(
+        update(Workspace).where(Workspace.id == workspace.id).values(default_locale=locale)
+    )
+    await db.commit()
+
+
+async def test_me_reports_the_effective_locale(client: AsyncClient, auth_headers: dict):
+    resp = await client.get(f"{AUTH}/me", headers=auth_headers)
+    assert resp.json()["effective_locale"] == "es"
+
+
+async def test_effective_locale_follows_the_workspace_when_the_user_never_chose(
+    client: AsyncClient, auth_headers: dict, db, workspace
+):
+    await _set_workspace_default(db, workspace, "es-MX")
+
+    me = (await client.get(f"{AUTH}/me", headers=auth_headers)).json()
+    assert me["locale"] is None
+    assert me["effective_locale"] == "es-MX"
+
+
+async def test_effective_locale_prefers_the_users_own_choice(
+    client: AsyncClient, auth_headers: dict, db, workspace
+):
+    await _set_workspace_default(db, workspace, "es-MX")
+    resp = await client.patch(f"{AUTH}/me", json={"locale": "es"}, headers=auth_headers)
+
+    assert resp.json()["locale"] == "es"
+    assert resp.json()["effective_locale"] == "es"
+
+
+async def test_effective_locale_ignores_accept_language_for_a_logged_in_user(
+    client: AsyncClient, auth_headers: dict
+):
+    # ADR 0016: la cabecera solo cuenta en el registro.
+    headers = {**auth_headers, "Accept-Language": "fr-FR,fr;q=0.9"}
+    resp = await client.get(f"{AUTH}/me", headers=headers)
+    assert resp.json()["effective_locale"] == "es"
+
+
 # ── PATCH /auth/me ───────────────────────────────────────────────────────────
 
 

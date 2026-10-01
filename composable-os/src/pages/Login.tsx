@@ -1,14 +1,17 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { Eye, EyeOff, Loader2, Zap } from "lucide-react";
 import { translateApiError } from "@/lib/errors";
 
 export default function Login() {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -25,7 +28,7 @@ export default function Login() {
       await login(email, password);
       navigate("/");
     } catch (err) {
-      setError(translateApiError(err, "Credenciales inválidas"));
+      setError(translateApiError(err, t("auth:login.invalidCredentials")));
     } finally {
       setLoading(false);
     }
@@ -40,23 +43,23 @@ export default function Login() {
             <Zap className="h-6 w-6" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">CBOS Platform</h1>
-          <p className="text-sm text-muted-foreground">Composable Business Operating System</p>
+          <p className="text-sm text-muted-foreground">{t("auth:login.tagline")}</p>
         </div>
 
         {/* Card */}
         <Card className="border border-border/60 shadow-lg">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Iniciar sesión</CardTitle>
-            <CardDescription>Ingresa tus credenciales para continuar</CardDescription>
+            <CardTitle className="text-lg">{t("auth:login.title")}</CardTitle>
+            <CardDescription>{t("auth:login.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("auth:login.emailLabel")}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="tu@empresa.com"
+                  placeholder={t("auth:login.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -64,7 +67,7 @@ export default function Login() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">{t("auth:login.passwordLabel")}</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -80,7 +83,7 @@ export default function Login() {
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground transition-colors"
                     tabIndex={-1}
-                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    aria-label={showPassword ? t("auth:login.hidePassword") : t("auth:login.showPassword")}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -95,17 +98,18 @@ export default function Login() {
 
               <Button type="submit" className="w-full gap-2" disabled={loading}>
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {loading ? "Iniciando sesión..." : "Entrar"}
+                {loading ? t("auth:login.submitting") : t("auth:login.submit")}
               </Button>
             </form>
           </CardContent>
         </Card>
         <p className="text-center text-sm text-muted-foreground">
-          ¿No tienes cuenta?{" "}
+          {t("auth:login.noAccount")}{" "}
           <Link to="/register" className="text-primary font-medium hover:underline">
-            Crear workspace
+            {t("auth:login.createWorkspace")}
           </Link>
         </p>
+        <LanguageSelector className="justify-center" />
       </div>
     </div>
   );
