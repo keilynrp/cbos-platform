@@ -12,6 +12,7 @@ import discovery from "../locales/es/discovery.json";
 import errors from "../locales/es/errors.json";
 import hr from "../locales/es/hr.json";
 import inventory from "../locales/es/inventory.json";
+import layout from "../locales/es/layout.json";
 import sales from "../locales/es/sales.json";
 import projects from "../locales/es/projects.json";
 import settings from "../locales/es/settings.json";
@@ -44,6 +45,7 @@ declare module "i18next" {
       errors: typeof errors;
       hr: typeof hr;
       inventory: typeof inventory;
+      layout: typeof layout;
       sales: typeof sales;
       projects: typeof projects;
       settings: typeof settings;

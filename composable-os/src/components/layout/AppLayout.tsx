@@ -10,8 +10,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/lib/auth";
 import { useNotifications } from "@/lib/useNotifications";
+import { useFormat } from "@/i18n/useFormat";
+import { useT } from "@/i18n/useT";
 
 export function AppLayout() {
+  const t = useT();
+  const { formatRelativeTime } = useFormat();
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAllRead, dismiss } = useNotifications();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -25,16 +29,6 @@ export function AppLayout() {
     if (open && unreadCount > 0) markAllRead();
   };
 
-  function timeAgo(iso: string) {
-    const diff = Date.now() - new Date(iso).getTime();
-    const m = Math.floor(diff / 60_000);
-    if (m < 1) return "ahora";
-    if (m < 60) return `${m}m`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return `${h}h`;
-    return `${Math.floor(h / 24)}d`;
-  }
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -45,7 +39,7 @@ export function AppLayout() {
               <div className="relative hidden sm:block">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Buscar en la plataforma..."
+                  placeholder={t("layout:header.search")}
                   className="pl-9 w-64 h-9 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-sm rounded-lg focus-visible:ring-primary/30"
                 />
               </div>
@@ -55,7 +49,7 @@ export function AppLayout() {
               {/* Notification bell */}
               <Popover open={notifOpen} onOpenChange={handleNotifOpen}>
                 <PopoverTrigger asChild>
-                  <button className="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5 transition-colors">
+                  <button aria-label={t("layout:notifications.title")} className="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5 transition-colors">
                     <Bell className="h-[18px] w-[18px]" />
                     {unreadCount > 0 && (
                       <span className="absolute top-1.5 right-1.5 h-3.5 w-3.5 rounded-full bg-primary text-[8px] text-primary-foreground flex items-center justify-center font-bold leading-none">
@@ -66,17 +60,17 @@ export function AppLayout() {
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-80 p-0">
                   <div className="flex items-center justify-between px-4 py-3 border-b">
-                    <span className="text-sm font-semibold">Notificaciones</span>
+                    <span className="text-sm font-semibold">{t("layout:notifications.title")}</span>
                     {notifications.length > 0 && (
                       <button className="flex items-center gap-1 h-6 px-2 text-xs text-primary hover:underline" onClick={markAllRead}>
-                        <CheckCheck className="h-3 w-3" /> Marcar todas
+                        <CheckCheck className="h-3 w-3" /> {t("layout:notifications.markAll")}
                       </button>
                     )}
                   </div>
                   <ScrollArea className="max-h-80">
                     {notifications.length === 0 ? (
                       <div className="py-8 text-center text-sm text-muted-foreground">
-                        Sin notificaciones
+                        {t("layout:notifications.empty")}
                       </div>
                     ) : (
                       notifications.map((n) => (
@@ -85,10 +79,11 @@ export function AppLayout() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium leading-tight">{n.title}</p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {n.event_type} · {timeAgo(n.timestamp)}
+                              {n.event_type} · {formatRelativeTime(n.timestamp)}
                             </p>
                           </div>
                           <button
+                            aria-label={t("layout:notifications.dismiss")}
                             onClick={() => dismiss(n.id)}
                             className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground">
                             <X className="h-3 w-3" />
@@ -110,12 +105,12 @@ export function AppLayout() {
                       </AvatarFallback>
                     </Avatar>
                     <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
-                      {user?.full_name ?? "Usuario"}
+                      {user?.full_name ?? t("layout:header.user")}
                     </span>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="font-medium">{user?.full_name ?? "Usuario"}</p>
+                  <p className="font-medium">{user?.full_name ?? t("layout:header.user")}</p>
                   <p className="text-xs opacity-70">{user?.email}</p>
                 </TooltipContent>
               </Tooltip>
@@ -124,13 +119,14 @@ export function AppLayout() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
+                    aria-label={t("layout:header.logout")}
                     className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-colors"
                     onClick={logout}
                   >
                     <LogOut className="h-[18px] w-[18px]" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Cerrar sesión</TooltipContent>
+                <TooltipContent>{t("layout:header.logout")}</TooltipContent>
               </Tooltip>
             </div>
           </header>
