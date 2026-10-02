@@ -33,6 +33,7 @@ export const MIGRATED = [
   "pages/HR.tsx",
   "pages/Sales.tsx",
   "pages/QuoteDetail.tsx",
+  "pages/Invoicing.tsx",
   "components/sales/QuoteStatusBadge.tsx",
   "components/LanguageSelector.tsx",
   "components/CloseLabel.tsx",

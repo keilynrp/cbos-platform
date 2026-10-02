@@ -71,6 +71,15 @@
     "fulfilled": "Completada",
     "cancelled": "Cancelada"
   },
+  "invoiceStatus": {
+    "draft": "Borrador",
+    "sent": "Enviada",
+    "paid": "Pagada",
+    "partial": "Parcial",
+    "overdue": "Vencida",
+    "cancelled": "Cancelada",
+    "void": "Anulada"
+  },
   "taskStatus": {
     "todo": "Pendiente",
     "in_progress": "En progreso",
