@@ -53,6 +53,22 @@
     "email": "correo",
     "meeting": "reunión",
     "note": "nota",
-    "task": "tarea"
+    "task": "tarea",
+    "deal": "negocio",
+    "document": "documento"
+  },
+  "quoteStatus": {
+    "draft": "Borrador",
+    "sent": "Enviada",
+    "accepted": "Aceptada",
+    "rejected": "Rechazada",
+    "expired": "Vencida"
+  },
+  "orderStatus": {
+    "draft": "Borrador",
+    "confirmed": "Confirmada",
+    "in_fulfillment": "En preparación",
+    "fulfilled": "Completada",
+    "cancelled": "Cancelada"
   }
 }

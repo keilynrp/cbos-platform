@@ -1,0 +1,141 @@
+{
+  "title": "Ventas",
+  "subtitle": "Gestiona cotizaciones y órdenes — conectado al backend en tiempo real.",
+  "tabs": {
+    "dashboard": "Panel",
+    "quotes": "Cotizaciones",
+    "orders": "Órdenes"
+  },
+  "kpi": {
+    "openQuotes": "Cotizaciones abiertas",
+    "pipelineValue": "Valor del pipeline",
+    "conversionRate": "Tasa de conversión",
+    "activeOrders": "Órdenes activas",
+    "notAvailable": "N/D"
+  },
+  "dashboard": {
+    "quotesByStatus": "Cotizaciones por estado",
+    "ordersByStatus": "Órdenes por estado"
+  },
+  "filters": {
+    "all": "Todas"
+  },
+  "quotes": {
+    "new": "Nueva Cotización",
+    "empty": "Sin cotizaciones",
+    "number": "N.º de cotización",
+    "quoteTitle": "Título",
+    "status": "Estado",
+    "total": "Total",
+    "actions": "Acciones",
+    "send": "Enviar",
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "pdf": "PDF"
+  },
+  "orders": {
+    "empty": "Sin órdenes",
+    "number": "N.º de orden",
+    "quoteId": "ID de cotización",
+    "status": "Estado",
+    "total": "Total",
+    "actions": "Acciones",
+    "confirm": "Confirmar",
+    "startFulfillment": "Iniciar preparación",
+    "fulfill": "Completar",
+    "cancel": "Cancelar"
+  },
+  "rejectDialog": {
+    "title": "Rechazar Cotización",
+    "reason": "Razón (opcional)",
+    "placeholder": "Razón de rechazo...",
+    "defaultReason": "Sin razón indicada",
+    "cancel": "Cancelar",
+    "confirm": "Rechazar"
+  },
+  "newQuoteDialog": {
+    "title": "Nueva Cotización",
+    "quoteTitle": "Título *",
+    "placeholder": "Ej. Propuesta de servicios Q1",
+    "defaultLine": "Artículo",
+    "cancel": "Cancelar",
+    "submit": "Crear"
+  },
+  "toast": {
+    "quoteCreated": "Cotización creada",
+    "quoteSent": "Cotización enviada",
+    "quoteAccepted": "Cotización aceptada — orden creada",
+    "quoteRejected": "Cotización rechazada",
+    "orderConfirmed": "Orden confirmada",
+    "fulfillmentStarted": "Preparación iniciada",
+    "orderFulfilled": "Orden completada",
+    "orderCancelled": "Orden cancelada",
+    "quotesLoadFailed": "Error cargando cotizaciones: {{message}}",
+    "ordersLoadFailed": "Error cargando órdenes: {{message}}"
+  },
+  "detail": {
+    "back": "Cotizaciones",
+    "backToSales": "Volver a Ventas",
+    "notFound": "Cotización no encontrada.",
+    "send": "Enviar",
+    "accept": "Aceptar",
+    "reject": "Rechazar",
+    "pdf": "PDF",
+    "share": "Compartir",
+    "alreadyProcessed": "Cotización ya procesada",
+    "activeLink": "✓ Link activo · expira {{date}}",
+    "activeLinkSentTo": "✓ Link activo — enviado a {{email}} · expira {{date}}",
+    "resend": "Reenviar / nuevo link",
+    "shareDialog": {
+      "title": "Compartir cotización",
+      "clientName": "Nombre del cliente",
+      "namePlaceholder": "Juan Pérez",
+      "clientEmail": "Email del cliente",
+      "emailPlaceholder": "juan@empresa.com",
+      "validFor": "Válida por",
+      "copyLink": "Copiar link",
+      "sendEmail": "Enviar email"
+    },
+    "lines": {
+      "title": "Líneas",
+      "index": "#",
+      "sku": "SKU",
+      "description": "Descripción",
+      "unit": "Unidad",
+      "quantity": "Cant.",
+      "unitPrice": "P. Unit",
+      "discount": "Desc%",
+      "tax": "IVA%",
+      "lineTotal": "Total línea",
+      "notes": "Notas",
+      "empty": "Sin líneas.",
+      "emptyDraft": "Sin líneas. Agrega una para comenzar.",
+      "add": "Agregar línea",
+      "newLine": "Nueva línea"
+    },
+    "totals": {
+      "subtotal": "Subtotal",
+      "discount": "Descuento",
+      "taxes": "Impuestos",
+      "total": "Total"
+    },
+    "notes": {
+      "title": "Notas generales",
+      "placeholder": "Notas visibles al cliente..."
+    },
+    "terms": {
+      "title": "Términos y condiciones",
+      "placeholder": "Términos de la cotización..."
+    },
+    "history": {
+      "title": "Historial",
+      "empty": "Sin eventos registrados."
+    },
+    "toast": {
+      "saveFailed": "Error al guardar: {{message}}",
+      "linkCopied": "Link copiado",
+      "copyFailed": "No se pudo copiar automáticamente",
+      "emailSent": "Email enviado a {{email}}"
+    }
+  }
+}

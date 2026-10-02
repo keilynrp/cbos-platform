@@ -1,0 +1,64 @@
+{
+  "title": "Contratos",
+  "subtitle": "Gestión del ciclo de vida de contratos con clientes.",
+  "new": "Nuevo contrato",
+  "kpi": {
+    "total": "Total contratos",
+    "inProgress": "En proceso",
+    "executed": "Ejecutados",
+    "totalValue": "Valor total"
+  },
+  "list": {
+    "title": "Todos los contratos",
+    "empty": "Sin contratos aún.",
+    "createFirst": "Crear el primero",
+    "number": "Número",
+    "contractTitle": "Título",
+    "status": "Estado",
+    "value": "Valor",
+    "due": "Vence",
+    "view": "Ver detalle",
+    "delete": "Eliminar"
+  },
+  "create": {
+    "title": "Nuevo contrato",
+    "contractTitle": "Título *",
+    "titlePlaceholder": "Ej: Acuerdo de servicios Q4 2026",
+    "value": "Valor",
+    "currency": "Moneda",
+    "startDate": "Fecha inicio",
+    "endDate": "Fecha fin",
+    "notes": "Notas",
+    "notesPlaceholder": "Descripción u observaciones...",
+    "cancel": "Cancelar",
+    "submit": "Crear contrato"
+  },
+  "detail": {
+    "value": "Valor",
+    "start": "Inicio",
+    "end": "Vencimiento",
+    "clauses": "Cláusulas ({{count}})",
+    "add": "Agregar",
+    "clauseTitlePlaceholder": "Título de la cláusula",
+    "clauseBodyPlaceholder": "Texto de la cláusula...",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "noClauses": "Sin cláusulas. Agrega la primera.",
+    "clauseN": "Cláusula {{n}}",
+    "notes": "Notas"
+  },
+  "actions": {
+    "send": "Enviar a cliente",
+    "sign": "Marcar firmado",
+    "execute": "Ejecutar contrato",
+    "expire": "Marcar vencido",
+    "terminate": "Terminar"
+  },
+  "toast": {
+    "created": "Contrato creado",
+    "deleted": "Contrato eliminado",
+    "statusUpdated": "Estado actualizado",
+    "clauseAdded": "Cláusula agregada",
+    "clauseDeleted": "Cláusula eliminada"
+  }
+}

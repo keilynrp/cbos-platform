@@ -14,7 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { translateApiError } from "@/lib/errors";
+import { useEnumLabel } from "@/i18n/enumLabel";
 import { useFormat } from "@/i18n/useFormat";
+import { useT } from "@/i18n/useT";
 import {
   Plus, DollarSign, TrendingUp, FileText, ShoppingCart, Loader2, Download,
 } from "lucide-react";
@@ -32,17 +34,18 @@ function useFmtCurrency() {
 type OrderStatus = SalesOrder["status"];
 
 function OrderStatusBadge({ status }: { status: OrderStatus }) {
-  const map: Record<OrderStatus, { variant: "secondary" | "default" | "destructive" | "outline"; label: string; className?: string }> = {
-    draft:          { variant: "secondary", label: "Draft" },
-    confirmed:      { variant: "default",   label: "Confirmed" },
-    in_fulfillment: { variant: "outline",   label: "In Fulfillment", className: "bg-yellow-50 text-yellow-700 border-yellow-300" },
-    fulfilled:      { variant: "secondary", label: "Fulfilled", className: "bg-green-100 text-green-700 border-green-200" },
-    cancelled:      { variant: "destructive", label: "Cancelled" },
+  const map: Record<OrderStatus, { variant: "secondary" | "default" | "destructive" | "outline"; className?: string }> = {
+    draft:          { variant: "secondary" },
+    confirmed:      { variant: "default" },
+    in_fulfillment: { variant: "outline", className: "bg-yellow-50 text-yellow-700 border-yellow-300" },
+    fulfilled:      { variant: "secondary", className: "bg-green-100 text-green-700 border-green-200" },
+    cancelled:      { variant: "destructive" },
   };
-  const cfg = map[status] ?? { variant: "secondary" as const, label: status };
+  const label = useEnumLabel();
+  const cfg = map[status] ?? { variant: "secondary" as const };
   return (
     <Badge variant={cfg.variant} className={cfg.className}>
-      {cfg.label}
+      {label("common:orderStatus", status)}
     </Badge>
   );
 }
@@ -73,10 +76,11 @@ function RejectQuoteDialog({
   onConfirm: (reason: string) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [reason, setReason] = useState("");
 
   function handleConfirm() {
-    onConfirm(reason || "No reason provided");
+    onConfirm(reason || t("sales:rejectDialog.defaultReason"));
     setReason("");
   }
 
@@ -88,20 +92,20 @@ function RejectQuoteDialog({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleCancel()}>
       <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle>Rechazar Cotización</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{t("sales:rejectDialog.title")}</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Razón (opcional)</Label>
+            <Label>{t("sales:rejectDialog.reason")}</Label>
             <textarea
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Razón de rechazo..."
+              placeholder={t("sales:rejectDialog.placeholder")}
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleCancel}>Cancelar</Button>
-            <Button type="button" variant="destructive" onClick={handleConfirm}>Rechazar</Button>
+            <Button type="button" variant="outline" onClick={handleCancel}>{t("sales:rejectDialog.cancel")}</Button>
+            <Button type="button" variant="destructive" onClick={handleConfirm}>{t("sales:rejectDialog.confirm")}</Button>
           </DialogFooter>
         </div>
       </DialogContent>
@@ -112,6 +116,7 @@ function RejectQuoteDialog({
 // ── New Quote Dialog ───────────────────────────────────────────────────────
 
 function NewQuoteDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useT();
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
 
@@ -122,11 +127,11 @@ function NewQuoteDialog({ open, onClose }: { open: boolean; onClose: () => void 
         currency: "USD",
         tax_rate: 0,
         discount_amount: 0,
-        lines: [{ description: "Item", quantity: 1, unit_price: 0, discount_percent: 0, line_order: 1 }],
+        lines: [{ description: t("sales:newQuoteDialog.defaultLine"), quantity: 1, unit_price: 0, discount_percent: 0, line_order: 1 }],
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales-quotes"] });
-      toast.success("Cotización creada");
+      toast.success(t("sales:toast.quoteCreated"));
       onClose();
       setTitle("");
     },
@@ -136,25 +141,25 @@ function NewQuoteDialog({ open, onClose }: { open: boolean; onClose: () => void 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm">
-        <DialogHeader><DialogTitle>Nueva Cotización</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{t("sales:newQuoteDialog.title")}</DialogTitle></DialogHeader>
         <form
           onSubmit={(e) => { e.preventDefault(); create.mutate(); }}
           className="space-y-3"
         >
           <div className="space-y-1.5">
-            <Label>Título *</Label>
+            <Label>{t("sales:newQuoteDialog.quoteTitle")}</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ej. Propuesta de servicios Q1"
+              placeholder={t("sales:newQuoteDialog.placeholder")}
               required
             />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t("sales:newQuoteDialog.cancel")}</Button>
             <Button type="submit" disabled={create.isPending} className="gap-2">
               {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-              Crear
+              {t("sales:newQuoteDialog.submit")}
             </Button>
           </DialogFooter>
         </form>
@@ -165,15 +170,11 @@ function NewQuoteDialog({ open, onClose }: { open: boolean; onClose: () => void 
 
 // ── Cotizaciones tab ───────────────────────────────────────────────────────
 
-const QUOTE_FILTERS: { label: string; value: string | null }[] = [
-  { label: "All", value: null },
-  { label: "Draft", value: "draft" },
-  { label: "Sent", value: "sent" },
-  { label: "Accepted", value: "accepted" },
-  { label: "Rejected", value: "rejected" },
-];
+const QUOTE_FILTERS: (string | null)[] = [null, "draft", "sent", "accepted", "rejected"];
 
 function CotizacionesTab() {
+  const t = useT();
+  const label = useEnumLabel();
   const fmtCurrency = useFmtCurrency();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -188,14 +189,14 @@ function CotizacionesTab() {
   });
 
   useEffect(() => {
-    if (error) toast.error("Error cargando cotizaciones: " + (error as Error)?.message);
-  }, [error]);
+    if (error) toast.error(t("sales:toast.quotesLoadFailed", { message: (error as Error)?.message }));
+  }, [error, t]);
 
   const sendQuote = useMutation({
     mutationFn: (id: string) => salesService.sendQuote(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales-quotes"] });
-      toast.success("Cotización enviada");
+      toast.success(t("sales:toast.quoteSent"));
     },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
@@ -205,7 +206,7 @@ function CotizacionesTab() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales-quotes"] });
       qc.invalidateQueries({ queryKey: ["sales-orders"] });
-      toast.success("Cotización aceptada — orden creada");
+      toast.success(t("sales:toast.quoteAccepted"));
     },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
@@ -215,7 +216,7 @@ function CotizacionesTab() {
       salesService.rejectQuote(id, reason),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sales-quotes"] });
-      toast.success("Cotización rechazada");
+      toast.success(t("sales:toast.quoteRejected"));
     },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
@@ -235,15 +236,15 @@ function CotizacionesTab() {
         <div className="flex gap-2 flex-wrap">
           {QUOTE_FILTERS.map((f) => (
             <FilterChip
-              key={f.label}
-              label={f.label}
-              active={filter === f.value}
-              onClick={() => setFilter(f.value)}
+              key={f ?? "all"}
+              label={f ? label("common:quoteStatus", f) : t("sales:filters.all")}
+              active={filter === f}
+              onClick={() => setFilter(f)}
             />
           ))}
         </div>
         <Button className="gap-2 h-8" onClick={() => setNewOpen(true)}>
-          <Plus className="h-4 w-4" /> Nueva Cotización
+          <Plus className="h-4 w-4" /> {t("sales:quotes.new")}
         </Button>
       </div>
 
@@ -251,17 +252,17 @@ function CotizacionesTab() {
       {isLoading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
       ) : quotes.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-10">Sin cotizaciones</p>
+        <p className="text-sm text-muted-foreground text-center py-10">{t("sales:quotes.empty")}</p>
       ) : (
         <div className="border border-border/60 rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Quote #</TableHead>
-                <TableHead>Título</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead>{t("sales:quotes.number")}</TableHead>
+                <TableHead>{t("sales:quotes.quoteTitle")}</TableHead>
+                <TableHead>{t("sales:quotes.status")}</TableHead>
+                <TableHead className="text-right">{t("sales:quotes.total")}</TableHead>
+                <TableHead className="text-right">{t("sales:quotes.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -288,7 +289,7 @@ function CotizacionesTab() {
                           {sendQuote.isPending && sendQuote.variables === quote.id
                             ? <Loader2 className="h-3 w-3 animate-spin mr-1" />
                             : null}
-                          Send
+                          {t("sales:quotes.send")}
                         </Button>
                       )}
                       {quote.status === "sent" && (
@@ -300,7 +301,7 @@ function CotizacionesTab() {
                             disabled={acceptQuote.isPending}
                             onClick={(e) => { e.stopPropagation(); acceptQuote.mutate(quote.id); }}
                           >
-                            Accept
+                            {t("sales:quotes.accept")}
                           </Button>
                           <Button
                             size="sm"
@@ -309,7 +310,7 @@ function CotizacionesTab() {
                             disabled={rejectQuote.isPending}
                             onClick={(e) => { e.stopPropagation(); handleReject(quote.id); }}
                           >
-                            Reject
+                            {t("sales:quotes.reject")}
                           </Button>
                         </>
                       )}
@@ -319,7 +320,7 @@ function CotizacionesTab() {
                         className="h-7 text-xs gap-1"
                         onClick={(e) => { e.stopPropagation(); handleDownloadPdf(quote.id); }}
                       >
-                        <Download className="h-3 w-3" /> PDF
+                        <Download className="h-3 w-3" /> {t("sales:quotes.pdf")}
                       </Button>
                     </div>
                   </TableCell>
@@ -345,16 +346,11 @@ function CotizacionesTab() {
 
 // ── Órdenes tab ────────────────────────────────────────────────────────────
 
-const ORDER_FILTERS: { label: string; value: string | null }[] = [
-  { label: "All", value: null },
-  { label: "Draft", value: "draft" },
-  { label: "Confirmed", value: "confirmed" },
-  { label: "In Fulfillment", value: "in_fulfillment" },
-  { label: "Fulfilled", value: "fulfilled" },
-  { label: "Cancelled", value: "cancelled" },
-];
+const ORDER_FILTERS: (string | null)[] = [null, "draft", "confirmed", "in_fulfillment", "fulfilled", "cancelled"];
 
 function OrdenesTab() {
+  const t = useT();
+  const label = useEnumLabel();
   const fmtCurrency = useFmtCurrency();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<string | null>(null);
@@ -366,30 +362,30 @@ function OrdenesTab() {
   });
 
   useEffect(() => {
-    if (error) toast.error("Error cargando órdenes: " + (error as Error)?.message);
-  }, [error]);
+    if (error) toast.error(t("sales:toast.ordersLoadFailed", { message: (error as Error)?.message }));
+  }, [error, t]);
 
   const confirmOrder = useMutation({
     mutationFn: (id: string) => salesService.confirmOrder(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success("Orden confirmada"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success(t("sales:toast.orderConfirmed")); },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const startFulfillment = useMutation({
     mutationFn: (id: string) => salesService.startFulfillment(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success("Fulfillment iniciado"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success(t("sales:toast.fulfillmentStarted")); },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const fulfillOrder = useMutation({
     mutationFn: (id: string) => salesService.fulfillOrder(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success("Orden completada"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success(t("sales:toast.orderFulfilled")); },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
   const cancelOrder = useMutation({
     mutationFn: (id: string) => salesService.cancelOrder(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success("Orden cancelada"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["sales-orders"] }); toast.success(t("sales:toast.orderCancelled")); },
     onError: (e: Error) => toast.error(translateApiError(e)),
   });
 
@@ -399,10 +395,10 @@ function OrdenesTab() {
       <div className="flex gap-2 flex-wrap">
         {ORDER_FILTERS.map((f) => (
           <FilterChip
-            key={f.label}
-            label={f.label}
-            active={filter === f.value}
-            onClick={() => setFilter(f.value)}
+            key={f ?? "all"}
+            label={f ? label("common:orderStatus", f) : t("sales:filters.all")}
+            active={filter === f}
+            onClick={() => setFilter(f)}
           />
         ))}
       </div>
@@ -411,17 +407,17 @@ function OrdenesTab() {
       {isLoading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
       ) : orders.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-10">Sin órdenes</p>
+        <p className="text-sm text-muted-foreground text-center py-10">{t("sales:orders.empty")}</p>
       ) : (
         <div className="border border-border/60 rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Order #</TableHead>
-                <TableHead>Quote ID</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead>{t("sales:orders.number")}</TableHead>
+                <TableHead>{t("sales:orders.quoteId")}</TableHead>
+                <TableHead>{t("sales:orders.status")}</TableHead>
+                <TableHead className="text-right">{t("sales:orders.total")}</TableHead>
+                <TableHead className="text-right">{t("sales:orders.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -443,7 +439,7 @@ function OrdenesTab() {
                           disabled={confirmOrder.isPending}
                           onClick={() => confirmOrder.mutate(order.id)}
                         >
-                          Confirm
+                          {t("sales:orders.confirm")}
                         </Button>
                       )}
                       {order.status === "confirmed" && (
@@ -455,7 +451,7 @@ function OrdenesTab() {
                             disabled={startFulfillment.isPending}
                             onClick={() => startFulfillment.mutate(order.id)}
                           >
-                            Start Fulfillment
+                            {t("sales:orders.startFulfillment")}
                           </Button>
                           <Button
                             size="sm"
@@ -464,7 +460,7 @@ function OrdenesTab() {
                             disabled={cancelOrder.isPending}
                             onClick={() => cancelOrder.mutate(order.id)}
                           >
-                            Cancel
+                            {t("sales:orders.cancel")}
                           </Button>
                         </>
                       )}
@@ -477,7 +473,7 @@ function OrdenesTab() {
                             disabled={fulfillOrder.isPending}
                             onClick={() => fulfillOrder.mutate(order.id)}
                           >
-                            Fulfill
+                            {t("sales:orders.fulfill")}
                           </Button>
                           <Button
                             size="sm"
@@ -486,7 +482,7 @@ function OrdenesTab() {
                             disabled={cancelOrder.isPending}
                             onClick={() => cancelOrder.mutate(order.id)}
                           >
-                            Cancel
+                            {t("sales:orders.cancel")}
                           </Button>
                         </>
                       )}
@@ -505,6 +501,8 @@ function OrdenesTab() {
 // ── Main Page ──────────────────────────────────────────────────────────────
 
 const Sales = () => {
+  const t = useT();
+  const { formatPercent } = useFormat();
   const fmtCurrency = useFmtCurrency();
   const [activeTab, setActiveTab] = useState("dashboard");
 
@@ -523,12 +521,12 @@ const Sales = () => {
   });
 
   useEffect(() => {
-    if (quotesError) toast.error("Error cargando cotizaciones: " + (quotesError as Error)?.message);
-  }, [quotesError]);
+    if (quotesError) toast.error(t("sales:toast.quotesLoadFailed", { message: (quotesError as Error)?.message }));
+  }, [quotesError, t]);
 
   useEffect(() => {
-    if (ordersError) toast.error("Error cargando órdenes: " + (ordersError as Error)?.message);
-  }, [ordersError]);
+    if (ordersError) toast.error(t("sales:toast.ordersLoadFailed", { message: (ordersError as Error)?.message }));
+  }, [ordersError, t]);
 
   // KPI calculations
   const openQuotes = allQuotes.filter((q) => q.status === "draft" || q.status === "sent");
@@ -538,17 +536,17 @@ const Sales = () => {
   const rejected = allQuotes.filter((q) => q.status === "rejected").length;
   const conversionDenominator = accepted + rejected;
   const conversionRate =
-    conversionDenominator > 0 ? Math.round((accepted / conversionDenominator) * 100) + "%" : "N/A";
+    conversionDenominator > 0 ? formatPercent(accepted / conversionDenominator) : t("sales:kpi.notAvailable");
 
   const activeOrders = allOrders.filter(
     (o) => o.status !== "fulfilled" && o.status !== "cancelled"
   ).length;
 
   const kpiStats = [
-    { label: "Open Quotes", value: String(openQuotes.length), icon: FileText },
-    { label: "Pipeline Value", value: fmtCurrency(pipelineValue), icon: DollarSign },
-    { label: "Conversion Rate", value: conversionRate, icon: TrendingUp },
-    { label: "Active Orders", value: String(activeOrders), icon: ShoppingCart },
+    { label: t("sales:kpi.openQuotes"), value: String(openQuotes.length), icon: FileText },
+    { label: t("sales:kpi.pipelineValue"), value: fmtCurrency(pipelineValue), icon: DollarSign },
+    { label: t("sales:kpi.conversionRate"), value: conversionRate, icon: TrendingUp },
+    { label: t("sales:kpi.activeOrders"), value: String(activeOrders), icon: ShoppingCart },
   ];
 
   const loadingKpis = loadingQuotes || loadingOrders;
@@ -558,9 +556,9 @@ const Sales = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Sales</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("sales:title")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Gestiona cotizaciones y órdenes — conectado al backend en tiempo real.
+            {t("sales:subtitle")}
           </p>
         </div>
       </div>
@@ -569,13 +567,13 @@ const Sales = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="dashboard" className="gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5" /> Dashboard
+            <TrendingUp className="h-3.5 w-3.5" /> {t("sales:tabs.dashboard")}
           </TabsTrigger>
           <TabsTrigger value="cotizaciones" className="gap-1.5">
-            <FileText className="h-3.5 w-3.5" /> Cotizaciones
+            <FileText className="h-3.5 w-3.5" /> {t("sales:tabs.quotes")}
           </TabsTrigger>
           <TabsTrigger value="ordenes" className="gap-1.5">
-            <ShoppingCart className="h-3.5 w-3.5" /> Órdenes
+            <ShoppingCart className="h-3.5 w-3.5" /> {t("sales:tabs.orders")}
           </TabsTrigger>
         </TabsList>
 
@@ -611,7 +609,7 @@ const Sales = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <Card className="border border-border/60">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold">Cotizaciones por estado</CardTitle>
+                  <CardTitle className="text-sm font-semibold">{t("sales:dashboard.quotesByStatus")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {(["draft", "sent", "accepted", "rejected", "expired"] as const).map((s) => {
@@ -628,7 +626,7 @@ const Sales = () => {
 
               <Card className="border border-border/60">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-semibold">Órdenes por estado</CardTitle>
+                  <CardTitle className="text-sm font-semibold">{t("sales:dashboard.ordersByStatus")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {(["draft", "confirmed", "in_fulfillment", "fulfilled", "cancelled"] as const).map((s) => {
