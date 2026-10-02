@@ -107,17 +107,27 @@ export function formatPercent(
 }
 
 /**
- * Una duracion en milisegundos, con la unidad de `Intl` ("12ms"). La unidad
- * abreviada es la misma en los idiomas que usa el producto, pero su posicion y
- * el separador decimal no, y no es texto que deba vivir en una pagina.
+ * Un numero con una unidad abreviada de `Intl` ("3d", "12ms", "200kB"). La
+ * abreviatura es de `Intl`, no una cadena del catalogo: su posicion y el
+ * separador decimal dependen del idioma, y no es texto que deba vivir en una
+ * pagina. `unit` es una unidad de ECMA-402 (`day`, `millisecond`, `kilobyte`...).
  */
-export function formatMilliseconds(value: number | null | undefined, locale: string): string {
+export function formatUnit(
+  value: number | null | undefined,
+  unit: string,
+  locale: string,
+): string {
   if (isMissing(value)) return EMPTY;
   return numberFormat(formattingLocale(locale), {
     style: "unit",
-    unit: "millisecond",
+    unit,
     unitDisplay: "narrow",
   }).format(value);
+}
+
+/** Una duracion en milisegundos ("12ms"). */
+export function formatMilliseconds(value: number | null | undefined, locale: string): string {
+  return formatUnit(value, "millisecond", locale);
 }
 
 export function formatCurrency(
@@ -235,6 +245,23 @@ export function formatMonthShort(yearMonth: string | null | undefined, locale: s
   if (month < 1 || month > 12) return EMPTY;
 
   return dateFormat(formattingLocale(locale), { month: "short" }).format(
+    new Date(Number(match[1]), month - 1, 1),
+  );
+}
+
+/**
+ * Mes y ano de dos cifras a partir de `YYYY-MM`: "2026-04" -> "abr 26". Es el
+ * rotulo de los ejes de los graficos de analitica, que antes salia de un array de
+ * abreviaturas en ingles ("Apr '26").
+ */
+export function formatMonthYear(yearMonth: string | null | undefined, locale: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(yearMonth ?? "");
+  if (!match) return EMPTY;
+
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return EMPTY;
+
+  return dateFormat(formattingLocale(locale), { month: "short", year: "2-digit" }).format(
     new Date(Number(match[1]), month - 1, 1),
   );
 }

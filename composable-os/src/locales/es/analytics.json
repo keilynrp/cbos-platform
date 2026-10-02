@@ -1,0 +1,100 @@
+{
+  "title": "Analítica",
+  "subtitle": "Dashboards de negocio con datos reales — facturación, pipeline, proyectos, contratos y equipo.",
+  "tabs": {
+    "revenue": "Ingresos",
+    "pipeline": "Pipeline",
+    "projects": "Proyectos",
+    "contracts": "Contratos",
+    "hr": "Equipo"
+  },
+  "errors": {
+    "revenue": "Error cargando datos de ingresos.",
+    "pipeline": "Error cargando datos del pipeline.",
+    "hr": "Error cargando datos de equipo.",
+    "projects": "Error cargando datos de proyectos.",
+    "contracts": "Error cargando datos de contratos."
+  },
+  "revenue": {
+    "kpi": {
+      "invoiced": { "label": "Total facturado", "sub": "acumulado" },
+      "paid": { "label": "Total cobrado", "sub": "pagos recibidos" },
+      "outstanding": { "label": "Por cobrar", "sub": "pendiente" },
+      "overdue": {
+        "label": "Vencidas",
+        "sub_one": "{{count}} factura",
+        "sub_other": "{{count}} facturas"
+      }
+    },
+    "chartTitle": "Ingresos — últimos {{months}} meses",
+    "empty": "Sin facturas registradas aún.",
+    "invoiced": "Facturado",
+    "paid": "Cobrado"
+  },
+  "pipeline": {
+    "kpi": {
+      "open": "Oportunidades abiertas",
+      "value": "Valor del pipeline",
+      "winRate": "Tasa de cierre (30d)",
+      "avgDeal": "Valor promedio / deal"
+    },
+    "monthly": {
+      "won": "Ganadas este mes",
+      "wonValue": "Valor ganado este mes",
+      "activeLeads": "Leads activos",
+      "newLeads": "Leads nuevos (mes)"
+    },
+    "stagesTitle": "Oportunidades por etapa",
+    "empty": "Sin oportunidades abiertas actualmente.",
+    "value": "Valor",
+    "count": "Cantidad"
+  },
+  "hr": {
+    "kpi": {
+      "active": "Empleados activos",
+      "onLeave": "En permiso",
+      "newHires": "Nuevas contrataciones (mes)",
+      "terminations": "Terminaciones (mes)"
+    },
+    "typeTitle": "Tipo de empleo (activos)",
+    "typeEmpty": "Sin empleados activos registrados.",
+    "employees": "Empleados",
+    "orgTitle": "Estructura organizacional",
+    "departments": "Departamentos",
+    "headcount": "Headcount total (activos)",
+    "unassigned": "Sin departamento asignado",
+    "former": "Ex-empleados"
+  },
+  "projects": {
+    "kpi": {
+      "active": "Proyectos activos",
+      "budget": "Budget activo total",
+      "completed": "Completados (mes)",
+      "cancelled": "Cancelados (mes)"
+    },
+    "statusTitle": "Proyectos por estado",
+    "statusEmpty": "Sin proyectos registrados aún.",
+    "projects": "Proyectos",
+    "tasksTitle": "Salud de tareas (proyectos activos)",
+    "completion": "Tasa de completitud",
+    "totalTasks": "Tareas totales (activos)",
+    "done": "Completadas",
+    "overdue": "Vencidas"
+  },
+  "contracts": {
+    "kpi": {
+      "total": "Total contratos",
+      "signedValue": "Valor firmado",
+      "signedMonth": "Firmados (mes)",
+      "expiring": "Por vencer (30d)"
+    },
+    "statusTitle": "Contratos por estado",
+    "statusEmpty": "Sin contratos registrados aún.",
+    "contracts": "Contratos",
+    "valueTitle": "Valor comprometido",
+    "signedExecuted": "Valor firmado + ejecutado",
+    "executedValue": "Valor ejecutado",
+    "executedMonth": "Ejecutados este mes",
+    "expiring30": "Por vencer en 30 días"
+  }
+}

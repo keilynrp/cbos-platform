@@ -9,9 +9,11 @@ import {
   formatDateTime,
   formatMilliseconds,
   formatMonthShort,
+  formatMonthYear,
   formatNumber,
   formatPercent,
   formatRelativeTime,
+  formatUnit,
   formattingLocale,
 } from "./format";
 
@@ -49,6 +51,8 @@ export function useFormat() {
       formatCompactCurrency: (value: number | null | undefined, currency?: string | null) =>
         formatCompactCurrency(value, currency, language),
       formatMonthShort: (yearMonth: string | null | undefined) => formatMonthShort(yearMonth, language),
+      formatMonthYear: (yearMonth: string | null | undefined) => formatMonthYear(yearMonth, language),
+      formatUnit: (value: number | null | undefined, unit: string) => formatUnit(value, unit, language),
       formatRelativeTime: (value: Parameters<typeof formatRelativeTime>[0]) =>
         formatRelativeTime(value, language),
     }),

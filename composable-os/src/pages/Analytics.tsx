@@ -38,25 +38,14 @@ import {
   Legend,
 } from "recharts";
 import { analyticsService } from "@/services/analytics";
+import { useEnumLabel } from "@/i18n/enumLabel";
+import { useFormat } from "@/i18n/useFormat";
+import { useT } from "@/i18n/useT";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmt(n: number) {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}k`;
-  return `$${n.toFixed(0)}`;
-}
-
-function fmtPct(rate: number) {
-  return `${(rate * 100).toFixed(1)}%`;
-}
-
-/** "2026-04" → "Apr '26" */
-function fmtMonth(ym: string) {
-  const [y, m] = ym.split("-").map(Number);
-  const abbr = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m - 1];
-  return `${abbr} '${String(y).slice(2)}`;
-}
+/** Meses de facturacion que pide el grafico de ingresos; el titulo lo cita. */
+const REVENUE_MONTHS = 12;
 
 const STATUS_COLORS: Record<string, string> = {
   // pipeline
@@ -116,14 +105,16 @@ function TabError({ message }: { message: string }) {
 // ── Revenue Tab ───────────────────────────────────────────────────────────────
 
 function RevenueTab() {
+  const t = useT();
+  const { formatCompactCurrency: fmt, formatMonthYear } = useFormat();
   const summaryQ = useQuery({
     queryKey: ["analytics-summary"],
     queryFn: analyticsService.getSummary,
     staleTime: 60_000,
   });
   const revenueQ = useQuery({
-    queryKey: ["analytics-revenue", 12],
-    queryFn: () => analyticsService.getRevenue(12),
+    queryKey: ["analytics-revenue", REVENUE_MONTHS],
+    queryFn: () => analyticsService.getRevenue(REVENUE_MONTHS),
     staleTime: 60_000,
   });
 
@@ -134,20 +125,20 @@ function RevenueTab() {
   const series = revenueQ.data?.series ?? [];
 
   const chartData = series.map((s) => ({
-    month: fmtMonth(s.month),
+    month: formatMonthYear(s.month),
     invoiced: s.invoiced,
     paid: s.paid,
     outstanding: s.outstanding,
   }));
 
   const kpis = [
-    { label: "Total facturado",  value: fmt(summary?.revenue.total_invoiced ?? 0),  icon: DollarSign,   sub: "acumulado" },
-    { label: "Total cobrado",    value: fmt(summary?.revenue.total_paid ?? 0),       icon: CheckCircle2, sub: "pagos recibidos" },
-    { label: "Por cobrar",       value: fmt(summary?.revenue.total_outstanding ?? 0),icon: Clock,        sub: "pendiente" },
-    { label: "Vencidas",         value: fmt(summary?.revenue.overdue_amount ?? 0),   icon: AlertCircle,  sub: `${summary?.revenue.overdue_count ?? 0} facturas` },
+    { label: t("analytics:revenue.kpi.invoiced.label"),    value: fmt(summary?.revenue.total_invoiced ?? 0),   icon: DollarSign,   sub: t("analytics:revenue.kpi.invoiced.sub") },
+    { label: t("analytics:revenue.kpi.paid.label"),        value: fmt(summary?.revenue.total_paid ?? 0),       icon: CheckCircle2, sub: t("analytics:revenue.kpi.paid.sub") },
+    { label: t("analytics:revenue.kpi.outstanding.label"), value: fmt(summary?.revenue.total_outstanding ?? 0), icon: Clock,        sub: t("analytics:revenue.kpi.outstanding.sub") },
+    { label: t("analytics:revenue.kpi.overdue.label"),     value: fmt(summary?.revenue.overdue_amount ?? 0),   icon: AlertCircle,  sub: t("analytics:revenue.kpi.overdue.sub", { count: summary?.revenue.overdue_count ?? 0 }) },
   ];
 
-  if (err) return <TabError message="Error cargando datos de ingresos." />;
+  if (err) return <TabError message={t("analytics:errors.revenue")} />;
 
   return (
     <div className="space-y-6">
@@ -173,14 +164,16 @@ function RevenueTab() {
 
       <Card className="border border-border/60">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">Ingresos — últimos 12 meses</CardTitle>
+          <CardTitle className="text-sm font-semibold">
+            {t("analytics:revenue.chartTitle", { months: REVENUE_MONTHS })}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <ChartSkeleton height={280} />
           ) : chartData.length === 0 ? (
             <div className="h-[280px] flex items-center justify-center text-sm text-muted-foreground">
-              Sin facturas registradas aún.
+              {t("analytics:revenue.empty")}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
@@ -202,8 +195,8 @@ function RevenueTab() {
                   formatter={(v: number, name: string) => [fmt(v), name]}
                   contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }}
                 />
-                <Area type="monotone" dataKey="invoiced" name="Facturado" stroke="hsl(262, 80%, 55%)" fill="url(#aInvGrad)" strokeWidth={2} />
-                <Area type="monotone" dataKey="paid" name="Cobrado" stroke="hsl(152, 60%, 48%)" fill="url(#aPaidGrad)" strokeWidth={2} />
+                <Area type="monotone" dataKey="invoiced" name={t("analytics:revenue.invoiced")} stroke="hsl(262, 80%, 55%)" fill="url(#aInvGrad)" strokeWidth={2} />
+                <Area type="monotone" dataKey="paid" name={t("analytics:revenue.paid")} stroke="hsl(152, 60%, 48%)" fill="url(#aPaidGrad)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           )}
@@ -213,11 +206,11 @@ function RevenueTab() {
       <div className="flex gap-5 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "hsl(262, 80%, 55%)" }} />
-          Facturado
+          {t("analytics:revenue.invoiced")}
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "hsl(152, 60%, 48%)" }} />
-          Cobrado
+          {t("analytics:revenue.paid")}
         </span>
       </div>
     </div>
@@ -227,6 +220,9 @@ function RevenueTab() {
 // ── Pipeline Tab ──────────────────────────────────────────────────────────────
 
 function PipelineTab() {
+  const t = useT();
+  const label = useEnumLabel();
+  const { formatCompactCurrency: fmt, formatPercent } = useFormat();
   const pipelineQ = useQuery({
     queryKey: ["analytics-pipeline"],
     queryFn: analyticsService.getPipeline,
@@ -244,33 +240,33 @@ function PipelineTab() {
   const summary = summaryQ.data;
 
   const stageData = (pipeline?.stages ?? []).map((s) => ({
-    stage: s.stage.charAt(0).toUpperCase() + s.stage.slice(1),
+    stage: label("common:crmStage", s.stage),
     count: s.count,
     value: s.value,
     fill: STATUS_COLORS[s.stage] ?? "hsl(240,5%,55%)",
   }));
 
   const kpis = [
-    { label: "Oportunidades abiertas", value: pipeline?.total_open ?? 0,    format: "int" },
-    { label: "Valor del pipeline",      value: pipeline?.total_value ?? 0,   format: "currency" },
-    { label: "Tasa de cierre (30d)",    value: pipeline?.won_rate_30d ?? 0,  format: "pct" },
-    { label: "Valor promedio / deal",   value: pipeline?.avg_deal_size ?? 0, format: "currency" },
+    { label: t("analytics:pipeline.kpi.open"),    value: pipeline?.total_open ?? 0,    format: "int" },
+    { label: t("analytics:pipeline.kpi.value"),   value: pipeline?.total_value ?? 0,   format: "currency" },
+    { label: t("analytics:pipeline.kpi.winRate"), value: pipeline?.won_rate_30d ?? 0,  format: "pct" },
+    { label: t("analytics:pipeline.kpi.avgDeal"), value: pipeline?.avg_deal_size ?? 0, format: "currency" },
   ];
 
   const monthlyWon = summary ? [
-    { label: "Ganadas este mes",    value: summary.pipeline.won_this_month,       format: "int" },
-    { label: "Valor ganado este mes",value: summary.pipeline.won_value_this_month, format: "currency" },
-    { label: "Leads activos",       value: summary.leads.total_active,            format: "int" },
-    { label: "Leads nuevos (mes)",  value: summary.leads.new_this_month,          format: "int" },
+    { label: t("analytics:pipeline.monthly.won"),         value: summary.pipeline.won_this_month,       format: "int" },
+    { label: t("analytics:pipeline.monthly.wonValue"),    value: summary.pipeline.won_value_this_month, format: "currency" },
+    { label: t("analytics:pipeline.monthly.activeLeads"), value: summary.leads.total_active,            format: "int" },
+    { label: t("analytics:pipeline.monthly.newLeads"),    value: summary.leads.new_this_month,          format: "int" },
   ] : [];
 
   function renderValue(val: number, format: string) {
     if (format === "currency") return fmt(val);
-    if (format === "pct") return fmtPct(val);
+    if (format === "pct") return formatPercent(val, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     return String(val);
   }
 
-  if (err) return <TabError message="Error cargando datos del pipeline." />;
+  if (err) return <TabError message={t("analytics:errors.pipeline")} />;
 
   return (
     <div className="space-y-6">
@@ -287,14 +283,14 @@ function PipelineTab() {
 
       <Card className="border border-border/60">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold">Oportunidades por etapa</CardTitle>
+          <CardTitle className="text-sm font-semibold">{t("analytics:pipeline.stagesTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <ChartSkeleton height={260} />
           ) : stageData.length === 0 ? (
             <div className="h-[260px] flex items-center justify-center text-sm text-muted-foreground">
-              Sin oportunidades abiertas actualmente.
+              {t("analytics:pipeline.empty")}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
@@ -303,7 +299,8 @@ function PipelineTab() {
                 <XAxis type="number" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                 <YAxis dataKey="stage" type="category" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={90} />
                 <Tooltip
-                  formatter={(v: number, name: string) => name === "value" ? [fmt(v), "Valor"] : [v, "Cantidad"]}
+                  formatter={(v: number, name: string) =>
+                    name === "value" ? [fmt(v), t("analytics:pipeline.value")] : [v, t("analytics:pipeline.count")]}
                   contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }}
                 />
                 <Bar dataKey="count" name="count" radius={[0, 6, 6, 0]} barSize={20}>
@@ -333,14 +330,9 @@ function PipelineTab() {
 
 // ── HR Tab ────────────────────────────────────────────────────────────────────
 
-const EMP_TYPE_LABELS: Record<string, string> = {
-  full_time:  "Tiempo completo",
-  part_time:  "Tiempo parcial",
-  contractor: "Contratista",
-  intern:     "Pasante",
-};
-
 function HRTab() {
+  const t = useT();
+  const label = useEnumLabel();
   const hrQ = useQuery({
     queryKey: ["analytics-hr"],
     queryFn: analyticsService.getHR,
@@ -350,19 +342,19 @@ function HRTab() {
   const loading = hrQ.isLoading;
   const hr = hrQ.data;
 
-  if (hrQ.error) return <TabError message="Error cargando datos de equipo." />;
+  if (hrQ.error) return <TabError message={t("analytics:errors.hr")} />;
 
   const kpis = [
-    { label: "Empleados activos",    value: hr?.active_count ?? 0,        icon: Users,     color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { label: "En permiso",           value: hr?.on_leave_count ?? 0,      icon: Clock,     color: "text-amber-500",   bg: "bg-amber-500/10" },
-    { label: "Nuevas contrataciones (mes)", value: hr?.new_hires_this_month ?? 0, icon: UserPlus, color: "text-blue-500", bg: "bg-blue-500/10" },
-    { label: "Terminaciones (mes)",  value: hr?.terminations_this_month ?? 0, icon: UserMinus, color: "text-red-500", bg: "bg-red-500/10" },
+    { label: t("analytics:hr.kpi.active"),       value: hr?.active_count ?? 0,            icon: Users,     color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: t("analytics:hr.kpi.onLeave"),      value: hr?.on_leave_count ?? 0,          icon: Clock,     color: "text-amber-500",   bg: "bg-amber-500/10" },
+    { label: t("analytics:hr.kpi.newHires"),     value: hr?.new_hires_this_month ?? 0,    icon: UserPlus,  color: "text-blue-500",    bg: "bg-blue-500/10" },
+    { label: t("analytics:hr.kpi.terminations"), value: hr?.terminations_this_month ?? 0, icon: UserMinus, color: "text-red-500",     bg: "bg-red-500/10" },
   ];
 
-  const typeData = (hr?.by_employment_type ?? []).map((t) => ({
-    name: EMP_TYPE_LABELS[t.employment_type] ?? t.employment_type,
-    value: t.count,
-    fill: STATUS_COLORS[t.employment_type] ?? "hsl(240,5%,55%)",
+  const typeData = (hr?.by_employment_type ?? []).map((e) => ({
+    name: label("common:employmentType", e.employment_type),
+    value: e.count,
+    fill: STATUS_COLORS[e.employment_type] ?? "hsl(240,5%,55%)",
   }));
 
   const totalActive = hr ? hr.active_count + hr.on_leave_count : 0;
@@ -393,14 +385,14 @@ function HRTab() {
         {/* Employment type pie */}
         <Card className="border border-border/60">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Tipo de empleo (activos)</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t("analytics:hr.typeTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
               <ChartSkeleton height={220} />
             ) : typeData.length === 0 ? (
               <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">
-                Sin empleados activos registrados.
+                {t("analytics:hr.typeEmpty")}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
@@ -419,7 +411,7 @@ function HRTab() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(v: number) => [v, "Empleados"]}
+                    formatter={(v: number) => [v, t("analytics:hr.employees")]}
                     contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }}
                   />
                   <Legend
@@ -436,7 +428,7 @@ function HRTab() {
         {/* Org health summary */}
         <Card className="border border-border/60">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Estructura organizacional</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t("analytics:hr.orgTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-1">
             {loading ? (
@@ -446,21 +438,21 @@ function HRTab() {
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <div className="flex items-center gap-2 text-sm">
                     <Building2 className="h-4 w-4 text-muted-foreground" />
-                    <span>Departamentos</span>
+                    <span>{t("analytics:hr.departments")}</span>
                   </div>
                   <span className="font-semibold">{hr?.department_count ?? 0}</span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>Headcount total (activos)</span>
+                    <span>{t("analytics:hr.headcount")}</span>
                   </div>
                   <span className="font-semibold">{totalActive}</span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <div className="flex items-center gap-2 text-sm">
                     <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <span>Sin departamento asignado</span>
+                    <span>{t("analytics:hr.unassigned")}</span>
                   </div>
                   <Badge
                     variant={hr && hr.unassigned_employees > 0 ? "destructive" : "secondary"}
@@ -472,7 +464,7 @@ function HRTab() {
                 <div className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                    <span>Ex-empleados</span>
+                    <span>{t("analytics:hr.former")}</span>
                   </div>
                   <span className="font-semibold text-muted-foreground">{hr?.terminated_count ?? 0}</span>
                 </div>
@@ -487,15 +479,10 @@ function HRTab() {
 
 // ── Projects Tab ──────────────────────────────────────────────────────────────
 
-const STATUS_LABELS_PRJ: Record<string, string> = {
-  planning:  "Planificación",
-  active:    "Activo",
-  on_hold:   "En pausa",
-  completed: "Completado",
-  cancelled: "Cancelado",
-};
-
 function ProjectsTab() {
+  const t = useT();
+  const label = useEnumLabel();
+  const { formatCompactCurrency: fmt, formatPercent } = useFormat();
   const prjQ = useQuery({
     queryKey: ["analytics-projects"],
     queryFn: analyticsService.getProjects,
@@ -505,17 +492,17 @@ function ProjectsTab() {
   const loading = prjQ.isLoading;
   const prj = prjQ.data;
 
-  if (prjQ.error) return <TabError message="Error cargando datos de proyectos." />;
+  if (prjQ.error) return <TabError message={t("analytics:errors.projects")} />;
 
   const kpis = [
-    { label: "Proyectos activos",    value: prj?.active_count ?? 0,              format: "int",      icon: FolderKanban, color: "text-primary",       bg: "bg-primary/10" },
-    { label: "Budget activo total",  value: fmt(prj?.total_budget_active ?? 0),  format: "preformatted", icon: DollarSign,   color: "text-emerald-500",   bg: "bg-emerald-500/10" },
-    { label: "Completados (mes)",    value: prj?.completed_this_month ?? 0,      format: "int",      icon: CheckCircle2, color: "text-emerald-500",   bg: "bg-emerald-500/10" },
-    { label: "Cancelados (mes)",     value: prj?.cancelled_this_month ?? 0,      format: "int",      icon: AlertCircle,  color: "text-red-500",       bg: "bg-red-500/10" },
+    { label: t("analytics:projects.kpi.active"),    value: prj?.active_count ?? 0,              format: "int",          icon: FolderKanban, color: "text-primary",     bg: "bg-primary/10" },
+    { label: t("analytics:projects.kpi.budget"),    value: fmt(prj?.total_budget_active ?? 0),  format: "preformatted", icon: DollarSign,   color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: t("analytics:projects.kpi.completed"), value: prj?.completed_this_month ?? 0,      format: "int",          icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: t("analytics:projects.kpi.cancelled"), value: prj?.cancelled_this_month ?? 0,      format: "int",          icon: AlertCircle,  color: "text-red-500",     bg: "bg-red-500/10" },
   ];
 
   const statusData = (prj?.by_status ?? []).map((s) => ({
-    status: STATUS_LABELS_PRJ[s.status] ?? s.status,
+    status: label("common:projectStatus", s.status),
     count: s.count,
     fill: STATUS_COLORS[s.status] ?? "hsl(240,5%,55%)",
   }));
@@ -551,14 +538,14 @@ function ProjectsTab() {
         {/* Status bar chart */}
         <Card className="border border-border/60">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Proyectos por estado</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t("analytics:projects.statusTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
               <ChartSkeleton height={220} />
             ) : statusData.length === 0 ? (
               <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">
-                Sin proyectos registrados aún.
+                {t("analytics:projects.statusEmpty")}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
@@ -567,7 +554,7 @@ function ProjectsTab() {
                   <XAxis dataKey="status" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                   <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
                   <Tooltip
-                    formatter={(v: number) => [v, "Proyectos"]}
+                    formatter={(v: number) => [v, t("analytics:projects.projects")]}
                     contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }}
                   />
                   <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={32}>
@@ -582,7 +569,7 @@ function ProjectsTab() {
         {/* Task health */}
         <Card className="border border-border/60">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Salud de tareas (proyectos activos)</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t("analytics:projects.tasksTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-1">
             {loading ? (
@@ -592,8 +579,8 @@ function ProjectsTab() {
                 {/* Completion progress bar */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Tasa de completitud</span>
-                    <span className="font-semibold">{completionPct}%</span>
+                    <span className="text-muted-foreground">{t("analytics:projects.completion")}</span>
+                    <span className="font-semibold">{formatPercent(completionRate, { maximumFractionDigits: 0 })}</span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div
@@ -606,21 +593,21 @@ function ProjectsTab() {
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <div className="flex items-center gap-2 text-sm">
                     <ListTodo className="h-4 w-4 text-muted-foreground" />
-                    <span>Tareas totales (activos)</span>
+                    <span>{t("analytics:projects.totalTasks")}</span>
                   </div>
                   <span className="font-semibold">{prj?.total_tasks ?? 0}</span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <div className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    <span>Completadas</span>
+                    <span>{t("analytics:projects.done")}</span>
                   </div>
                   <span className="font-semibold text-emerald-600">{prj?.done_tasks ?? 0}</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-2 text-sm">
                     <AlertTriangle className="h-4 w-4 text-red-500" />
-                    <span>Vencidas</span>
+                    <span>{t("analytics:projects.overdue")}</span>
                   </div>
                   <Badge
                     variant={prj && prj.overdue_tasks > 0 ? "destructive" : "secondary"}
@@ -640,16 +627,10 @@ function ProjectsTab() {
 
 // ── Contracts Tab ─────────────────────────────────────────────────────────────
 
-const STATUS_LABELS_CTR: Record<string, string> = {
-  draft:      "Borrador",
-  sent:       "Enviado",
-  signed:     "Firmado",
-  executed:   "Ejecutado",
-  expired:    "Vencido",
-  terminated: "Terminado",
-};
-
 function ContractsTab() {
+  const t = useT();
+  const label = useEnumLabel();
+  const { formatCompactCurrency: fmt } = useFormat();
   const ctrQ = useQuery({
     queryKey: ["analytics-contracts"],
     queryFn: analyticsService.getContracts,
@@ -659,17 +640,17 @@ function ContractsTab() {
   const loading = ctrQ.isLoading;
   const ctr = ctrQ.data;
 
-  if (ctrQ.error) return <TabError message="Error cargando datos de contratos." />;
+  if (ctrQ.error) return <TabError message={t("analytics:errors.contracts")} />;
 
   const kpis = [
-    { label: "Total contratos",    value: ctr?.total_contracts ?? 0,              format: "int",          icon: ScrollText,  color: "text-primary",     bg: "bg-primary/10" },
-    { label: "Valor firmado",      value: fmt(ctr?.total_value_signed ?? 0),      format: "preformatted", icon: FileCheck,   color: "text-emerald-500", bg: "bg-emerald-500/10" },
-    { label: "Firmados (mes)",     value: ctr?.signed_this_month ?? 0,            format: "int",          icon: TrendingUp,  color: "text-blue-500",    bg: "bg-blue-500/10" },
-    { label: "Por vencer (30d)",   value: ctr?.expiring_soon ?? 0,               format: "int",          icon: FileClock,   color: "text-amber-500",   bg: "bg-amber-500/10" },
+    { label: t("analytics:contracts.kpi.total"),       value: ctr?.total_contracts ?? 0,         format: "int",          icon: ScrollText, color: "text-primary",     bg: "bg-primary/10" },
+    { label: t("analytics:contracts.kpi.signedValue"), value: fmt(ctr?.total_value_signed ?? 0), format: "preformatted", icon: FileCheck,  color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { label: t("analytics:contracts.kpi.signedMonth"), value: ctr?.signed_this_month ?? 0,       format: "int",          icon: TrendingUp, color: "text-blue-500",    bg: "bg-blue-500/10" },
+    { label: t("analytics:contracts.kpi.expiring"),    value: ctr?.expiring_soon ?? 0,           format: "int",          icon: FileClock,  color: "text-amber-500",   bg: "bg-amber-500/10" },
   ];
 
   const statusData = (ctr?.by_status ?? []).map((s) => ({
-    status: STATUS_LABELS_CTR[s.status] ?? s.status,
+    status: label("common:contractStatus", s.status),
     count: s.count,
     fill: STATUS_COLORS[s.status] ?? "hsl(240,5%,55%)",
   }));
@@ -702,14 +683,14 @@ function ContractsTab() {
         {/* Status breakdown */}
         <Card className="border border-border/60">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Contratos por estado</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t("analytics:contracts.statusTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
               <ChartSkeleton height={220} />
             ) : statusData.length === 0 ? (
               <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">
-                Sin contratos registrados aún.
+                {t("analytics:contracts.statusEmpty")}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
@@ -718,7 +699,7 @@ function ContractsTab() {
                   <XAxis dataKey="status" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                   <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
                   <Tooltip
-                    formatter={(v: number) => [v, "Contratos"]}
+                    formatter={(v: number) => [v, t("analytics:contracts.contracts")]}
                     contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }}
                   />
                   <Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={32}>
@@ -733,7 +714,7 @@ function ContractsTab() {
         {/* Value summary */}
         <Card className="border border-border/60">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold">Valor comprometido</CardTitle>
+            <CardTitle className="text-sm font-semibold">{t("analytics:contracts.valueTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 pt-1">
             {loading ? (
@@ -743,28 +724,28 @@ function ContractsTab() {
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <div className="flex items-center gap-2 text-sm">
                     <FileCheck className="h-4 w-4 text-emerald-500" />
-                    <span>Valor firmado + ejecutado</span>
+                    <span>{t("analytics:contracts.signedExecuted")}</span>
                   </div>
                   <span className="font-semibold">{fmt(ctr?.total_value_signed ?? 0)}</span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <div className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-primary" />
-                    <span>Valor ejecutado</span>
+                    <span>{t("analytics:contracts.executedValue")}</span>
                   </div>
                   <span className="font-semibold">{fmt(ctr?.total_value_executed ?? 0)}</span>
                 </div>
                 <div className="flex items-center justify-between py-2 border-b border-border/50">
                   <div className="flex items-center gap-2 text-sm">
                     <TrendingUp className="h-4 w-4 text-blue-500" />
-                    <span>Ejecutados este mes</span>
+                    <span>{t("analytics:contracts.executedMonth")}</span>
                   </div>
                   <span className="font-semibold">{ctr?.executed_this_month ?? 0}</span>
                 </div>
                 <div className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-2 text-sm">
                     <FileClock className="h-4 w-4 text-amber-500" />
-                    <span>Por vencer en 30 días</span>
+                    <span>{t("analytics:contracts.expiring30")}</span>
                   </div>
                   <Badge
                     variant={ctr && ctr.expiring_soon > 0 ? "destructive" : "secondary"}
@@ -785,31 +766,32 @@ function ContractsTab() {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const Analytics = () => {
+  const t = useT();
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Analytics</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("analytics:title")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Dashboards de negocio con datos reales — facturación, pipeline, proyectos, contratos y equipo.
+          {t("analytics:subtitle")}
         </p>
       </div>
 
       <Tabs defaultValue="revenue">
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="revenue" className="gap-1.5">
-            <DollarSign className="h-3.5 w-3.5" /> Ingresos
+            <DollarSign className="h-3.5 w-3.5" /> {t("analytics:tabs.revenue")}
           </TabsTrigger>
           <TabsTrigger value="pipeline" className="gap-1.5">
-            <Target className="h-3.5 w-3.5" /> Pipeline
+            <Target className="h-3.5 w-3.5" /> {t("analytics:tabs.pipeline")}
           </TabsTrigger>
           <TabsTrigger value="projects" className="gap-1.5">
-            <FolderKanban className="h-3.5 w-3.5" /> Proyectos
+            <FolderKanban className="h-3.5 w-3.5" /> {t("analytics:tabs.projects")}
           </TabsTrigger>
           <TabsTrigger value="contracts" className="gap-1.5">
-            <ScrollText className="h-3.5 w-3.5" /> Contratos
+            <ScrollText className="h-3.5 w-3.5" /> {t("analytics:tabs.contracts")}
           </TabsTrigger>
           <TabsTrigger value="hr" className="gap-1.5">
-            <Users className="h-3.5 w-3.5" /> Equipo
+            <Users className="h-3.5 w-3.5" /> {t("analytics:tabs.hr")}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="revenue" className="mt-4">

@@ -147,6 +147,8 @@ formatDateTime(event.created_at)                        // 30 sep 2026, 03:07 p.
 formatPercent(quote.tax_rate)                           // 16%           (recibe la fraccion)
 formatCompactCurrency(12500)                            // USD 12.5 k    (KPI y ejes de graficos)
 formatMonthShort("2026-04")                             // abr           (desde YYYY-MM)
+formatMonthYear("2026-04")                              // abr 26        (ejes con varios anios)
+formatUnit(5, "day")                                    // 5d            (unidad corta, no un sufijo cableado)
 formatRelativeTime(activity.created_at)                 // hace 5 min, ayer, ahora
 formatMilliseconds(step.duration_ms)                    // 12ms
 ```

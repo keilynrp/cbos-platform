@@ -3,7 +3,7 @@ import { render } from "@testing-library/react";
 import i18next, { type i18n as I18n } from "i18next";
 import type { ReactElement } from "react";
 import { I18nextProvider } from "react-i18next";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { buildI18nOptions, resources } from "@/i18n";
 
@@ -53,7 +53,12 @@ export function renderWithI18n(ui: ReactElement, instance: I18n) {
  * Como `renderWithI18n`, y ademas con un `QueryClient` sin reintentos: las
  * paginas que piden datos con React Query (los servicios se mockean en el test).
  */
-export function renderPageWithI18n(ui: ReactElement, instance: I18n) {
+export function renderPageWithI18n(
+  ui: ReactElement,
+  instance: I18n,
+  /** Para paginas que leen parametros de la ruta (`/portal/:token`). */
+  route?: { entry: string; path: string },
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 }, mutations: { retry: false } },
   });
@@ -61,7 +66,15 @@ export function renderPageWithI18n(ui: ReactElement, instance: I18n) {
   return render(
     <I18nextProvider i18n={instance}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>{ui}</MemoryRouter>
+        {route ? (
+          <MemoryRouter initialEntries={[route.entry]}>
+            <Routes>
+              <Route path={route.path} element={ui} />
+            </Routes>
+          </MemoryRouter>
+        ) : (
+          <MemoryRouter>{ui}</MemoryRouter>
+        )}
       </QueryClientProvider>
     </I18nextProvider>,
   );

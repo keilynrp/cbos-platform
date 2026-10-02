@@ -1,0 +1,49 @@
+{
+  "title": "Datos de facturación",
+  "subtitle": "Estos datos aparecen como emisor en las facturas impresas y exportadas",
+  "save": "Guardar",
+  "saved": "Datos guardados",
+  "saveFailed": "No se pudo guardar",
+  "loadFailed": "No se pudieron cargar los datos de facturación",
+  "unknownError": "Error desconocido",
+  "retry": "Reintentar",
+  "identity": {
+    "title": "Identidad",
+    "logoAlt": "Logo",
+    "upload": "Subir logo",
+    "remove": "Quitar",
+    "hint": "PNG o JPG, máximo {{max}} KB",
+    "legalName": "Razón social",
+    "legalNamePlaceholder": "Mi Empresa S.A. de C.V.",
+    "taxIdType": "Tipo de ID",
+    "taxId": "Identificador fiscal"
+  },
+  "address": {
+    "title": "Dirección",
+    "line": "Calle y número",
+    "city": "Ciudad",
+    "state": "Estado / Provincia",
+    "postalCode": "Código postal",
+    "country": "País"
+  },
+  "contact": {
+    "title": "Contacto",
+    "email": "Email",
+    "phone": "Teléfono",
+    "website": "Sitio web"
+  },
+  "defaults": {
+    "title": "Valores por defecto",
+    "currency": "Moneda",
+    "taxRate": "IVA por defecto (%)",
+    "footerNote": "Nota al pie de la factura",
+    "footerNotePlaceholder": "Gracias por su preferencia · Condiciones de pago…"
+  },
+  "logo": {
+    "badFormatTitle": "Formato no admitido",
+    "badFormat": "El logo debe ser PNG o JPG.",
+    "tooBigTitle": "Logo demasiado grande",
+    "tooBig": "Pesa {{size}} KB y el maximo son {{max}} KB.",
+    "readFailed": "No se pudo leer el archivo"
+  }
+}

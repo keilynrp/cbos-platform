@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useT } from "@/i18n/useT";
 import { translateApiError } from "@/lib/errors";
 import {
   accountingService,
@@ -18,6 +19,7 @@ import {
 } from "@/services/accounting";
 
 const MAX_LOGO_BYTES = 204_800;
+const MAX_LOGO_KB = Math.round(MAX_LOGO_BYTES / 1024);
 const ACCEPTED_LOGO_TYPES = ["image/png", "image/jpeg"];
 
 type FormState = UpdateCompanyProfileDto;
@@ -32,6 +34,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 export default function CompanyProfileSettings() {
+  const t = useT();
   const [form, setForm] = useState<FormState>({});
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -53,10 +56,10 @@ export default function CompanyProfileSettings() {
     mutationFn: () => accountingService.updateCompanyProfile(form),
     onSuccess: (updated: CompanyProfile) => {
       qc.setQueryData(["company-profile"], updated);
-      toast({ title: "Datos guardados" });
+      toast({ title: t("companyProfile:saved") });
     },
     onError: (e: Error) =>
-      toast({ title: "No se pudo guardar", description: translateApiError(e), variant: "destructive" }),
+      toast({ title: t("companyProfile:saveFailed"), description: translateApiError(e), variant: "destructive" }),
   });
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -71,16 +74,16 @@ export default function CompanyProfileSettings() {
     // Validate before uploading so the user gets instant feedback.
     if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
       toast({
-        title: "Formato no admitido",
-        description: "El logo debe ser PNG o JPG.",
+        title: t("companyProfile:logo.badFormatTitle"),
+        description: t("companyProfile:logo.badFormat"),
         variant: "destructive",
       });
       return;
     }
     if (file.size > MAX_LOGO_BYTES) {
       toast({
-        title: "Logo demasiado grande",
-        description: `Pesa ${Math.round(file.size / 1024)} KB y el maximo son 200 KB.`,
+        title: t("companyProfile:logo.tooBigTitle"),
+        description: t("companyProfile:logo.tooBig", { size: Math.round(file.size / 1024), max: MAX_LOGO_KB }),
         variant: "destructive",
       });
       return;
@@ -89,7 +92,7 @@ export default function CompanyProfileSettings() {
     const reader = new FileReader();
     reader.onload = () => set("logo_data_uri", reader.result as string);
     reader.onerror = () =>
-      toast({ title: "No se pudo leer el archivo", variant: "destructive" });
+      toast({ title: t("companyProfile:logo.readFailed"), variant: "destructive" });
     reader.readAsDataURL(file);
   }
 
@@ -110,14 +113,14 @@ export default function CompanyProfileSettings() {
         <CardContent className="py-10 flex flex-col items-center text-center gap-3">
           <AlertCircle className="h-8 w-8 text-destructive" />
           <div>
-            <p className="font-medium">No se pudieron cargar los datos de facturación</p>
+            <p className="font-medium">{t("companyProfile:loadFailed")}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {translateApiError(error, "Error desconocido")}
+              {translateApiError(error, t("companyProfile:unknownError"))}
             </p>
           </div>
           <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
             {isFetching && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Reintentar
+            {t("companyProfile:retry")}
           </Button>
         </CardContent>
       </Card>
@@ -129,53 +132,53 @@ export default function CompanyProfileSettings() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Building2 className="h-6 w-6 text-primary" /> Datos de facturación
+            <Building2 className="h-6 w-6 text-primary" /> {t("companyProfile:title")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Estos datos aparecen como emisor en las facturas impresas y exportadas
+            {t("companyProfile:subtitle")}
           </p>
         </div>
         <Button onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending
             ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             : <Save className="h-4 w-4 mr-2" />}
-          Guardar
+          {t("companyProfile:save")}
         </Button>
       </div>
 
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-base">Identidad</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base">{t("companyProfile:identity.title")}</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="h-20 w-20 border rounded-lg flex items-center justify-center bg-muted/30 overflow-hidden shrink-0">
               {form.logo_data_uri
-                ? <img src={form.logo_data_uri} alt="Logo" className="max-h-full max-w-full object-contain" />
+                ? <img src={form.logo_data_uri} alt={t("companyProfile:identity.logoAlt")} className="max-h-full max-w-full object-contain" />
                 : <Building2 className="h-8 w-8 text-muted-foreground/40" />}
             </div>
             <div className="space-y-2">
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" asChild>
                   <label className="cursor-pointer">
-                    <Upload className="h-3.5 w-3.5 mr-1" /> Subir logo
+                    <Upload className="h-3.5 w-3.5 mr-1" /> {t("companyProfile:identity.upload")}
                     <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={onLogoSelected} />
                   </label>
                 </Button>
                 {form.logo_data_uri && (
                   <Button size="sm" variant="ghost" onClick={() => set("logo_data_uri", null)}>
-                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Quitar
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("companyProfile:identity.remove")}
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">PNG o JPG, máximo 200 KB</p>
+              <p className="text-xs text-muted-foreground">{t("companyProfile:identity.hint", { max: MAX_LOGO_KB })}</p>
             </div>
           </div>
 
-          <Field label="Razón social">
-            <Input value={form.legal_name ?? ""} onChange={(e) => set("legal_name", e.target.value)} placeholder="Mi Empresa S.A. de C.V." />
+          <Field label={t("companyProfile:identity.legalName")}>
+            <Input value={form.legal_name ?? ""} onChange={(e) => set("legal_name", e.target.value)} placeholder={t("companyProfile:identity.legalNamePlaceholder")} />
           </Field>
 
           <div className="grid grid-cols-[120px_1fr] gap-3">
-            <Field label="Tipo de ID">
+            <Field label={t("companyProfile:identity.taxIdType")}>
               <Select value={form.tax_id_label ?? "RFC"} onValueChange={(v) => set("tax_id_label", v)}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -185,7 +188,7 @@ export default function CompanyProfileSettings() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Identificador fiscal">
+            <Field label={t("companyProfile:identity.taxId")}>
               <Input value={form.tax_id ?? ""} onChange={(e) => set("tax_id", e.target.value)} />
             </Field>
           </div>
@@ -193,48 +196,48 @@ export default function CompanyProfileSettings() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-base">Dirección</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base">{t("companyProfile:address.title")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <Field label="Calle y número">
+          <Field label={t("companyProfile:address.line")}>
             <Input value={form.address_line ?? ""} onChange={(e) => set("address_line", e.target.value)} />
           </Field>
           <div className="grid grid-cols-3 gap-3">
-            <Field label="Ciudad">
+            <Field label={t("companyProfile:address.city")}>
               <Input value={form.city ?? ""} onChange={(e) => set("city", e.target.value)} />
             </Field>
-            <Field label="Estado / Provincia">
+            <Field label={t("companyProfile:address.state")}>
               <Input value={form.state ?? ""} onChange={(e) => set("state", e.target.value)} />
             </Field>
-            <Field label="Código postal">
+            <Field label={t("companyProfile:address.postalCode")}>
               <Input value={form.postal_code ?? ""} onChange={(e) => set("postal_code", e.target.value)} />
             </Field>
           </div>
-          <Field label="País">
+          <Field label={t("companyProfile:address.country")}>
             <Input value={form.country ?? ""} onChange={(e) => set("country", e.target.value)} />
           </Field>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-base">Contacto</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base">{t("companyProfile:contact.title")}</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-3 gap-3">
-          <Field label="Email">
+          <Field label={t("companyProfile:contact.email")}>
             <Input type="email" value={form.email ?? ""} onChange={(e) => set("email", e.target.value)} />
           </Field>
-          <Field label="Teléfono">
+          <Field label={t("companyProfile:contact.phone")}>
             <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} />
           </Field>
-          <Field label="Sitio web">
+          <Field label={t("companyProfile:contact.website")}>
             <Input value={form.website ?? ""} onChange={(e) => set("website", e.target.value)} />
           </Field>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-base">Valores por defecto</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-base">{t("companyProfile:defaults.title")}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Moneda">
+            <Field label={t("companyProfile:defaults.currency")}>
               <Select value={form.default_currency ?? "USD"} onValueChange={(v) => set("default_currency", v)}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -244,7 +247,7 @@ export default function CompanyProfileSettings() {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="IVA por defecto (%)">
+            <Field label={t("companyProfile:defaults.taxRate")}>
               <Input
                 type="number" min="0" max="100" step="0.1"
                 value={form.default_tax_rate ?? 0}
@@ -252,10 +255,10 @@ export default function CompanyProfileSettings() {
               />
             </Field>
           </div>
-          <Field label="Nota al pie de la factura">
+          <Field label={t("companyProfile:defaults.footerNote")}>
             <Textarea
               rows={2}
-              placeholder="Gracias por su preferencia · Condiciones de pago…"
+              placeholder={t("companyProfile:defaults.footerNotePlaceholder")}
               value={form.invoice_footer_note ?? ""}
               onChange={(e) => set("invoice_footer_note", e.target.value)}
             />
