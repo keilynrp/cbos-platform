@@ -1,0 +1,87 @@
+{
+  "title": "Equipo",
+  "subtitle": "Gestión de empleados y departamentos",
+  "newEmployee": "Nuevo empleado",
+  "kpi": {
+    "total": "Total equipo",
+    "active": "Activos",
+    "onLeave": "De permiso",
+    "terminated": "Bajas"
+  },
+  "tabs": {
+    "employees": "Empleados",
+    "departments": "Departamentos"
+  },
+  "list": {
+    "loading": "Cargando...",
+    "empty": "Sin empleados registrados",
+    "registerFirst": "Registrar primer empleado",
+    "number": "No.",
+    "name": "Nombre",
+    "position": "Cargo",
+    "department": "Departamento",
+    "type": "Tipo",
+    "status": "Estado",
+    "view": "Ver detalle",
+    "delete": "Eliminar"
+  },
+  "createEmployee": {
+    "title": "Nuevo empleado",
+    "fullName": "Nombre completo *",
+    "fullNamePlaceholder": "Ej. Ana Torres",
+    "email": "Email",
+    "emailPlaceholder": "correo@empresa.com",
+    "phone": "Teléfono",
+    "position": "Cargo",
+    "positionPlaceholder": "Ej. Ingeniera de software",
+    "employmentType": "Tipo de empleo",
+    "department": "Departamento",
+    "noDepartment": "Sin departamento",
+    "startDate": "Fecha de inicio",
+    "salary": "Salario",
+    "currency": "Moneda",
+    "notes": "Notas",
+    "cancel": "Cancelar",
+    "submit": "Registrar"
+  },
+  "createDepartment": {
+    "title": "Nuevo departamento",
+    "name": "Nombre *",
+    "namePlaceholder": "Ej. Ingeniería",
+    "description": "Descripción",
+    "cancel": "Cancelar",
+    "submit": "Crear"
+  },
+  "departments": {
+    "new": "Nuevo departamento",
+    "loading": "Cargando...",
+    "empty": "Sin departamentos",
+    "employees_one": "{{count}} empleado",
+    "employees_other": "{{count}} empleados",
+    "delete": "Eliminar"
+  },
+  "detail": {
+    "loading": "Cargando...",
+    "type": "Tipo",
+    "department": "Departamento",
+    "salary": "Salario",
+    "startDate": "Ingreso",
+    "contact": "Contacto",
+    "putOnLeave": "Poner en permiso",
+    "terminate": "Dar de baja",
+    "reinstate": "Reincorporar",
+    "terminatedAt": "Dado de baja: {{date}}",
+    "notes": "Notas"
+  },
+  "toast": {
+    "created": "Empleado registrado",
+    "createFailed": "Error al registrar empleado",
+    "departmentCreated": "Departamento creado",
+    "departmentCreateFailed": "Error al crear departamento",
+    "statusUpdated": "Estado actualizado",
+    "transitionNotAllowed": "Transición no permitida",
+    "departmentDeleted": "Departamento eliminado",
+    "deleted": "Empleado eliminado",
+    "deleteFailed": "No se puede eliminar este registro"
+  }
+}

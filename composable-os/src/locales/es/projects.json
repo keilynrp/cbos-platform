@@ -1,0 +1,80 @@
+{
+  "title": "Proyectos",
+  "subtitle": "Gestión del ciclo de vida de proyectos",
+  "new": "Nuevo proyecto",
+  "kpi": {
+    "total": "Total proyectos",
+    "active": "Activos",
+    "completed": "Completados",
+    "budget": "Presupuesto total"
+  },
+  "list": {
+    "title": "Lista de proyectos",
+    "loading": "Cargando...",
+    "empty": "Sin proyectos aún",
+    "createFirst": "Crear primer proyecto",
+    "number": "Número",
+    "projectTitle": "Título",
+    "status": "Estado",
+    "budget": "Presupuesto",
+    "start": "Inicio",
+    "end": "Fin",
+    "view": "Ver detalle",
+    "delete": "Eliminar"
+  },
+  "create": {
+    "title": "Nuevo proyecto",
+    "projectTitle": "Título *",
+    "titlePlaceholder": "Nombre del proyecto",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Descripción del alcance",
+    "budget": "Presupuesto",
+    "currency": "Moneda",
+    "startDate": "Fecha inicio",
+    "endDate": "Fecha fin",
+    "notes": "Notas",
+    "notesPlaceholder": "Observaciones adicionales",
+    "cancel": "Cancelar",
+    "submit": "Crear proyecto"
+  },
+  "taskDialog": {
+    "title": "Nueva tarea",
+    "taskTitle": "Título *",
+    "titlePlaceholder": "Descripción de la tarea",
+    "description": "Descripción",
+    "dueDate": "Fecha límite",
+    "cancel": "Cancelar",
+    "submit": "Añadir"
+  },
+  "detail": {
+    "loading": "Cargando...",
+    "budget": "Presupuesto",
+    "period": "Período",
+    "periodRange": "{{start}} → {{end}}",
+    "description": "Descripción",
+    "activate": "Activar",
+    "pause": "Pausar",
+    "complete": "Completar",
+    "resume": "Reanudar",
+    "cancel": "Cancelar",
+    "tasks": "Tareas ({{count}})",
+    "add": "Añadir",
+    "noTasks": "Sin tareas",
+    "start": "Iniciar",
+    "markDone": "Marcar completada",
+    "reopen": "Reabrir",
+    "delete": "Eliminar",
+    "notes": "Notas"
+  },
+  "toast": {
+    "created": "Proyecto creado",
+    "createFailed": "Error al crear proyecto",
+    "taskAdded": "Tarea añadida",
+    "taskAddFailed": "Error al añadir tarea",
+    "statusUpdated": "Estado actualizado",
+    "transitionNotAllowed": "Transición no permitida",
+    "taskDeleted": "Tarea eliminada",
+    "deleted": "Proyecto eliminado",
+    "deleteFailed": "No se puede eliminar este proyecto"
+  }
+}

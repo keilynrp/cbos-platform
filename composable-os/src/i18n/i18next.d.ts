@@ -10,7 +10,10 @@ import customerPortal from "../locales/es/customerPortal.json";
 import dashboard from "../locales/es/dashboard.json";
 import discovery from "../locales/es/discovery.json";
 import errors from "../locales/es/errors.json";
+import hr from "../locales/es/hr.json";
+import inventory from "../locales/es/inventory.json";
 import sales from "../locales/es/sales.json";
+import projects from "../locales/es/projects.json";
 import settings from "../locales/es/settings.json";
 import workflows from "../locales/es/workflows.json";
 
@@ -39,7 +42,10 @@ declare module "i18next" {
       discovery: typeof discovery;
       auth: typeof auth;
       errors: typeof errors;
+      hr: typeof hr;
+      inventory: typeof inventory;
       sales: typeof sales;
+      projects: typeof projects;
       settings: typeof settings;
       workflows: typeof workflows;
     };

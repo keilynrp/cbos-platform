@@ -70,5 +70,16 @@
     "in_fulfillment": "En preparación",
     "fulfilled": "Completada",
     "cancelled": "Cancelada"
+  },
+  "taskStatus": {
+    "todo": "Pendiente",
+    "in_progress": "En progreso",
+    "done": "Completado",
+    "cancelled": "Cancelado"
+  },
+  "employeeStatus": {
+    "active": "Activo",
+    "on_leave": "De permiso",
+    "terminated": "Terminado"
   }
 }

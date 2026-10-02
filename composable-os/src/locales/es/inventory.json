@@ -1,0 +1,88 @@
+{
+  "title": "Centro de operaciones comerciales",
+  "subtitle": "Gestión unificada de inventario, órdenes y entregas en todos los canales.",
+  "kpi": {
+    "totalSkus": "Total de SKU",
+    "totalSkusHint": "productos en inventario",
+    "value": "Valor de inventario",
+    "valueHint": "costo en stock",
+    "health": "Salud del inventario",
+    "healthHint": "ítems en nivel óptimo",
+    "lowStock": "Alertas de stock bajo",
+    "lowStockHint": "SKU requieren reposición"
+  },
+  "tabs": {
+    "catalog": "Catálogo",
+    "inventory": "Inventario",
+    "orders": "Órdenes",
+    "fulfillment": "Entregas",
+    "pricing": "Precios",
+    "crm": "Sincronización CRM",
+    "revpath": "RevPath",
+    "channels": "Canales",
+    "ai": "Asistente IA",
+    "analytics": "Analítica"
+  },
+  "catalog": {
+    "title": "Constructor de catálogo de productos",
+    "description": "Gestiona productos, variantes, categorías, paquetes y servicios.",
+    "addProduct": "Agregar producto",
+    "addProductHint": "SKU, precio, costo, código de barras"
+  },
+  "inventory": {
+    "title": "Gestión de inventario",
+    "description": "Stock real sincronizado con el backend.",
+    "empty": "Sin ítems de inventario. Agrega productos desde el módulo de Ventas.",
+    "product": "Producto",
+    "sku": "SKU",
+    "onHand": "En stock",
+    "reserved": "Reservado",
+    "available": "Disponible",
+    "reorderPoint": "Punto de reorden",
+    "unitCost": "Costo unit.",
+    "totalValue": "Valor total",
+    "status": "Estado"
+  },
+  "orders": {
+    "title": "Gestión unificada de órdenes",
+    "description": "Órdenes del punto de venta, la tienda en línea, el portal B2B y los eventos.",
+    "demoOnline": "vía Tienda en línea • Sarah Jenkins",
+    "demoPos": "vía Terminal POS • Cliente de mostrador",
+    "processing": "En proceso",
+    "completed": "Completada"
+  },
+  "fulfillment": {
+    "title": "Motor de entregas",
+    "description": "Flujos de trabajo para recoger, empacar, enviar y entregar en tienda."
+  },
+  "pricing": {
+    "title": "Precios y promociones",
+    "description": "Gestiona descuentos, precios por paquete, códigos promocionales y campañas."
+  },
+  "crm": {
+    "title": "Integración con CRM",
+    "description": "Conecta las órdenes con los perfiles del CRM para ver el valor de vida y el comportamiento de compra."
+  },
+  "revpath": {
+    "title": "Integración con RevPath",
+    "description": "Visualiza cómo contribuyen las órdenes al flujo de ingresos.",
+    "lead": "Lead",
+    "opportunity": "Oportunidad",
+    "order": "Orden",
+    "revenue": "Ingresos",
+    "repeat": "Recompra"
+  },
+  "channels": {
+    "title": "Comercio omnicanal",
+    "description": "Sincronización entre el punto de venta, las tiendas en línea y los portales de clientes."
+  },
+  "ai": {
+    "title": "Asistente de suministro con IA",
+    "description": "Predice la demanda, recibe recomendaciones de reposición y detecta patrones de venta inusuales.",
+    "insight": "Insight: se prevé una demanda alta de \"Paquetes empresariales\" la próxima semana según la tendencia histórica B2B."
+  },
+  "analytics": {
+    "title": "Analítica comercial",
+    "description": "Paneles de rendimiento de ventas, márgenes de beneficio y rotación de inventario."
+  }
+}
