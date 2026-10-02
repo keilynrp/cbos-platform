@@ -237,6 +237,16 @@ maquina holgada y bastante mas en el runner de CI.
 
 Se ignoran las cadenas sin ninguna letra (`••••••••`).
 
+Dos trampas de jsdom al probar un `Select` de Radix: no rellena `pointerType`, asi que
+`fireEvent.pointerDown` no lo abre (abrelo con `fireEvent.keyDown(combobox, { key: "Enter" })`),
+y falta la captura de puntero (`hasPointerCapture`, `setPointerCapture`,
+`releasePointerCapture`: stubs en el `beforeAll` del test, como en `Invoicing.test.tsx`).
+
+El control positivo del escaner (`hardcoded.test.ts`) lee `src/test/fixtures/unmigrated-page.tsx.txt`,
+una copia congelada de `PortalBuilder` antes de migrarla: ya no queda ninguna pagina sin
+migrar que sirva de control. Es `.txt` a proposito, para que ni el typecheck ni el linter ni
+`MIGRATED` la traten como codigo de la app.
+
 ### Al encontrar texto en inglés en una pagina en español
 
 No es parte "ya traducida": es un bug (el ADR 0015 ya lo cuenta asi). Se traduce al

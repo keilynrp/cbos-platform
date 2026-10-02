@@ -128,11 +128,13 @@ describe("the scanner against a real migrated page", () => {
     expect(find(source).filter((f) => f !== "jsx-text: CBOS Platform")).toEqual([]);
   });
 
-  it("does find the strings in a page that is not migrated yet", () => {
+  it("does find the strings in a page that is not migrated", () => {
     // Control positivo sobre codigo real: si esto pasa a 0, el escaner esta roto.
-    // Hay que apuntarlo a la pagina sin migrar que quede mas tarde (hoy, la ultima
-    // del plan): al migrarla, este test falla y recuerda cambiarla.
-    const source = readFileSync(resolve(__dirname, "../pages/PortalBuilder.tsx"), "utf8");
+    // Antes apuntaba a la ultima pagina sin migrar del plan; al migrarla (tarea 9)
+    // ya no queda ninguna, asi que apunta a una copia congelada de `PortalBuilder`
+    // tal y como estaba antes. Es texto (`.tsx.txt`) para que ni el typecheck ni
+    // el linter ni el escaner de `MIGRATED` la traten como codigo de la app.
+    const source = readFileSync(resolve(__dirname, "fixtures/unmigrated-page.tsx.txt"), "utf8");
 
     expect(find(source).length).toBeGreaterThan(20);
   });

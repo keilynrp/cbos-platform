@@ -15,6 +15,7 @@ import inventory from "../locales/es/inventory.json";
 import invoicing from "../locales/es/invoicing.json";
 import layout from "../locales/es/layout.json";
 import sales from "../locales/es/sales.json";
+import portalBuilder from "../locales/es/portalBuilder.json";
 import projects from "../locales/es/projects.json";
 import settings from "../locales/es/settings.json";
 import workflows from "../locales/es/workflows.json";
@@ -49,6 +50,7 @@ declare module "i18next" {
       invoicing: typeof invoicing;
       layout: typeof layout;
       sales: typeof sales;
+      portalBuilder: typeof portalBuilder;
       projects: typeof projects;
       settings: typeof settings;
       workflows: typeof workflows;

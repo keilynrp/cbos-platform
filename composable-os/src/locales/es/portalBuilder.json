@@ -1,0 +1,277 @@
+{
+  "title": "Constructor de portales",
+  "subtitle": "Diseña portales de cliente y gestiona accesos por cotización.",
+  "tabs": {
+    "sessions": "Sesiones activas",
+    "builder": "Constructor de páginas"
+  },
+  "builder": {
+    "hint": "Arrastra bloques para construir la página del portal cliente.",
+    "edit": "Editar",
+    "preview": "Vista previa",
+    "viewport": {
+      "desktop": "Escritorio",
+      "tablet": "Tableta",
+      "mobile": "Móvil"
+    },
+    "all": "Todos",
+    "emptyCanvas": "Arrastra bloques aquí o haz clic en la paleta",
+    "properties": "Propiedades",
+    "selectBlock": "Selecciona un bloque para editarlo",
+    "toolbar": {
+      "moveUp": "Mover arriba",
+      "moveDown": "Mover abajo",
+      "duplicate": "Duplicar",
+      "remove": "Eliminar"
+    }
+  },
+  "categories": {
+    "layout": "Diseño",
+    "content": "Contenido",
+    "data": "Datos",
+    "navigation": "Navegación",
+    "shop": "Tienda"
+  },
+  "blockTypes": {
+    "section": "Sección",
+    "columns-2": "2 columnas",
+    "columns-3": "3 columnas",
+    "spacer": "Espaciador",
+    "divider": "Divisor",
+    "heading": "Título",
+    "text": "Bloque de texto",
+    "image": "Imagen",
+    "button": "Botón",
+    "card": "Tarjeta",
+    "list": "Lista",
+    "table": "Tabla de datos",
+    "chart": "Gráfico",
+    "kpi": "Tarjeta KPI",
+    "form": "Formulario",
+    "navbar": "Barra de navegación",
+    "breadcrumb": "Ruta de navegación",
+    "tabs-nav": "Pestañas",
+    "footer": "Pie de página",
+    "product-grid": "Cuadrícula de productos",
+    "cart-widget": "Carrito",
+    "checkout-form": "Formulario de pago",
+    "chatbot-widget": "Chatbot"
+  },
+  "defaults": {
+    "heading": { "text": "Texto del título" },
+    "text": { "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt." },
+    "image": { "alt": "Imagen" },
+    "button": { "text": "Haz clic aquí" },
+    "card": {
+      "title": "Título de la tarjeta",
+      "description": "La descripción de la tarjeta va aquí."
+    },
+    "list": {
+      "item1": "Elemento uno",
+      "item2": "Elemento dos",
+      "item3": "Elemento tres"
+    },
+    "table": {
+      "col1": "Nombre",
+      "col2": "Estado",
+      "col3": "Valor"
+    },
+    "chart": { "title": "Resumen de ingresos" },
+    "kpi": { "label": "Ingresos totales" },
+    "form": {
+      "field1": "Nombre",
+      "field2": "Correo",
+      "field3": "Mensaje",
+      "submit": "Enviar"
+    },
+    "navbar": {
+      "brand": "Mi portal",
+      "link1": "Inicio",
+      "link2": "Acerca de",
+      "link3": "Contacto"
+    },
+    "breadcrumb": {
+      "item1": "Inicio",
+      "item2": "Panel",
+      "item3": "Ajustes"
+    },
+    "tabsNav": {
+      "tab1": "Resumen",
+      "tab2": "Detalles",
+      "tab3": "Ajustes"
+    },
+    "footer": {
+      "text": "© {{year}} Composable OS. Todos los derechos reservados.",
+      "link1": "Privacidad",
+      "link2": "Términos"
+    },
+    "checkout": {
+      "step1": "Envío",
+      "step2": "Pago",
+      "step3": "Revisión",
+      "submit": "Realizar pedido"
+    },
+    "chatbot": {
+      "botName": "Asistente de soporte",
+      "greeting": "¡Hola! 👋 ¿En qué puedo ayudarte hoy?",
+      "placeholder": "Escribe un mensaje..."
+    }
+  },
+  "initial": {
+    "brand": "Portal del cliente",
+    "link1": "Panel",
+    "link2": "Documentos",
+    "link3": "Soporte",
+    "heading": "Te damos la bienvenida a tu portal",
+    "kpiLabel": "Proyectos activos",
+    "kpiChange": "+3 este mes"
+  },
+  "preview": {
+    "sectionBlock": "Bloque de sección",
+    "column": "Columna {{n}}",
+    "spacer": "Espaciador ({{height}})",
+    "sampleData": "Datos de ejemplo",
+    "enterField": "Ingresa {{field}}...",
+    "unknownBlock": "Bloque desconocido",
+    "product": "Producto {{n}}",
+    "addToCart": "Agregar al carrito",
+    "cart": {
+      "title": "Carrito de compras",
+      "items_one": "{{count}} artículo",
+      "items_other": "{{count}} artículos",
+      "item1": "Audífonos inalámbricos",
+      "item2": "Concentrador USB-C",
+      "item3": "Funda para teléfono",
+      "subtotal": "Subtotal"
+    },
+    "checkout": {
+      "title": "Pago",
+      "fullName": "Nombre completo",
+      "address": "Dirección",
+      "city": "Ciudad",
+      "zip": "Código postal",
+      "summary": "Resumen del pedido",
+      "items": "Artículos ({{count}})",
+      "shipping": "Envío",
+      "tax": "Impuestos",
+      "total": "Total",
+      "placeOrder": "Realizar pedido"
+    },
+    "chat": {
+      "status": "En línea · Suele responder al instante",
+      "quick1": "Información del producto",
+      "quick2": "Precios",
+      "quick3": "Soporte",
+      "userMessage": "Quisiera saber sobre los precios",
+      "botReply": "¡Buena pregunta! Tenemos 3 planes desde {{price}}. ¿Quieres que te ayude a elegir el mejor?"
+    }
+  },
+  "editor": {
+    "on": "Sí",
+    "off": "No",
+    "add": "Agregar",
+    "newItem": "Elemento nuevo",
+    "removeItem": "Quitar elemento"
+  },
+  "props": {
+    "padding": "Relleno",
+    "background": "Fondo",
+    "gap": "Separación",
+    "height": "Alto",
+    "width": "Ancho",
+    "color": "Color",
+    "text": "Texto",
+    "level": "Nivel",
+    "align": "Alineación",
+    "src": "Origen",
+    "alt": "Texto alternativo",
+    "variant": "Variante",
+    "size": "Tamaño",
+    "title": "Título",
+    "description": "Descripción",
+    "showImage": "Mostrar imagen",
+    "items": "Elementos",
+    "style": "Estilo",
+    "columns": "Columnas",
+    "rows": "Filas",
+    "chartType": "Tipo de gráfico",
+    "label": "Etiqueta",
+    "value": "Valor",
+    "change": "Cambio",
+    "fields": "Campos",
+    "submitText": "Texto del botón de envío",
+    "brand": "Marca",
+    "links": "Enlaces",
+    "tabs": "Pestañas",
+    "productsCount": "Cantidad de productos",
+    "showPrice": "Mostrar precio",
+    "showRating": "Mostrar valoración",
+    "showAddToCart": "Mostrar agregar al carrito",
+    "showThumbnails": "Mostrar miniaturas",
+    "showQuantity": "Mostrar cantidad",
+    "showSubtotal": "Mostrar subtotal",
+    "steps": "Pasos",
+    "showOrderSummary": "Mostrar resumen del pedido",
+    "botName": "Nombre del bot",
+    "greeting": "Saludo",
+    "position": "Posición",
+    "showAvatar": "Mostrar avatar",
+    "accentColor": "Color de acento",
+    "placeholder": "Texto de ayuda"
+  },
+  "options": {
+    "variant": {
+      "primary": "Primario",
+      "outline": "Contorno",
+      "secondary": "Secundario"
+    },
+    "align": {
+      "left": "Izquierda",
+      "center": "Centro",
+      "right": "Derecha"
+    },
+    "size": {
+      "sm": "Pequeño",
+      "md": "Mediano",
+      "lg": "Grande"
+    },
+    "chartType": {
+      "bar": "Barras",
+      "line": "Líneas",
+      "area": "Área"
+    },
+    "style": {
+      "bullet": "Viñetas",
+      "numbered": "Numerada"
+    }
+  },
+  "sessions": {
+    "count_one": "{{count}} sesión de portal",
+    "count_other": "{{count}} sesiones de portal",
+    "create": "Crear enlace de portal",
+    "dialogTitle": "Crear sesión de portal",
+    "quote": "Cotización *",
+    "quotePlaceholder": "Selecciona una cotización",
+    "clientName": "Nombre del cliente",
+    "clientNamePlaceholder": "Ej: Juan Pérez",
+    "clientEmail": "Email del cliente",
+    "clientEmailPlaceholder": "cliente@empresa.com",
+    "expireHours": "Expira en (horas)",
+    "submit": "Crear enlace",
+    "creating": "Creando...",
+    "empty": "Sin sesiones de portal aún.",
+    "emptyHint": "Crea un enlace para que tu cliente vea y acepte su cotización.",
+    "unnamed": "Cliente sin nombre",
+    "noEmail": "sin email",
+    "expires": "{{email}} · expira {{date}}",
+    "copy": "Copiar",
+    "view": "Ver",
+    "email": "Email"
+  },
+  "sessionStatus": {
+    "accepted": "Aceptado",
+    "rejected": "Rechazado",
+    "viewed": "Visto",
+    "pending": "Pendiente"
+  }
+}
