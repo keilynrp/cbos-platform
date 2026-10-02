@@ -7,6 +7,7 @@ import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n/useT";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -21,45 +22,53 @@ interface NavItem {
   icon: LucideIcon;
 }
 interface NavSection {
+  /** Identificador estable: la clave de React y de pruebas, no el texto. */
+  id: string;
   label: string;
   items: NavItem[];
 }
 
-const navSections: NavSection[] = [
-  {
-    label: "",
-    items: [
-      { title: "Dashboard", url: "/", icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: "Comercio",
-    items: [
-      { title: "CRM",           url: "/crm",            icon: Users },
-      { title: "Ventas",        url: "/sales",           icon: Receipt },
-      { title: "Inventario",    url: "/inventory",       icon: PackageSearch },
-      { title: "Portal",        url: "/portal-builder",  icon: PanelTop },
-      { title: "Facturacion",   url: "/invoicing",       icon: FileText },
-      { title: "Contratos",     url: "/contracts",       icon: ScrollText },
-      { title: "Proyectos",     url: "/projects",        icon: FolderKanban },
-      { title: "Equipo",        url: "/hr",              icon: UserCog },
-    ],
-  },
-  {
-    label: "Operaciones",
-    items: [
-      { title: "Workflows",  url: "/workflows",  icon: Zap },
-      { title: "Discovery",  url: "/discovery",   icon: Search },
-      { title: "Analitica",  url: "/analytics",   icon: BarChart3 },
-    ],
-  },
-  {
-    label: "Sistema",
-    items: [
-      { title: "Ajustes", url: "/settings", icon: Settings },
-    ],
-  },
-];
+function buildNavSections(t: ReturnType<typeof useT>): NavSection[] {
+  return [
+    {
+      id: "main",
+      label: "",
+      items: [
+        { title: t("layout:nav.items.dashboard"), url: "/", icon: LayoutDashboard },
+      ],
+    },
+    {
+      id: "commerce",
+      label: t("layout:nav.sections.commerce"),
+      items: [
+        { title: t("layout:nav.items.crm"),       url: "/crm",            icon: Users },
+        { title: t("layout:nav.items.sales"),     url: "/sales",          icon: Receipt },
+        { title: t("layout:nav.items.inventory"), url: "/inventory",      icon: PackageSearch },
+        { title: t("layout:nav.items.portal"),    url: "/portal-builder", icon: PanelTop },
+        { title: t("layout:nav.items.invoicing"), url: "/invoicing",      icon: FileText },
+        { title: t("layout:nav.items.contracts"), url: "/contracts",      icon: ScrollText },
+        { title: t("layout:nav.items.projects"),  url: "/projects",       icon: FolderKanban },
+        { title: t("layout:nav.items.team"),      url: "/hr",             icon: UserCog },
+      ],
+    },
+    {
+      id: "operations",
+      label: t("layout:nav.sections.operations"),
+      items: [
+        { title: t("layout:nav.items.workflows"), url: "/workflows", icon: Zap },
+        { title: t("layout:nav.items.discovery"), url: "/discovery", icon: Search },
+        { title: t("layout:nav.items.analytics"), url: "/analytics", icon: BarChart3 },
+      ],
+    },
+    {
+      id: "system",
+      label: t("layout:nav.sections.system"),
+      items: [
+        { title: t("layout:nav.items.settings"), url: "/settings", icon: Settings },
+      ],
+    },
+  ];
+}
 
 // ── NavItem component ──────────────────────────────────────────────────────
 function NavItemEl({
@@ -115,11 +124,15 @@ function NavItemEl({
 
 // ── AppSidebar ─────────────────────────────────────────────────────────────
 export function AppSidebar() {
+  const t = useT();
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
+  const navSections = buildNavSections(t);
+  const themeLabel = isDark ? t("layout:sidebar.lightMode") : t("layout:sidebar.darkMode");
+  const collapseLabel = collapsed ? t("layout:sidebar.expand") : t("layout:sidebar.collapse");
 
   function isActive(url: string) {
     return url === "/" ? location.pathname === "/" : location.pathname.startsWith(url);
@@ -141,10 +154,9 @@ export function AppSidebar() {
             {!collapsed && (
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">
-                  CBOS
-                </span>
+                  CBOS</span> {/* i18n-ok: nombre del producto */}
                 <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                  Business Platform
+                  {t("layout:brand.tagline")}
                 </span>
               </div>
             )}
@@ -154,7 +166,7 @@ export function AppSidebar() {
         {/* ── Nav ─────────────────────────────────────────────── */}
         <SidebarContent className="overflow-y-auto overflow-x-hidden px-3 pb-4 [scrollbar-width:thin] [scrollbar-color:theme(colors.gray.200)_transparent] dark:[scrollbar-color:theme(colors.gray.800)_transparent]">
           {navSections.map((section) => (
-            <div key={section.label || "__main"} className="mb-1">
+            <div key={section.id} className="mb-1">
               {/* Section label */}
               {section.label && !collapsed && (
                 <p className="mb-1 mt-4 px-3 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600">
@@ -189,6 +201,7 @@ export function AppSidebar() {
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <button
+                  aria-label={themeLabel}
                   onClick={() => setTheme(isDark ? "light" : "dark")}
                   className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300 transition-colors"
                 >
@@ -200,7 +213,7 @@ export function AppSidebar() {
                 </button>
               </TooltipTrigger>
               <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">
-                {isDark ? "Modo claro" : "Modo oscuro"}
+                {themeLabel}
               </TooltipContent>
             </Tooltip>
 
@@ -208,6 +221,7 @@ export function AppSidebar() {
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <button
+                  aria-label={collapseLabel}
                   onClick={toggleSidebar}
                   className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-gray-300 transition-colors"
                 >
@@ -219,7 +233,7 @@ export function AppSidebar() {
                 </button>
               </TooltipTrigger>
               <TooltipContent side={collapsed ? "right" : "top"} className="text-xs">
-                {collapsed ? "Expandir" : "Colapsar"}
+                {collapseLabel}
               </TooltipContent>
             </Tooltip>
           </div>

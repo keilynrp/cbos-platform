@@ -33,12 +33,19 @@ export const MIGRATED = [
   "pages/HR.tsx",
   "pages/Sales.tsx",
   "pages/QuoteDetail.tsx",
+  "pages/Invoicing.tsx",
+  "pages/PortalBuilder.tsx",
   "components/sales/QuoteStatusBadge.tsx",
   "components/LanguageSelector.tsx",
   "components/CloseLabel.tsx",
   "components/ui/dialog.tsx",
   "components/ui/sheet.tsx",
   "components/ui/sidebar.tsx",
+  "components/ui/pagination.tsx",
+  "components/ui/breadcrumb.tsx",
+  "components/ui/carousel.tsx",
+  "components/layout/AppSidebar.tsx",
+  "components/layout/AppLayout.tsx",
 ];
 
 describe("migrated pages keep every visible string in the catalogue", () => {

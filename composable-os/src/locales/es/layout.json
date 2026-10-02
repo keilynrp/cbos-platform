@@ -1,0 +1,44 @@
+{
+  "brand": {
+    "tagline": "Business Platform"
+  },
+  "nav": {
+    "sections": {
+      "commerce": "Comercio",
+      "operations": "Operaciones",
+      "system": "Sistema"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "crm": "CRM",
+      "sales": "Ventas",
+      "inventory": "Inventario",
+      "portal": "Portal",
+      "invoicing": "Facturación",
+      "contracts": "Contratos",
+      "projects": "Proyectos",
+      "team": "Equipo",
+      "workflows": "Workflows",
+      "discovery": "Discovery",
+      "analytics": "Analítica",
+      "settings": "Ajustes"
+    }
+  },
+  "sidebar": {
+    "lightMode": "Modo claro",
+    "darkMode": "Modo oscuro",
+    "expand": "Expandir",
+    "collapse": "Colapsar"
+  },
+  "header": {
+    "search": "Buscar en la plataforma...",
+    "user": "Usuario",
+    "logout": "Cerrar sesión"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "markAll": "Marcar todas",
+    "empty": "Sin notificaciones",
+    "dismiss": "Descartar"
+  }
+}

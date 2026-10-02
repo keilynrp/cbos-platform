@@ -9,9 +9,6 @@
  */
 import { useState, useCallback, useRef } from "react";
 import { useFormat } from "@/i18n/useFormat";
-import { useEnumLabel } from "@/i18n/enumLabel";
-import { useT } from "@/i18n/useT";
-import { translateApiError } from "@/lib/errors";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { portalService, CreateSessionDto } from "@/services/portal";
 import { salesService } from "@/services/sales";
@@ -76,12 +73,12 @@ type BlockType =
   | "navbar" | "sidebar-nav" | "footer" | "breadcrumb" | "tabs-nav"
   | "product-grid" | "cart-widget" | "checkout-form" | "chatbot-widget";
 
-type Translate = ReturnType<typeof useT>;
-
 interface BlockDef {
   type: BlockType;
+  label: string;
   icon: typeof Square;
   category: "layout" | "content" | "data" | "navigation" | "shop";
+  defaultProps: Record<string, any>;
 }
 
 interface CanvasBlock {
@@ -91,103 +88,38 @@ interface CanvasBlock {
   children?: CanvasBlock[];
 }
 
-// El nombre de cada bloque sale de `portalBuilder:blockTypes` y los textos de
-// ejemplo de `defaultProps`, que los genera al insertar el bloque.
 const blockDefs: BlockDef[] = [
   // Layout
-  { type: "section", icon: Square, category: "layout" },
-  { type: "columns-2", icon: Columns, category: "layout" },
-  { type: "columns-3", icon: LayoutGrid, category: "layout" },
-  { type: "spacer", icon: Minus, category: "layout" },
-  { type: "divider", icon: Minus, category: "layout" },
+  { type: "section", label: "Section", icon: Square, category: "layout", defaultProps: { padding: "32px", background: "transparent" } },
+  { type: "columns-2", label: "2 Columns", icon: Columns, category: "layout", defaultProps: { gap: "16px" } },
+  { type: "columns-3", label: "3 Columns", icon: LayoutGrid, category: "layout", defaultProps: { gap: "16px" } },
+  { type: "spacer", label: "Spacer", icon: Minus, category: "layout", defaultProps: { height: "40px" } },
+  { type: "divider", label: "Divider", icon: Minus, category: "layout", defaultProps: { color: "border" } },
   // Content
-  { type: "heading", icon: Heading, category: "content" },
-  { type: "text", icon: AlignLeft, category: "content" },
-  { type: "image", icon: Image, category: "content" },
-  { type: "button", icon: CircleDot, category: "content" },
-  { type: "card", icon: CreditCard, category: "content" },
-  { type: "list", icon: ListOrdered, category: "content" },
+  { type: "heading", label: "Heading", icon: Heading, category: "content", defaultProps: { text: "Heading Text", level: "h2", align: "left" } },
+  { type: "text", label: "Text Block", icon: AlignLeft, category: "content", defaultProps: { text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt.", align: "left" } },
+  { type: "image", label: "Image", icon: Image, category: "content", defaultProps: { src: "/placeholder.svg", alt: "Image", width: "100%", height: "200px" } },
+  { type: "button", label: "Button", icon: CircleDot, category: "content", defaultProps: { text: "Click Me", variant: "primary", size: "md", align: "left" } },
+  { type: "card", label: "Card", icon: CreditCard, category: "content", defaultProps: { title: "Card Title", description: "Card description goes here.", showImage: true } },
+  { type: "list", label: "List", icon: ListOrdered, category: "content", defaultProps: { items: ["Item one", "Item two", "Item three"], style: "bullet" } },
   // Data
-  { type: "table", icon: Table, category: "data" },
-  { type: "chart", icon: BarChart3, category: "data" },
-  { type: "kpi", icon: CreditCard, category: "data" },
-  { type: "form", icon: FormInput, category: "data" },
+  { type: "table", label: "Data Table", icon: Table, category: "data", defaultProps: { columns: ["Name", "Status", "Value"], rows: 4 } },
+  { type: "chart", label: "Chart", icon: BarChart3, category: "data", defaultProps: { chartType: "bar", title: "Revenue Overview" } },
+  { type: "kpi", label: "KPI Card", icon: CreditCard, category: "data", defaultProps: { label: "Total Revenue", value: "$84,200", change: "+12.5%" } },
+  { type: "form", label: "Form", icon: FormInput, category: "data", defaultProps: { fields: ["Name", "Email", "Message"], submitText: "Submit" } },
   // Navigation
-  { type: "navbar", icon: PanelTop, category: "navigation" },
-  { type: "breadcrumb", icon: ChevronRight, category: "navigation" },
-  { type: "tabs-nav", icon: TabsIcon, category: "navigation" },
-  { type: "footer", icon: PanelBottom, category: "navigation" },
+  { type: "navbar", label: "Navbar", icon: PanelTop, category: "navigation", defaultProps: { brand: "My Portal", links: ["Home", "About", "Contact"] } },
+  { type: "breadcrumb", label: "Breadcrumb", icon: ChevronRight, category: "navigation", defaultProps: { items: ["Home", "Dashboard", "Settings"] } },
+  { type: "tabs-nav", label: "Tabs", icon: TabsIcon, category: "navigation", defaultProps: { tabs: ["Overview", "Details", "Settings"] } },
+  { type: "footer", label: "Footer", icon: PanelBottom, category: "navigation", defaultProps: { text: "© 2026 Composable OS. All rights reserved.", links: ["Privacy", "Terms"] } },
   // Shop
-  { type: "product-grid", icon: ShoppingBag, category: "shop" },
-  { type: "cart-widget", icon: ShoppingCart, category: "shop" },
-  { type: "checkout-form", icon: ClipboardList, category: "shop" },
-  { type: "chatbot-widget", icon: MessageSquare, category: "shop" },
+  { type: "product-grid", label: "Product Grid", icon: ShoppingBag, category: "shop", defaultProps: { columns: 3, productsCount: 6, showPrice: true, showRating: true, showAddToCart: true } },
+  { type: "cart-widget", label: "Cart Widget", icon: ShoppingCart, category: "shop", defaultProps: { style: "sidebar", showThumbnails: true, showQuantity: true, showSubtotal: true } },
+  { type: "checkout-form", label: "Checkout Form", icon: ClipboardList, category: "shop", defaultProps: { steps: ["Shipping", "Payment", "Review"], showOrderSummary: true, submitText: "Place Order" } },
+  { type: "chatbot-widget", label: "Chatbot Widget", icon: MessageSquare, category: "shop", defaultProps: { botName: "Support Bot", greeting: "Hi! 👋 How can I help you today?", position: "bottom-right", showAvatar: true, accentColor: "primary", placeholder: "Type a message..." } },
 ];
 
-/**
- * Las props con las que nace un bloque. Los valores de control (`level`, `align`,
- * `variant`...) son identificadores y no se traducen; los textos de ejemplo si.
- */
-function defaultProps(type: BlockType, t: Translate): Record<string, any> {
-  switch (type) {
-    case "section": return { padding: "32px", background: "transparent" };
-    case "columns-2":
-    case "columns-3": return { gap: "16px" };
-    case "spacer": return { height: "40px" };
-    case "divider": return { color: "border" };
-    case "heading": return { text: t("portalBuilder:defaults.heading.text"), level: "h2", align: "left" };
-    case "text": return { text: t("portalBuilder:defaults.text.text"), align: "left" };
-    case "image": return { src: "/placeholder.svg", alt: t("portalBuilder:defaults.image.alt"), width: "100%", height: "200px" };
-    case "button": return { text: t("portalBuilder:defaults.button.text"), variant: "primary", size: "md", align: "left" };
-    case "card": return { title: t("portalBuilder:defaults.card.title"), description: t("portalBuilder:defaults.card.description"), showImage: true };
-    case "list": return {
-      items: [t("portalBuilder:defaults.list.item1"), t("portalBuilder:defaults.list.item2"), t("portalBuilder:defaults.list.item3")],
-      style: "bullet",
-    };
-    case "table": return {
-      columns: [t("portalBuilder:defaults.table.col1"), t("portalBuilder:defaults.table.col2"), t("portalBuilder:defaults.table.col3")],
-      rows: 4,
-    };
-    case "chart": return { chartType: "bar", title: t("portalBuilder:defaults.chart.title") };
-    case "kpi": return { label: t("portalBuilder:defaults.kpi.label"), value: "$84,200", change: "+12.5%" };
-    case "form": return {
-      fields: [t("portalBuilder:defaults.form.field1"), t("portalBuilder:defaults.form.field2"), t("portalBuilder:defaults.form.field3")],
-      submitText: t("portalBuilder:defaults.form.submit"),
-    };
-    case "navbar": return {
-      brand: t("portalBuilder:defaults.navbar.brand"),
-      links: [t("portalBuilder:defaults.navbar.link1"), t("portalBuilder:defaults.navbar.link2"), t("portalBuilder:defaults.navbar.link3")],
-    };
-    case "breadcrumb": return {
-      items: [t("portalBuilder:defaults.breadcrumb.item1"), t("portalBuilder:defaults.breadcrumb.item2"), t("portalBuilder:defaults.breadcrumb.item3")],
-    };
-    case "tabs-nav": return {
-      tabs: [t("portalBuilder:defaults.tabsNav.tab1"), t("portalBuilder:defaults.tabsNav.tab2"), t("portalBuilder:defaults.tabsNav.tab3")],
-    };
-    case "footer": return {
-      text: t("portalBuilder:defaults.footer.text", { year: new Date().getFullYear() }),
-      links: [t("portalBuilder:defaults.footer.link1"), t("portalBuilder:defaults.footer.link2")],
-    };
-    case "product-grid": return { columns: 3, productsCount: 6, showPrice: true, showRating: true, showAddToCart: true };
-    case "cart-widget": return { style: "sidebar", showThumbnails: true, showQuantity: true, showSubtotal: true };
-    case "checkout-form": return {
-      steps: [t("portalBuilder:defaults.checkout.step1"), t("portalBuilder:defaults.checkout.step2"), t("portalBuilder:defaults.checkout.step3")],
-      showOrderSummary: true,
-      submitText: t("portalBuilder:defaults.checkout.submit"),
-    };
-    case "chatbot-widget": return {
-      botName: t("portalBuilder:defaults.chatbot.botName"),
-      greeting: t("portalBuilder:defaults.chatbot.greeting"),
-      position: "bottom-right",
-      showAvatar: true,
-      accentColor: "primary",
-      placeholder: t("portalBuilder:defaults.chatbot.placeholder"),
-    };
-    default: return {};
-  }
-}
-
-const categoryKeys = ["layout", "content", "data", "navigation", "shop"] as const;
+const categoryLabels: Record<string, string> = { layout: "Layout", content: "Content", data: "Data", navigation: "Navigation", shop: "Shop" };
 const categoryIcons: Record<string, typeof LayoutGrid> = { layout: LayoutGrid, content: Type, data: BarChart3, navigation: Navigation, shop: ShoppingBag };
 
 let idCounter = 0;
@@ -196,8 +128,6 @@ const genId = () => `block-${++idCounter}`;
 // --- Block Renderers ---
 
 function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSelected: boolean; onClick: () => void }) {
-  const t = useT();
-  const label = useEnumLabel();
   const cls = `relative group cursor-pointer transition-all rounded-lg border-2 ${
     isSelected ? "border-primary ring-2 ring-primary/20" : "border-transparent hover:border-primary/30"
   }`;
@@ -207,7 +137,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
       return (
         <div className={cls} style={{ padding: block.props.padding, background: block.props.background }} onClick={onClick}>
           <div className="min-h-[60px] rounded-md border border-dashed border-border/60 flex items-center justify-center text-xs text-muted-foreground">
-            {t("portalBuilder:preview.sectionBlock")}
+            Section Block
           </div>
           <BlockOverlay block={block} isSelected={isSelected} />
         </div>
@@ -216,8 +146,8 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
       return (
         <div className={cls} onClick={onClick}>
           <div className="grid grid-cols-2 gap-4 p-4">
-            <div className="min-h-[80px] rounded-md border border-dashed border-border/60 flex items-center justify-center text-xs text-muted-foreground">{t("portalBuilder:preview.column", { n: 1 })}</div>
-            <div className="min-h-[80px] rounded-md border border-dashed border-border/60 flex items-center justify-center text-xs text-muted-foreground">{t("portalBuilder:preview.column", { n: 2 })}</div>
+            <div className="min-h-[80px] rounded-md border border-dashed border-border/60 flex items-center justify-center text-xs text-muted-foreground">Column 1</div>
+            <div className="min-h-[80px] rounded-md border border-dashed border-border/60 flex items-center justify-center text-xs text-muted-foreground">Column 2</div>
           </div>
           <BlockOverlay block={block} isSelected={isSelected} />
         </div>
@@ -227,7 +157,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
         <div className={cls} onClick={onClick}>
           <div className="grid grid-cols-3 gap-4 p-4">
             {[1, 2, 3].map(i => (
-              <div key={i} className="min-h-[80px] rounded-md border border-dashed border-border/60 flex items-center justify-center text-xs text-muted-foreground">{t("portalBuilder:preview.column", { n: i })}</div>
+              <div key={i} className="min-h-[80px] rounded-md border border-dashed border-border/60 flex items-center justify-center text-xs text-muted-foreground">Col {i}</div>
             ))}
           </div>
           <BlockOverlay block={block} isSelected={isSelected} />
@@ -236,7 +166,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
     case "spacer":
       return (
         <div className={`${cls} flex items-center justify-center`} style={{ height: block.props.height }} onClick={onClick}>
-          <span className="text-[10px] text-muted-foreground/40">{t("portalBuilder:preview.spacer", { height: block.props.height })}</span>
+          <span className="text-[10px] text-muted-foreground/40">Spacer ({block.props.height})</span>
           <BlockOverlay block={block} isSelected={isSelected} />
         </div>
       );
@@ -322,7 +252,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
               <tbody>
                 {Array.from({ length: block.props.rows }).map((_, ri) => (
                   <tr key={ri} className="border-t border-border/40">
-                    {block.props.columns.map((col: string, ci: number) => <td key={ci} className="p-2 text-muted-foreground">{t("portalBuilder:preview.sampleData")}</td>)}
+                    {block.props.columns.map((col: string, ci: number) => <td key={ci} className="p-2 text-muted-foreground">Sample data</td>)}
                   </tr>
                 ))}
               </tbody>
@@ -370,7 +300,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
               {block.props.fields.map((f: string) => (
                 <div key={f} className="space-y-1">
                   <Label className="text-xs">{f}</Label>
-                  <Input className="h-8 text-sm" placeholder={t("portalBuilder:preview.enterField", { field: f.toLowerCase() })} />
+                  <Input className="h-8 text-sm" placeholder={`Enter ${f.toLowerCase()}...`} />
                 </div>
               ))}
               <Button size="sm" className="w-full">{block.props.submitText}</Button>
@@ -431,7 +361,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
     case "product-grid": {
       const cols = block.props.columns || 3;
       const mockProducts = Array.from({ length: block.props.productsCount || 6 }, (_, i) => ({
-        name: t("portalBuilder:preview.product", { n: i + 1 }),
+        name: `Product ${i + 1}`,
         price: `$${(19.99 + i * 10).toFixed(2)}`,
         rating: (4 + Math.random()).toFixed(1),
       }));
@@ -439,8 +369,8 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
         <div className={`${cls} p-4`} onClick={onClick}>
           <div className="flex items-center gap-2 mb-3">
             <ShoppingBag className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">{label("portalBuilder:blockTypes", "product-grid")}</span>
-            <Badge variant="outline" className="text-[9px]">{label("portalBuilder:categories", "shop")}</Badge>
+            <span className="text-sm font-semibold">Product Grid</span>
+            <Badge variant="outline" className="text-[9px]">Shop</Badge>
           </div>
           <div className={`grid gap-3`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
             {mockProducts.map((p, i) => (
@@ -453,7 +383,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
                   {block.props.showPrice && <p className="text-xs font-bold text-primary">{p.price}</p>}
                   {block.props.showRating && <p className="text-[10px] text-muted-foreground">★ {p.rating}</p>}
                   {block.props.showAddToCart && (
-                    <button className="w-full mt-1 text-[10px] bg-primary text-primary-foreground rounded py-1 font-medium">{t("portalBuilder:preview.addToCart")}</button>
+                    <button className="w-full mt-1 text-[10px] bg-primary text-primary-foreground rounded py-1 font-medium">Add to Cart</button>
                   )}
                 </CardContent>
               </Card>
@@ -470,12 +400,12 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold">{t("portalBuilder:preview.cart.title")}</span>
-                <Badge variant="outline" className="text-[9px]">{label("portalBuilder:categories", "shop")}</Badge>
-                <span className="ml-auto text-xs text-muted-foreground">{t("portalBuilder:preview.cart.items", { count: 3 })}</span>
+                <span className="text-sm font-semibold">Shopping Cart</span>
+                <Badge variant="outline" className="text-[9px]">Shop</Badge>
+                <span className="ml-auto text-xs text-muted-foreground">3 items</span>
               </div>
               <Separator />
-              {[t("portalBuilder:preview.cart.item1"), t("portalBuilder:preview.cart.item2"), t("portalBuilder:preview.cart.item3")].map((item, i) => (
+              {["Wireless Headphones", "USB-C Hub", "Phone Case"].map((item, i) => (
                 <div key={i} className="flex items-center gap-3">
                   {block.props.showThumbnails && (
                     <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0">
@@ -497,7 +427,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
                 <>
                   <Separator />
                   <div className="flex justify-between text-xs font-semibold">
-                    <span>{t("portalBuilder:preview.cart.subtotal")}</span><span>$84.96</span>
+                    <span>Subtotal</span><span>$84.96</span>
                   </div>
                 </>
               )}
@@ -513,8 +443,8 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
             <CardContent className="p-4 space-y-4">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-primary" />
-                <span className="text-sm font-semibold">{t("portalBuilder:preview.checkout.title")}</span>
-                <Badge variant="outline" className="text-[9px]">{label("portalBuilder:categories", "shop")}</Badge>
+                <span className="text-sm font-semibold">Checkout</span>
+                <Badge variant="outline" className="text-[9px]">Shop</Badge>
               </div>
               {/* Step indicators */}
               <div className="flex gap-1">
@@ -531,12 +461,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
               <Separator />
               {/* Shipping fields */}
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  t("portalBuilder:preview.checkout.fullName"),
-                  t("portalBuilder:preview.checkout.address"),
-                  t("portalBuilder:preview.checkout.city"),
-                  t("portalBuilder:preview.checkout.zip"),
-                ].map(f => (
+                {["Full Name", "Address", "City", "Zip Code"].map(f => (
                   <div key={f} className="space-y-1">
                     <Label className="text-[10px]">{f}</Label>
                     <Input className="h-7 text-xs" placeholder={f} />
@@ -545,15 +470,15 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
               </div>
               {block.props.showOrderSummary && (
                 <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
-                  <p className="text-[10px] font-semibold">{t("portalBuilder:preview.checkout.summary")}</p>
-                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>{t("portalBuilder:preview.checkout.items", { count: 3 })}</span><span>$84.96</span></div>
-                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>{t("portalBuilder:preview.checkout.shipping")}</span><span>$5.99</span></div>
-                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>{t("portalBuilder:preview.checkout.tax")}</span><span>$7.65</span></div>
+                  <p className="text-[10px] font-semibold">Order Summary</p>
+                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>Items (3)</span><span>$84.96</span></div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>Shipping</span><span>$5.99</span></div>
+                  <div className="flex justify-between text-[10px] text-muted-foreground"><span>Tax</span><span>$7.65</span></div>
                   <Separator />
-                  <div className="flex justify-between text-xs font-bold"><span>{t("portalBuilder:preview.checkout.total")}</span><span>$98.60</span></div>
+                  <div className="flex justify-between text-xs font-bold"><span>Total</span><span>$98.60</span></div>
                 </div>
               )}
-              <Button size="sm" className="w-full">{block.props.submitText || t("portalBuilder:preview.checkout.placeOrder")}</Button>
+              <Button size="sm" className="w-full">{block.props.submitText || "Place Order"}</Button>
             </CardContent>
           </Card>
           <BlockOverlay block={block} isSelected={isSelected} />
@@ -573,7 +498,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-semibold">{block.props.botName}</p>
-                  <p className="text-[9px] opacity-80">{t("portalBuilder:preview.chat.status")}</p>
+                  <p className="text-[9px] opacity-80">Online · Typically replies instantly</p>
                 </div>
                 <X className="h-3.5 w-3.5 opacity-60 cursor-pointer" />
               </div>
@@ -590,14 +515,14 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
                 </div>
                 {/* Quick replies */}
                 <div className="flex flex-wrap gap-1 pl-7">
-                  {[t("portalBuilder:preview.chat.quick1"), t("portalBuilder:preview.chat.quick2"), t("portalBuilder:preview.chat.quick3")].map(q => (
+                  {["Product info", "Pricing", "Support"].map(q => (
                     <span key={q} className="text-[9px] px-2 py-1 rounded-full border border-primary/30 text-primary cursor-pointer hover:bg-primary/5">{q}</span>
                   ))}
                 </div>
                 {/* User message */}
                 <div className="flex justify-end">
                   <div className="bg-primary text-primary-foreground rounded-xl rounded-tr-sm px-3 py-2 max-w-[85%]">
-                    <p className="text-[10px]">{t("portalBuilder:preview.chat.userMessage")}</p>
+                    <p className="text-[10px]">I'd like to know about pricing</p>
                   </div>
                 </div>
                 {/* Bot reply */}
@@ -606,7 +531,7 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
                     <Bot className="h-2.5 w-2.5 text-primary" />
                   </div>
                   <div className="bg-muted/60 rounded-xl rounded-tl-sm px-3 py-2 max-w-[85%]">
-                    <p className="text-[10px] leading-relaxed">{t("portalBuilder:preview.chat.botReply", { price: "$29/mo" })}</p>
+                    <p className="text-[10px] leading-relaxed">Great question! We have 3 plans starting at <strong>$29/mo</strong>. Want me to help you find the best fit?</p>
                   </div>
                 </div>
               </div>
@@ -623,15 +548,15 @@ function RenderBlock({ block, isSelected, onClick }: { block: CanvasBlock; isSel
         </div>
       );
     default:
-      return <div className={cls} onClick={onClick}><p className="text-xs text-muted-foreground p-4">{t("portalBuilder:preview.unknownBlock")}</p></div>;
+      return <div className={cls} onClick={onClick}><p className="text-xs text-muted-foreground p-4">Unknown block</p></div>;
   }
 }
 
 function BlockOverlay({ block, isSelected }: { block: CanvasBlock; isSelected: boolean }) {
-  const label = useEnumLabel();
+  const def = blockDefs.find(d => d.type === block.type);
   return (
     <div className={`absolute top-0 right-0 flex items-center gap-0.5 p-1 rounded-bl-lg rounded-tr-lg transition-opacity ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"} bg-primary text-primary-foreground`}>
-      <span className="text-[9px] font-medium px-1.5">{label("portalBuilder:blockTypes", block.type)}</span>
+      <span className="text-[9px] font-medium px-1.5">{def?.label}</span>
     </div>
   );
 }
@@ -639,19 +564,8 @@ function BlockOverlay({ block, isSelected }: { block: CanvasBlock; isSelected: b
 // --- Property Editor ---
 
 function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (props: Record<string, any>) => void }) {
-  const t = useT();
-  const label = useEnumLabel();
   const def = blockDefs.find(d => d.type === block.type);
   if (!def) return null;
-
-  // El nombre de cada propiedad sale del catalogo; una que el catalogo no
-  // conoce cae a su clave con la primera letra en mayuscula, no a un hueco.
-  const propLabel = (key: string) => {
-    const text = label("portalBuilder:props", key);
-    if (text !== key) return text;
-    const spaced = key.replace(/([A-Z])/g, " $1");
-    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-  };
 
   const update = (key: string, value: any) => onChange({ ...block.props, [key]: value });
 
@@ -659,14 +573,14 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <def.icon className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold">{label("portalBuilder:blockTypes", block.type)}</span>
+        <span className="text-sm font-semibold">{def.label}</span>
       </div>
       <Separator />
       {Object.entries(block.props).map(([key, value]) => {
         if (Array.isArray(value)) {
           return (
             <div key={key} className="space-y-1.5">
-              <Label className="text-xs">{propLabel(key)}</Label>
+              <Label className="text-xs capitalize">{key.replace(/([A-Z])/g, " $1")}</Label>
               {value.map((item: string, i: number) => (
                 <div key={i} className="flex gap-1">
                   <Input
@@ -678,13 +592,13 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
                       update(key, arr);
                     }}
                   />
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" aria-label={t("portalBuilder:editor.removeItem")} onClick={() => update(key, value.filter((_: any, j: number) => j !== i))}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => update(key, value.filter((_: any, j: number) => j !== i))}>
                     <X className="h-3 w-3" />
                   </Button>
                 </div>
               ))}
-              <Button variant="outline" size="sm" className="h-6 text-[10px] w-full" onClick={() => update(key, [...value, t("portalBuilder:editor.newItem")])}>
-                <Plus className="h-3 w-3 mr-1" /> {t("portalBuilder:editor.add")}
+              <Button variant="outline" size="sm" className="h-6 text-[10px] w-full" onClick={() => update(key, [...value, "New item"])}>
+                <Plus className="h-3 w-3 mr-1" /> Add
               </Button>
             </div>
           );
@@ -692,9 +606,9 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
         if (typeof value === "boolean") {
           return (
             <div key={key} className="flex items-center justify-between">
-              <Label className="text-xs">{propLabel(key)}</Label>
+              <Label className="text-xs capitalize">{key.replace(/([A-Z])/g, " $1")}</Label>
               <Button variant={value ? "default" : "outline"} size="sm" className="h-6 text-[10px]" onClick={() => update(key, !value)}>
-                {value ? t("portalBuilder:editor.on") : t("portalBuilder:editor.off")}
+                {value ? "On" : "Off"}
               </Button>
             </div>
           );
@@ -702,7 +616,7 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
         if (typeof value === "number") {
           return (
             <div key={key} className="space-y-1">
-              <Label className="text-xs">{propLabel(key)}</Label>
+              <Label className="text-xs capitalize">{key.replace(/([A-Z])/g, " $1")}</Label>
               <Input type="number" className="h-7 text-xs" value={value} onChange={e => update(key, parseInt(e.target.value) || 0)} />
             </div>
           );
@@ -710,11 +624,11 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
         if (key === "variant") {
           return (
             <div key={key} className="space-y-1">
-              <Label className="text-xs">{propLabel("variant")}</Label>
+              <Label className="text-xs">Variant</Label>
               <Select value={value as string} onValueChange={v => update(key, v)}>
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["primary", "outline", "secondary"].map(v => <SelectItem key={v} value={v}>{label("portalBuilder:options.variant", v)}</SelectItem>)}
+                  {["primary", "outline", "secondary"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -723,7 +637,7 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
         if (key === "level") {
           return (
             <div key={key} className="space-y-1">
-              <Label className="text-xs">{propLabel("level")}</Label>
+              <Label className="text-xs">Level</Label>
               <Select value={value as string} onValueChange={v => update(key, v)}>
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -736,11 +650,11 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
         if (key === "align") {
           return (
             <div key={key} className="space-y-1">
-              <Label className="text-xs">{propLabel("align")}</Label>
+              <Label className="text-xs">Align</Label>
               <Select value={value as string} onValueChange={v => update(key, v)}>
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["left", "center", "right"].map(v => <SelectItem key={v} value={v}>{label("portalBuilder:options.align", v)}</SelectItem>)}
+                  {["left", "center", "right"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -749,11 +663,11 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
         if (key === "size") {
           return (
             <div key={key} className="space-y-1">
-              <Label className="text-xs">{propLabel("size")}</Label>
+              <Label className="text-xs">Size</Label>
               <Select value={value as string} onValueChange={v => update(key, v)}>
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["sm", "md", "lg"].map(v => <SelectItem key={v} value={v}>{label("portalBuilder:options.size", v)}</SelectItem>)}
+                  {["sm", "md", "lg"].map(v => <SelectItem key={v} value={v}>{v.toUpperCase()}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -762,11 +676,11 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
         if (key === "chartType") {
           return (
             <div key={key} className="space-y-1">
-              <Label className="text-xs">{propLabel("chartType")}</Label>
+              <Label className="text-xs">Chart Type</Label>
               <Select value={value as string} onValueChange={v => update(key, v)}>
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["bar", "line", "area"].map(v => <SelectItem key={v} value={v}>{label("portalBuilder:options.chartType", v)}</SelectItem>)}
+                  {["bar", "line", "area"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -775,11 +689,11 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
         if (key === "style") {
           return (
             <div key={key} className="space-y-1">
-              <Label className="text-xs">{propLabel("style")}</Label>
+              <Label className="text-xs">Style</Label>
               <Select value={value as string} onValueChange={v => update(key, v)}>
                 <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["bullet", "numbered"].map(v => <SelectItem key={v} value={v}>{label("portalBuilder:options.style", v)}</SelectItem>)}
+                  {["bullet", "numbered"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -788,7 +702,7 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
         // Default: text input
         return (
           <div key={key} className="space-y-1">
-            <Label className="text-xs">{propLabel(key)}</Label>
+            <Label className="text-xs capitalize">{key.replace(/([A-Z])/g, " $1")}</Label>
             <Input className="h-7 text-xs" value={value as string} onChange={e => update(key, e.target.value)} />
           </div>
         );
@@ -800,20 +714,11 @@ function PropertyEditor({ block, onChange }: { block: CanvasBlock; onChange: (pr
 // --- Main Page ---
 
 const PortalBuilder = () => {
-  const t = useT();
-  const label = useEnumLabel();
-  const [blocks, setBlocks] = useState<CanvasBlock[]>(() => [
-    {
-      id: genId(),
-      type: "navbar",
-      props: {
-        brand: t("portalBuilder:initial.brand"),
-        links: [t("portalBuilder:initial.link1"), t("portalBuilder:initial.link2"), t("portalBuilder:initial.link3")],
-      },
-    },
-    { id: genId(), type: "heading", props: { text: t("portalBuilder:initial.heading"), level: "h1", align: "left" } },
+  const [blocks, setBlocks] = useState<CanvasBlock[]>([
+    { id: genId(), type: "navbar", props: { brand: "Client Portal", links: ["Dashboard", "Documents", "Support"] } },
+    { id: genId(), type: "heading", props: { text: "Welcome to Your Portal", level: "h1", align: "left" } },
     { id: genId(), type: "columns-3", props: { gap: "16px" } },
-    { id: genId(), type: "kpi", props: { label: t("portalBuilder:initial.kpiLabel"), value: "12", change: t("portalBuilder:initial.kpiChange") } },
+    { id: genId(), type: "kpi", props: { label: "Active Projects", value: "12", change: "+3 this month" } },
   ]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
@@ -827,7 +732,7 @@ const PortalBuilder = () => {
   const addBlock = useCallback((type: BlockType, index?: number) => {
     const def = blockDefs.find(d => d.type === type);
     if (!def) return;
-    const newBlock: CanvasBlock = { id: genId(), type, props: defaultProps(type, t) };
+    const newBlock: CanvasBlock = { id: genId(), type, props: { ...def.defaultProps } };
     setBlocks(prev => {
       const i = index !== undefined ? index : prev.length;
       const next = [...prev];
@@ -835,7 +740,7 @@ const PortalBuilder = () => {
       return next;
     });
     setSelectedId(newBlock.id);
-  }, [t]);
+  }, []);
 
   const removeBlock = useCallback((id: string) => {
     setBlocks(prev => prev.filter(b => b.id !== id));
@@ -889,14 +794,14 @@ const PortalBuilder = () => {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("portalBuilder:title")}</h1>
-        <p className="text-muted-foreground text-sm mt-1">{t("portalBuilder:subtitle")}</p>
+        <h1 className="text-2xl font-bold tracking-tight">Portal Builder</h1>
+        <p className="text-muted-foreground text-sm mt-1">Diseña portales de cliente y gestiona accesos por cotización.</p>
       </div>
 
       <Tabs defaultValue="sessions">
       <TabsList className="mb-2">
-        <TabsTrigger value="sessions">{t("portalBuilder:tabs.sessions")}</TabsTrigger>
-        <TabsTrigger value="builder">{t("portalBuilder:tabs.builder")}</TabsTrigger>
+        <TabsTrigger value="sessions">Sesiones activas</TabsTrigger>
+        <TabsTrigger value="builder">Page Builder</TabsTrigger>
       </TabsList>
 
       {/* ── Sessions tab ───────────────────────────────────────── */}
@@ -910,7 +815,7 @@ const PortalBuilder = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">{t("portalBuilder:builder.hint")}</p>
+          <p className="text-sm text-muted-foreground">Arrastra bloques para construir la página del portal cliente.</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Viewport toggle */}
@@ -920,7 +825,7 @@ const PortalBuilder = () => {
               { v: "tablet" as const, icon: Tablet },
               { v: "mobile" as const, icon: Smartphone },
             ].map(({ v, icon: Icon }) => (
-              <Button key={v} variant={viewport === v ? "default" : "ghost"} size="icon" className="h-7 w-7" aria-label={t(`portalBuilder:builder.viewport.${v}`)} onClick={() => setViewport(v)}>
+              <Button key={v} variant={viewport === v ? "default" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setViewport(v)}>
                 <Icon className="h-3.5 w-3.5" />
               </Button>
             ))}
@@ -928,10 +833,10 @@ const PortalBuilder = () => {
           {/* Mode toggle */}
           <div className="flex items-center border border-border rounded-lg p-0.5 gap-0.5">
             <Button variant={mode === "edit" ? "default" : "ghost"} size="sm" className="h-7 text-xs gap-1" onClick={() => setMode("edit")}>
-              <Pencil className="h-3 w-3" /> {t("portalBuilder:builder.edit")}
+              <Pencil className="h-3 w-3" /> Edit
             </Button>
             <Button variant={mode === "preview" ? "default" : "ghost"} size="sm" className="h-7 text-xs gap-1" onClick={() => setMode("preview")}>
-              <Eye className="h-3 w-3" /> {t("portalBuilder:builder.preview")}
+              <Eye className="h-3 w-3" /> Preview
             </Button>
           </div>
         </div>
@@ -943,9 +848,9 @@ const PortalBuilder = () => {
         {mode === "edit" && (
           <div className="w-56 shrink-0 overflow-y-auto space-y-3">
             <div className="flex flex-wrap gap-1">
-              <Button variant={paletteCategory === "all" ? "default" : "outline"} size="sm" className="h-6 text-[10px]" onClick={() => setPaletteCategory("all")}>{t("portalBuilder:builder.all")}</Button>
-              {categoryKeys.map((key) => (
-                <Button key={key} variant={paletteCategory === key ? "default" : "outline"} size="sm" className="h-6 text-[10px]" onClick={() => setPaletteCategory(key)}>{label("portalBuilder:categories", key)}</Button>
+              <Button variant={paletteCategory === "all" ? "default" : "outline"} size="sm" className="h-6 text-[10px]" onClick={() => setPaletteCategory("all")}>All</Button>
+              {Object.entries(categoryLabels).map(([key, label]) => (
+                <Button key={key} variant={paletteCategory === key ? "default" : "outline"} size="sm" className="h-6 text-[10px]" onClick={() => setPaletteCategory(key)}>{label}</Button>
               ))}
             </div>
             <div className="grid grid-cols-2 gap-1.5">
@@ -959,7 +864,7 @@ const PortalBuilder = () => {
                   className="flex flex-col items-center gap-1.5 p-2.5 rounded-lg border border-border/60 bg-card hover:border-primary/30 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-center"
                 >
                   <def.icon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-[10px] font-medium leading-tight">{label("portalBuilder:blockTypes", def.type)}</span>
+                  <span className="text-[10px] font-medium leading-tight">{def.label}</span>
                 </div>
               ))}
             </div>
@@ -976,7 +881,7 @@ const PortalBuilder = () => {
                 onDrop={e => handleDrop(e, 0)}
               >
                 <MousePointer className="h-8 w-8 opacity-30" />
-                <p className="text-sm">{t("portalBuilder:builder.emptyCanvas")}</p>
+                <p className="text-sm">Drag blocks here or click from the palette</p>
               </div>
             ) : (
               <div className="space-y-0">
@@ -997,11 +902,11 @@ const PortalBuilder = () => {
                       {/* Block toolbar */}
                       {mode === "edit" && selectedId === block.id && (
                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex items-center gap-0.5 bg-card border border-border rounded-lg shadow-md p-0.5 z-10">
-                          <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t("portalBuilder:builder.toolbar.moveUp")} onClick={() => moveBlock(block.id, -1)}><MoveUp className="h-3 w-3" /></Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t("portalBuilder:builder.toolbar.moveDown")} onClick={() => moveBlock(block.id, 1)}><MoveDown className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveBlock(block.id, -1)}><MoveUp className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => moveBlock(block.id, 1)}><MoveDown className="h-3 w-3" /></Button>
                           <Separator orientation="vertical" className="h-4" />
-                          <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t("portalBuilder:builder.toolbar.duplicate")} onClick={() => duplicateBlock(block.id)}><Copy className="h-3 w-3" /></Button>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" aria-label={t("portalBuilder:builder.toolbar.remove")} onClick={() => removeBlock(block.id)}><Trash2 className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => duplicateBlock(block.id)}><Copy className="h-3 w-3" /></Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => removeBlock(block.id)}><Trash2 className="h-3 w-3" /></Button>
                         </div>
                       )}
                     </div>
@@ -1024,8 +929,8 @@ const PortalBuilder = () => {
             {selectedBlock ? (
               <Card className="border border-border/60">
                 <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
-                  <CardTitle className="text-xs font-semibold">{t("portalBuilder:builder.properties")}</CardTitle>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={t("common:close")} onClick={() => setSelectedId(null)}>
+                  <CardTitle className="text-xs font-semibold">Properties</CardTitle>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedId(null)}>
                     <X className="h-3 w-3" />
                   </Button>
                 </CardHeader>
@@ -1036,7 +941,7 @@ const PortalBuilder = () => {
             ) : (
               <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
                 <MousePointer className="h-6 w-6 opacity-30 mb-2" />
-                <p className="text-xs">{t("portalBuilder:builder.selectBlock")}</p>
+                <p className="text-xs">Select a block to edit</p>
               </div>
             )}
           </div>
@@ -1052,7 +957,6 @@ const PortalBuilder = () => {
 // ── Portal Sessions component ─────────────────────────────────────────────────
 
 function PortalSessions() {
-  const t = useT();
   const { formatDate } = useFormat();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -1090,29 +994,29 @@ function PortalSessions() {
   };
 
   const statusLabel = (action: string | null, accessed_at: string | null) => {
-    if (action === "accepted") return <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">{t("portalBuilder:sessionStatus.accepted")}</Badge>;
-    if (action === "rejected") return <Badge className="bg-red-100 text-red-800 text-[10px]">{t("portalBuilder:sessionStatus.rejected")}</Badge>;
-    if (accessed_at) return <Badge className="bg-blue-100 text-blue-800 text-[10px]">{t("portalBuilder:sessionStatus.viewed")}</Badge>;
-    return <Badge variant="outline" className="text-[10px]">{t("portalBuilder:sessionStatus.pending")}</Badge>;
+    if (action === "accepted") return <Badge className="bg-emerald-100 text-emerald-800 text-[10px]">Aceptado</Badge>;
+    if (action === "rejected") return <Badge className="bg-red-100 text-red-800 text-[10px]">Rechazado</Badge>;
+    if (accessed_at) return <Badge className="bg-blue-100 text-blue-800 text-[10px]">Visto</Badge>;
+    return <Badge variant="outline" className="text-[10px]">Pendiente</Badge>;
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{t("portalBuilder:sessions.count", { count: sessions.length })}</p>
+        <p className="text-sm text-muted-foreground">{sessions.length} sesiones de portal</p>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-2"><Link2 className="h-4 w-4" /> {t("portalBuilder:sessions.create")}</Button>
+            <Button size="sm" className="gap-2"><Link2 className="h-4 w-4" /> Crear enlace de portal</Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>{t("portalBuilder:sessions.dialogTitle")}</DialogTitle>
+              <DialogTitle>Crear sesión de portal</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
               <div className="space-y-1.5">
-                <Label>{t("portalBuilder:sessions.quote")}</Label>
+                <Label>Cotización *</Label>
                 <Select value={form.quote_id} onValueChange={(v) => setForm(f => ({ ...f, quote_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder={t("portalBuilder:sessions.quotePlaceholder")} /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecciona una cotización" /></SelectTrigger>
                   <SelectContent>
                     {quotes.map((q) => (
                       <SelectItem key={q.id} value={q.id}>
@@ -1123,23 +1027,23 @@ function PortalSessions() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>{t("portalBuilder:sessions.clientName")}</Label>
-                <Input placeholder={t("portalBuilder:sessions.clientNamePlaceholder")} value={form.client_name ?? ""} onChange={e => setForm(f => ({ ...f, client_name: e.target.value }))} />
+                <Label>Nombre del cliente</Label>
+                <Input placeholder="Ej: Juan Pérez" value={form.client_name ?? ""} onChange={e => setForm(f => ({ ...f, client_name: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>{t("portalBuilder:sessions.clientEmail")}</Label>
-                <Input type="email" placeholder={t("portalBuilder:sessions.clientEmailPlaceholder")} value={form.client_email ?? ""} onChange={e => setForm(f => ({ ...f, client_email: e.target.value }))} />
+                <Label>Email del cliente</Label>
+                <Input type="email" placeholder="cliente@empresa.com" value={form.client_email ?? ""} onChange={e => setForm(f => ({ ...f, client_email: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
-                <Label>{t("portalBuilder:sessions.expireHours")}</Label>
+                <Label>Expira en (horas)</Label>
                 <Input type="number" min={1} value={form.expire_hours} onChange={e => setForm(f => ({ ...f, expire_hours: Number(e.target.value) }))} />
               </div>
               <Button className="w-full" disabled={!form.quote_id || createMutation.isPending}
                 onClick={() => createMutation.mutate(form)}>
-                {createMutation.isPending ? t("portalBuilder:sessions.creating") : t("portalBuilder:sessions.submit")}
+                {createMutation.isPending ? "Creando..." : "Crear enlace"}
               </Button>
               {createMutation.isError && (
-                <p className="text-xs text-destructive">{translateApiError(createMutation.error)}</p>
+                <p className="text-xs text-destructive">{String(createMutation.error)}</p>
               )}
             </div>
           </DialogContent>
@@ -1151,8 +1055,8 @@ function PortalSessions() {
       ) : sessions.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground border rounded-xl">
           <Link2 className="h-8 w-8 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">{t("portalBuilder:sessions.empty")}</p>
-          <p className="text-xs mt-1">{t("portalBuilder:sessions.emptyHint")}</p>
+          <p className="text-sm">Sin sesiones de portal aún.</p>
+          <p className="text-xs mt-1">Crea un enlace para que tu cliente vea y acepte su cotización.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -1163,29 +1067,29 @@ function PortalSessions() {
                   <div className="shrink-0">{statusIcon(s.action, s.completed_at)}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium">{s.client_name ?? t("portalBuilder:sessions.unnamed")}</span>
+                      <span className="text-sm font-medium">{s.client_name ?? "Cliente sin nombre"}</span>
                       {statusLabel(s.action, s.accessed_at)}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {t("portalBuilder:sessions.expires", { email: s.client_email ?? t("portalBuilder:sessions.noEmail"), date: formatDate(s.expires_at, "short") })}
+                      {s.client_email ?? "sin email"} · expira {formatDate(s.expires_at, "short")}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Button variant="outline" size="sm" className="h-7 text-xs gap-1"
                       onClick={() => navigator.clipboard.writeText(s.portal_url)}>
-                      <Link2 className="h-3 w-3" /> {t("portalBuilder:sessions.copy")}
+                      <Link2 className="h-3 w-3" /> Copiar
                     </Button>
                     <Button variant="outline" size="sm" className="h-7 text-xs gap-1"
                       asChild>
                       <a href={s.portal_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-3 w-3" /> {t("portalBuilder:sessions.view")}
+                        <ExternalLink className="h-3 w-3" /> Ver
                       </a>
                     </Button>
                     {s.client_email && !s.action && (
                       <Button size="sm" className="h-7 text-xs gap-1"
                         disabled={sendEmailMutation.isPending}
                         onClick={() => sendEmailMutation.mutate(s.id)}>
-                        <Send className="h-3 w-3" /> {t("portalBuilder:sessions.email")}
+                        <Send className="h-3 w-3" /> Email
                       </Button>
                     )}
                   </div>

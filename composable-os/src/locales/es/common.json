@@ -71,6 +71,15 @@
     "fulfilled": "Completada",
     "cancelled": "Cancelada"
   },
+  "invoiceStatus": {
+    "draft": "Borrador",
+    "sent": "Enviada",
+    "paid": "Pagada",
+    "partial": "Parcial",
+    "overdue": "Vencida",
+    "cancelled": "Cancelada",
+    "void": "Anulada"
+  },
   "taskStatus": {
     "todo": "Pendiente",
     "in_progress": "En progreso",
@@ -81,5 +90,21 @@
     "active": "Activo",
     "on_leave": "De permiso",
     "terminated": "Terminado"
+  },
+  "pagination": {
+    "label": "Paginación",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "goToPrevious": "Ir a la página anterior",
+    "goToNext": "Ir a la página siguiente",
+    "more": "Más páginas"
+  },
+  "breadcrumb": {
+    "label": "Ruta de navegación",
+    "more": "Más"
+  },
+  "carousel": {
+    "previous": "Diapositiva anterior",
+    "next": "Diapositiva siguiente"
   }
 }
