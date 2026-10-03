@@ -56,7 +56,7 @@ suscrito al idioma (el componente se re-renderiza al cambiarlo).
 namespace del hook a `common`: las claves relativas dejan de aceptarse. Con la
 clave completa el compilador valida que exista en el catalogo `es`, y una errata
 rompe `npm run typecheck`. Ademas se puede rastrear con `grep`, que es lo que
-necesitara el check de cadenas huerfanas.
+usa el check de cadenas huerfanas (`src/i18n/catalogues.test.ts`).
 
 Nombres en `camelCase`, agrupados por pantalla o componente: `login.title`,
 `login.showPassword`. Un nombre describe el papel del texto, no su contenido
@@ -257,9 +257,22 @@ migracion es el momento de arreglarlo, no de conservarlo.
 
 1. Crear `locales/<idioma>/` con un fichero por dominio, las mismas claves que `es`.
 2. Nada mas: aparece en `SUPPORTED_LOCALES` y en el selector.
-3. Falta por automatizar (plan de i18n, seccion Verificacion): la paridad entre
-   catalogos y el chequeo de claves usadas y no definidas, o al reves. Hasta
-   entonces, una clave que falte en el idioma nuevo cae al texto en espanol.
+3. Dos checks lo vigilan, y fallan en CI (`src/i18n/catalogues.test.ts`, vitest):
+   - **Paridad con `es`**: el idioma nuevo no puede tener claves de menos (cae al
+     espanol sin avisar), de mas, ni un `{{marcador}}` distinto. Un idioma se puede
+     enviar por dominios: los que aun no tiene van en `PENDING` de ese test, y esa
+     lista es un trinquete: solo se encoge, y falla si queda un dominio listado que
+     ya existe.
+   - **Claves huerfanas**: una clave del catalogo que ningun fichero menciona, o una
+     que el codigo pide y no existe. El escaner lee los literales `espacio:ruta` del
+     codigo (tambien los interpolados, que usan todo lo que casa) y un grupo
+     (`label("ns:runStatus", ...)`) usa lo que cuelga de el. El espacio `errors` se
+     indexa por el `code` del servidor y queda fuera del barrido; lo cubre
+     `scripts/ci/check_error_registry.py`.
+
+   Cada control se prueba contra catalogos inventados que *deben* fallar: con un solo
+   idioma la paridad pasa trivialmente, y un escaner que no encuentra nada pasa igual
+   que uno que funciona.
 
 ## Artefactos que renderiza el servidor
 
@@ -300,6 +313,11 @@ translate("invoice_pdf:footer", locale, number="INV-7")   # marcadores {nombre},
   de migrar, congelada en `tests/data/`, y el segundo idioma pone en MAYUSCULAS cada mensaje
   del catalogo; con datos de prueba tambien en mayusculas, toda palabra en minusculas que
   sobreviva es texto cableado (`tests/test_email_templates.py`).
+- **Huerfanas en el backend**: `tests/test_i18n_catalogue_usage.py` recorre `app/` con
+  `ast` y cruza lo que el codigo pide (`translate("d:k")`, `t("k")` dentro de una
+  funcion con `_scope("grupo")`, `fallback_text("k")`, y los f-string con prefijo como
+  `invoice_pdf:status.{estado}`) con las claves del catalogo. Una clave armada de otra
+  forma da un fallo, no un pase silencioso.
 - **HTML en el catalogo.** Un mensaje puede llevar etiquetas en linea (`<strong>{x}</strong>`)
   cuando la frase es una sola, y la estructura (tablas, estilos) se queda en el codigo. Lo
   que se interpola en un mensaje de HTML llega ya escapado: el catalogo no escapa nada.
