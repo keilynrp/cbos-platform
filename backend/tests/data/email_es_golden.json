@@ -1,0 +1,57 @@
+{
+  "quote_portal_named": [
+    "Cotización Q-100 de Acme",
+    "Hola Ana,\n\nAcme te ha enviado una cotización para tu revisión.\n\n  Número:     Q-100\n  Total:      USD 1,234.50\n  Válida hasta: 2026-09-01\n\nRevisa y acepta tu cotización aquí:\nhttps://portal.test/t\n\nSaludos,\nAcme",
+    "<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"></head>\n<body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;\">\n  <div style=\"background: #1e40af; padding: 24px; border-radius: 8px 8px 0 0;\">\n    <h1 style=\"color: white; margin: 0; font-size: 20px;\">Acme</h1>\n  </div>\n  <div style=\"background: #f8fafc; padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;\">\n    <p style=\"font-size: 16px;\">Hola Ana,</p>\n    <p>Te hemos enviado una cotización para tu revisión y aprobación.</p>\n    <div style=\"background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0;\">\n      <table style=\"width: 100%; border-collapse: collapse;\">\n        <tr><td style=\"padding: 8px 0; color: #64748b; font-size: 14px;\">Número</td>\n            <td style=\"padding: 8px 0; font-weight: bold; text-align: right;\">Q-100</td></tr>\n        <tr><td style=\"padding: 8px 0; color: #64748b; font-size: 14px;\">Total</td>\n            <td style=\"padding: 8px 0; font-weight: bold; font-size: 18px; color: #1e40af; text-align: right;\">USD 1,234.50</td></tr>\n        <tr><td style=\"padding: 8px 0; color: #64748b; font-size: 14px;\">Válida hasta</td>\n            <td style=\"padding: 8px 0; text-align: right;\">2026-09-01</td></tr>\n      </table>\n    </div>\n    <div style=\"text-align: center; margin: 32px 0;\">\n      <a href=\"https://portal.test/t\"\n         style=\"background: #1e40af; color: white; padding: 14px 32px; border-radius: 6px;\n                text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;\">\n        Ver y Aceptar Cotización →\n      </a>\n    </div>\n    <p style=\"font-size: 12px; color: #94a3b8; text-align: center;\">\n      Si el botón no funciona, copia este enlace en tu navegador:<br>\n      <a href=\"https://portal.test/t\" style=\"color: #1e40af;\">https://portal.test/t</a>\n    </p>\n    <hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;\">\n    <p style=\"font-size: 13px; color: #64748b; margin: 0;\">\n      Saludos,<br><strong>Acme</strong>\n    </p>\n  </div>\n</body>\n</html>"
+  ],
+  "quote_portal_anonymous": [
+    "Cotización Q-100 de Acme",
+    "Hola,\n\nAcme te ha enviado una cotización para tu revisión.\n\n  Número:     Q-100\n  Total:      MXN 99.00\n  Válida hasta: Sin fecha límite\n\nRevisa y acepta tu cotización aquí:\nhttps://portal.test/t\n\nSaludos,\nAcme",
+    "<!DOCTYPE html>\n<html>\n<head><meta charset=\"utf-8\"></head>\n<body style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;\">\n  <div style=\"background: #1e40af; padding: 24px; border-radius: 8px 8px 0 0;\">\n    <h1 style=\"color: white; margin: 0; font-size: 20px;\">Acme</h1>\n  </div>\n  <div style=\"background: #f8fafc; padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;\">\n    <p style=\"font-size: 16px;\">Hola,</p>\n    <p>Te hemos enviado una cotización para tu revisión y aprobación.</p>\n    <div style=\"background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0;\">\n      <table style=\"width: 100%; border-collapse: collapse;\">\n        <tr><td style=\"padding: 8px 0; color: #64748b; font-size: 14px;\">Número</td>\n            <td style=\"padding: 8px 0; font-weight: bold; text-align: right;\">Q-100</td></tr>\n        <tr><td style=\"padding: 8px 0; color: #64748b; font-size: 14px;\">Total</td>\n            <td style=\"padding: 8px 0; font-weight: bold; font-size: 18px; color: #1e40af; text-align: right;\">MXN 99.00</td></tr>\n        <tr><td style=\"padding: 8px 0; color: #64748b; font-size: 14px;\">Válida hasta</td>\n            <td style=\"padding: 8px 0; text-align: right;\">Sin fecha límite</td></tr>\n      </table>\n    </div>\n    <div style=\"text-align: center; margin: 32px 0;\">\n      <a href=\"https://portal.test/t\"\n         style=\"background: #1e40af; color: white; padding: 14px 32px; border-radius: 6px;\n                text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;\">\n        Ver y Aceptar Cotización →\n      </a>\n    </div>\n    <p style=\"font-size: 12px; color: #94a3b8; text-align: center;\">\n      Si el botón no funciona, copia este enlace en tu navegador:<br>\n      <a href=\"https://portal.test/t\" style=\"color: #1e40af;\">https://portal.test/t</a>\n    </p>\n    <hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;\">\n    <p style=\"font-size: 13px; color: #64748b; margin: 0;\">\n      Saludos,<br><strong>Acme</strong>\n    </p>\n  </div>\n</body>\n</html>"
+  ],
+  "quote_accepted": [
+    "Cotización Q-100 aceptada",
+    "Hola,\n\nLa cotización Q-100 por USD 1,234.50 ha sido aceptada.\nNúmero de orden generada: ORD-5\n\nCBOS Platform",
+    "\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto\">\n      <h2 style=\"color:#16a34a\">Cotización aceptada ✓</h2>\n      <p>La cotización <strong>Q-100</strong> por <strong>USD 1,234.50</strong> fue aceptada.</p>\n      <p>Orden generada: <strong>ORD-5</strong></p>\n      <hr style=\"border:1px solid #e5e7eb\"/>\n      <p style=\"color:#6b7280;font-size:12px\">CBOS Platform</p>\n    </div>"
+  ],
+  "sales_order_created": [
+    "Nueva orden de venta ORD-5",
+    "Se ha creado la orden de venta ORD-5 por USD 1,234.50.\n\nCBOS Platform",
+    "\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto\">\n      <h2 style=\"color:#2563eb\">Nueva orden de venta</h2>\n      <p>Orden <strong>ORD-5</strong> creada por <strong>USD 1,234.50</strong>.</p>\n      <hr style=\"border:1px solid #e5e7eb\"/>\n      <p style=\"color:#6b7280;font-size:12px\">CBOS Platform</p>\n    </div>"
+  ],
+  "workflow_failed": [
+    "Workflow falló: Sync",
+    "El workflow 'Sync' falló con el error:\nboom\n\nCBOS Platform",
+    "\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto\">\n      <h2 style=\"color:#dc2626\">Workflow falló</h2>\n      <p>El workflow <strong>Sync</strong> falló.</p>\n      <pre style=\"background:#fef2f2;padding:12px;border-radius:4px;font-size:13px\">boom</pre>\n      <hr style=\"border:1px solid #e5e7eb\"/>\n      <p style=\"color:#6b7280;font-size:12px\">CBOS Platform</p>\n    </div>"
+  ],
+  "invoice_overdue": [
+    "Factura vencida: INV-9",
+    "La factura INV-9 por USD 1,160.00 esta vencida.\nMonto pendiente: USD 760.00\nFecha de vencimiento: 2026-09-01\n\nCBOS Platform",
+    "\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto\">\n      <h2 style=\"color:#d97706\">Factura vencida</h2>\n      <p>La factura <strong>INV-9</strong> por <strong>USD 1,160.00</strong> ha vencido.</p>\n      <p>Monto pendiente: <strong>USD 760.00</strong></p>\n      <p>Fecha de vencimiento: <strong>2026-09-01</strong></p>\n      <hr style=\"border:1px solid #e5e7eb\"/>\n      <p style=\"color:#6b7280;font-size:12px\">CBOS Platform</p>\n    </div>"
+  ],
+  "low_stock": [
+    "Stock bajo: Widget (W-1)",
+    "El producto Widget (SKU: W-1) tiene stock bajo.\nStock actual: 3 | Mínimo: 10\n\nCBOS Platform",
+    "\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto\">\n      <h2 style=\"color:#d97706\">Alerta de stock bajo</h2>\n      <p>Producto: <strong>Widget</strong> (SKU: W-1)</p>\n      <p>Stock actual: <strong>3</strong> | Mínimo requerido: <strong>10</strong></p>\n      <hr style=\"border:1px solid #e5e7eb\"/>\n      <p style=\"color:#6b7280;font-size:12px\">CBOS Platform</p>\n    </div>"
+  ],
+  "seller_accept": [
+    "Ana <b> & Co aceptó la propuesta Q-100",
+    "¡Buenas noticias!\n\nAna <b> & Co ha aceptado la propuesta Q-100.\n\n  Orden creada: ORD-5\n  Total:        USD 1,234.50\n\nAcme & Sons · CBOS Platform",
+    "\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto\">\n      <h2 style=\"color:#16a34a\">✓ Propuesta aceptada</h2>\n      <p><strong>Ana &lt;b&gt; &amp; Co</strong> aceptó la propuesta <strong>Q-100</strong>.</p>\n      <div style=\"background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0\">\n        <p style=\"margin:0 0 8px;font-size:13px;color:#166534\">Orden generada</p>\n        <p style=\"margin:0;font-size:24px;font-weight:700;color:#15803d;font-family:monospace\">ORD-5</p>\n        <p style=\"margin:8px 0 0;font-size:13px;color:#166534\">Total: USD 1,234.50</p>\n      </div>\n      <hr style=\"border:1px solid #e5e7eb\"/>\n      <p style=\"color:#6b7280;font-size:12px\">Acme &amp; Sons · CBOS Platform</p>\n    </div>"
+  ],
+  "seller_reject_with_reason": [
+    "Ana <b> & Co rechazó la propuesta Q-100",
+    "Ana <b> & Co rechazó la propuesta Q-100.\n  Motivo: Muy caro <script>\n\nAcme & Sons · CBOS Platform",
+    "\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto\">\n      <h2 style=\"color:#dc2626\">✗ Propuesta rechazada</h2>\n      <p><strong>Ana &lt;b&gt; &amp; Co</strong> rechazó la propuesta <strong>Q-100</strong>.</p>\n      <p style=\"color:#6b7280;font-size:13px\">Motivo: Muy caro &lt;script&gt;</p>\n      <hr style=\"border:1px solid #e5e7eb\"/>\n      <p style=\"color:#6b7280;font-size:12px\">Acme &amp; Sons · CBOS Platform</p>\n    </div>"
+  ],
+  "seller_reject_no_reason": [
+    "Ana rechazó la propuesta Q-100",
+    "Ana rechazó la propuesta Q-100.\n\nAcme · CBOS Platform",
+    "\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto\">\n      <h2 style=\"color:#dc2626\">✗ Propuesta rechazada</h2>\n      <p><strong>Ana</strong> rechazó la propuesta <strong>Q-100</strong>.</p>\n      \n      <hr style=\"border:1px solid #e5e7eb\"/>\n      <p style=\"color:#6b7280;font-size:12px\">Acme · CBOS Platform</p>\n    </div>"
+  ],
+  "client_confirmation": [
+    "Confirmación — Q-100 aceptada",
+    "Gracias por aceptar la propuesta Q-100.\n\nTu número de orden es: ORD-5\nGuarda este número para consultas futuras.\n\nAcme & Sons",
+    "\n    <div style=\"font-family:sans-serif;max-width:600px;margin:0 auto\">\n      <h2 style=\"color:#2563eb\">Confirmación de propuesta</h2>\n      <p>Gracias por aceptar la propuesta <strong>Q-100</strong>.</p>\n      <div style=\"background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin:16px 0;text-align:center\">\n        <p style=\"margin:0 0 8px;font-size:13px;color:#1e40af\">Tu número de orden</p>\n        <p style=\"margin:0;font-size:28px;font-weight:700;color:#1d4ed8;font-family:monospace\">ORD-5</p>\n        <p style=\"margin:8px 0 0;font-size:12px;color:#1e40af\">Guarda este número para consultas</p>\n      </div>\n      <hr style=\"border:1px solid #e5e7eb\"/>\n      <p style=\"color:#6b7280;font-size:12px\">Acme &amp; Sons</p>\n    </div>"
+  ]
+}

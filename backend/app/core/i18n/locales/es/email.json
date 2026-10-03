@@ -1,0 +1,80 @@
+{
+  "workspaceFooter": "{workspace} · CBOS Platform",
+  "fallback": {
+    "clientName": "Cliente",
+    "workflowName": "Desconocido",
+    "workflowError": "Error desconocido"
+  },
+  "quotePortal": {
+    "greeting": "Hola {name},",
+    "greetingAnonymous": "Hola,",
+    "noExpiry": "Sin fecha límite",
+    "subject": "Cotización {number} de {workspace}",
+    "text": "{greeting}\n\n{workspace} te ha enviado una cotización para tu revisión.\n\n  Número:     {number}\n  Total:      {amount}\n  Válida hasta: {validUntil}\n\nRevisa y acepta tu cotización aquí:\n{url}\n\nSaludos,\n{workspace}",
+    "intro": "Te hemos enviado una cotización para tu revisión y aprobación.",
+    "number": "Número",
+    "total": "Total",
+    "validUntil": "Válida hasta",
+    "cta": "Ver y Aceptar Cotización →",
+    "fallbackLink": "Si el botón no funciona, copia este enlace en tu navegador:",
+    "signoff": "Saludos,"
+  },
+  "quoteAccepted": {
+    "subject": "Cotización {number} aceptada",
+    "text": "Hola,\n\nLa cotización {number} por {amount} ha sido aceptada.\nNúmero de orden generada: {order}\n\nCBOS Platform",
+    "title": "Cotización aceptada ✓",
+    "body": "La cotización <strong>{number}</strong> por <strong>{amount}</strong> fue aceptada.",
+    "order": "Orden generada: <strong>{order}</strong>"
+  },
+  "salesOrderCreated": {
+    "subject": "Nueva orden de venta {order}",
+    "text": "Se ha creado la orden de venta {order} por {amount}.\n\nCBOS Platform",
+    "title": "Nueva orden de venta",
+    "body": "Orden <strong>{order}</strong> creada por <strong>{amount}</strong>."
+  },
+  "workflowFailed": {
+    "subject": "Workflow falló: {name}",
+    "text": "El workflow '{name}' falló con el error:\n{error}\n\nCBOS Platform",
+    "title": "Workflow falló",
+    "body": "El workflow <strong>{name}</strong> falló."
+  },
+  "invoiceOverdue": {
+    "subject": "Factura vencida: {number}",
+    "text": "La factura {number} por {amount} esta vencida.\nMonto pendiente: {pending}\nFecha de vencimiento: {dueDate}\n\nCBOS Platform",
+    "title": "Factura vencida",
+    "body": "La factura <strong>{number}</strong> por <strong>{amount}</strong> ha vencido.",
+    "pending": "Monto pendiente: <strong>{pending}</strong>",
+    "dueDate": "Fecha de vencimiento: <strong>{dueDate}</strong>"
+  },
+  "lowStock": {
+    "subject": "Stock bajo: {product} ({sku})",
+    "text": "El producto {product} (SKU: {sku}) tiene stock bajo.\nStock actual: {current} | Mínimo: {min}\n\nCBOS Platform",
+    "title": "Alerta de stock bajo",
+    "product": "Producto: <strong>{product}</strong> (SKU: {sku})",
+    "stock": "Stock actual: <strong>{current}</strong> | Mínimo requerido: <strong>{min}</strong>"
+  },
+  "sellerAccept": {
+    "subject": "{client} aceptó la propuesta {number}",
+    "text": "¡Buenas noticias!\n\n{client} ha aceptado la propuesta {number}.\n\n  Orden creada: {order}\n  Total:        {amount}\n\n{workspace} · CBOS Platform",
+    "title": "✓ Propuesta aceptada",
+    "body": "<strong>{client}</strong> aceptó la propuesta <strong>{number}</strong>.",
+    "orderLabel": "Orden generada",
+    "total": "Total: {amount}"
+  },
+  "sellerReject": {
+    "subject": "{client} rechazó la propuesta {number}",
+    "text": "{client} rechazó la propuesta {number}.{reasonLine}\n\n{workspace} · CBOS Platform",
+    "reasonLine": "\n  Motivo: {reason}",
+    "title": "✗ Propuesta rechazada",
+    "body": "<strong>{client}</strong> rechazó la propuesta <strong>{number}</strong>.",
+    "reason": "Motivo: {reason}"
+  },
+  "clientConfirmation": {
+    "subject": "Confirmación — {number} aceptada",
+    "text": "Gracias por aceptar la propuesta {number}.\n\nTu número de orden es: {order}\nGuarda este número para consultas futuras.\n\n{workspace}",
+    "title": "Confirmación de propuesta",
+    "body": "Gracias por aceptar la propuesta <strong>{number}</strong>.",
+    "orderLabel": "Tu número de orden",
+    "saveNote": "Guarda este número para consultas"
+  }
+}

@@ -8,9 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
+from app.core.deps import resolve_portal_locale, resolve_user_locale
 from app.core.i18n import SUPPORTED_LOCALES, normalize_locale
 from app.core.email import (
     client_confirmation_email,
+    fallback_text,
     quote_portal_email,
     seller_accept_email,
     seller_reject_email,
@@ -241,6 +243,7 @@ async def send_session_email(
     workspace_name = await _get_workspace_name(db, workspace_id)
     contact_name, _ = await _get_names(db, quote.contact_id, None)
     name = session.client_name or contact_name
+    locale = await resolve_portal_locale(db, workspace_id, session.locale)
 
     subject, text_body, html_body = quote_portal_email(
         contact_name=name,
@@ -250,6 +253,7 @@ async def send_session_email(
         currency=quote.currency,
         valid_until=quote.valid_until,
         portal_url=_portal_url(session.token),
+        locale=locale,
     )
 
     return await send_email(session.client_email, subject, html_body, text_body)
@@ -425,13 +429,17 @@ async def portal_accept(
     seller_email = creator.email if creator else None
 
     if seller_email:
+        seller_locale = await resolve_user_locale(db, creator)
         subj, text, html = seller_accept_email(
-            client_name=data.client_name or session.client_name or "Cliente",
+            client_name=(
+                data.client_name or session.client_name or fallback_text("clientName", seller_locale)
+            ),
             workspace_name=workspace_name,
             quote_number=quote.quote_number,
             order_number=order_number,
             total=quote.total,
             currency=quote.currency,
+            locale=seller_locale,
         )
         try:
             await send_email(seller_email, subj, html, text)
@@ -446,6 +454,7 @@ async def portal_accept(
             workspace_name=workspace_name,
             quote_number=quote.quote_number,
             order_number=order_number,
+            locale=await resolve_portal_locale(db, session.workspace_id, session.locale),
         )
         try:
             await send_email(client_email_addr, subj, html, text)
@@ -543,11 +552,15 @@ async def portal_reject(
     seller_email = creator.email if creator else None
 
     if seller_email:
+        seller_locale = await resolve_user_locale(db, creator)
         subj, text, html = seller_reject_email(
-            client_name=data.client_name or session.client_name or "Cliente",
+            client_name=(
+                data.client_name or session.client_name or fallback_text("clientName", seller_locale)
+            ),
             workspace_name=workspace_name,
             quote_number=quote.quote_number,
             reason=data.reason,
+            locale=seller_locale,
         )
         try:
             await send_email(seller_email, subj, html, text)

@@ -11,6 +11,8 @@ from email.mime.text import MIMEText
 from typing import Any
 
 from app.core.config import settings
+from app.core.i18n import DEFAULT_LOCALE
+from app.core.i18n.catalogue import translate
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +67,39 @@ def _send_smtp(to: str, subject: str, html_body: str, text_body: str | None) -> 
 
 
 # ── Email templates ───────────────────────────────────────────────────────────
+#
+# El texto de cada correo vive en el catalogo `email` (`core/i18n/locales/<idioma>/
+# email.json`); aqui solo queda la estructura del HTML y los estilos. Todas las
+# plantillas reciben `locale` y devuelven `(subject, text_body, html_body)`.
+#
+# Quien llama decide el idioma, una vez:
+#   - los correos internos (al vendedor y a los usuarios del workspace) usan el
+#     idioma del destinatario, `app.core.deps.resolve_user_locale`;
+#   - los dos que van al cliente final usan el de la sesion de portal,
+#     `app.core.deps.resolve_portal_locale` (ADR 0016, punto 2).
+#
+# Los marcadores del HTML escapado (nombres de cliente y de workspace) llegan ya
+# escapados: el catalogo no escapa nada. El formato de importes (`USD 1,234.50`) no
+# sigue al idioma todavia, como en el PDF de factura (plan i18n, tarea 10).
+
+
+def _scope(group: str, locale: str):
+    """`t("subject", number=...)` -> el mensaje `email:<group>.subject` en `locale`."""
+
+    def t(key: str, **params: object) -> str:
+        return translate(f"email:{group}.{key}", locale, **params)
+
+    return t
+
+
+def fallback_text(key: str, locale: str = DEFAULT_LOCALE) -> str:
+    """Texto de reserva para un dato que falta (`Cliente`, `Desconocido`...).
+
+    Es de quien llama —el correo se arma con el dato o con esto— y por eso es publico:
+    el texto de reserva tiene que salir en el idioma del correo, no en el del codigo.
+    """
+    return translate(f"email:fallback.{key}", locale)
+
 
 def quote_portal_email(
     contact_name: str | None,
@@ -74,23 +109,33 @@ def quote_portal_email(
     currency: str,
     valid_until: Any,
     portal_url: str,
+    locale: str = DEFAULT_LOCALE,
 ) -> tuple[str, str, str]:
     """Returns (subject, text_body, html_body)."""
-    greeting = f"Hola {contact_name}," if contact_name else "Hola,"
-    valid_str = str(valid_until) if valid_until else "Sin fecha límite"
+    t = _scope("quotePortal", locale)
+    greeting = t("greeting", name=contact_name) if contact_name else t("greetingAnonymous")
+    valid_str = str(valid_until) if valid_until else t("noExpiry")
     amount = f"{currency} {total:,.2f}"
 
-    subject = f"Cotización {quote_number} de {workspace_name}"
+    subject = t("subject", number=quote_number, workspace=workspace_name)
 
-    text_body = (
-        f"{greeting}\n\n"
-        f"{workspace_name} te ha enviado una cotización para tu revisión.\n\n"
-        f"  Número:     {quote_number}\n"
-        f"  Total:      {amount}\n"
-        f"  Válida hasta: {valid_str}\n\n"
-        f"Revisa y acepta tu cotización aquí:\n{portal_url}\n\n"
-        f"Saludos,\n{workspace_name}"
+    text_body = t(
+        "text",
+        greeting=greeting,
+        workspace=workspace_name,
+        number=quote_number,
+        amount=amount,
+        validUntil=valid_str,
+        url=portal_url,
     )
+
+    intro = t("intro")
+    label_number = t("number")
+    label_total = t("total")
+    label_valid_until = t("validUntil")
+    cta = t("cta")
+    fallback_link = t("fallbackLink")
+    signoff = t("signoff")
 
     html_body = f"""<!DOCTYPE html>
 <html>
@@ -101,14 +146,14 @@ def quote_portal_email(
   </div>
   <div style="background: #f8fafc; padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
     <p style="font-size: 16px;">{greeting}</p>
-    <p>Te hemos enviado una cotización para tu revisión y aprobación.</p>
+    <p>{intro}</p>
     <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0;">
       <table style="width: 100%; border-collapse: collapse;">
-        <tr><td style="padding: 8px 0; color: #64748b; font-size: 14px;">Número</td>
+        <tr><td style="padding: 8px 0; color: #64748b; font-size: 14px;">{label_number}</td>
             <td style="padding: 8px 0; font-weight: bold; text-align: right;">{quote_number}</td></tr>
-        <tr><td style="padding: 8px 0; color: #64748b; font-size: 14px;">Total</td>
+        <tr><td style="padding: 8px 0; color: #64748b; font-size: 14px;">{label_total}</td>
             <td style="padding: 8px 0; font-weight: bold; font-size: 18px; color: #1e40af; text-align: right;">{amount}</td></tr>
-        <tr><td style="padding: 8px 0; color: #64748b; font-size: 14px;">Válida hasta</td>
+        <tr><td style="padding: 8px 0; color: #64748b; font-size: 14px;">{label_valid_until}</td>
             <td style="padding: 8px 0; text-align: right;">{valid_str}</td></tr>
       </table>
     </div>
@@ -116,16 +161,16 @@ def quote_portal_email(
       <a href="{portal_url}"
          style="background: #1e40af; color: white; padding: 14px 32px; border-radius: 6px;
                 text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">
-        Ver y Aceptar Cotización →
+        {cta}
       </a>
     </div>
     <p style="font-size: 12px; color: #94a3b8; text-align: center;">
-      Si el botón no funciona, copia este enlace en tu navegador:<br>
+      {fallback_link}<br>
       <a href="{portal_url}" style="color: #1e40af;">{portal_url}</a>
     </p>
     <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
     <p style="font-size: 13px; color: #64748b; margin: 0;">
-      Saludos,<br><strong>{workspace_name}</strong>
+      {signoff}<br><strong>{workspace_name}</strong>
     </p>
   </div>
 </body>
@@ -140,20 +185,21 @@ def quote_accepted_email(
     total: float,
     currency: str,
     order_number: str,
+    locale: str = DEFAULT_LOCALE,
 ) -> tuple[str, str, str]:
     """Email notification when a quote is accepted by the customer."""
-    subject = f"Cotización {quote_number} aceptada"
-    text = (
-        f"Hola,\n\n"
-        f"La cotización {quote_number} por {currency} {total:,.2f} ha sido aceptada.\n"
-        f"Número de orden generada: {order_number}\n\n"
-        f"CBOS Platform"
-    )
+    t = _scope("quoteAccepted", locale)
+    amount = f"{currency} {total:,.2f}"
+    subject = t("subject", number=quote_number)
+    text = t("text", number=quote_number, amount=amount, order=order_number)
+    title = t("title")
+    body = t("body", number=quote_number, amount=amount)
+    order = t("order", order=order_number)
     html = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#16a34a">Cotización aceptada ✓</h2>
-      <p>La cotización <strong>{quote_number}</strong> por <strong>{currency} {total:,.2f}</strong> fue aceptada.</p>
-      <p>Orden generada: <strong>{order_number}</strong></p>
+      <h2 style="color:#16a34a">{title}</h2>
+      <p>{body}</p>
+      <p>{order}</p>
       <hr style="border:1px solid #e5e7eb"/>
       <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
     </div>"""
@@ -164,17 +210,19 @@ def sales_order_created_email(
     order_number: str,
     total: float,
     currency: str,
+    locale: str = DEFAULT_LOCALE,
 ) -> tuple[str, str, str]:
     """Email notification when a new sales order is created."""
-    subject = f"Nueva orden de venta {order_number}"
-    text = (
-        f"Se ha creado la orden de venta {order_number} por {currency} {total:,.2f}.\n\n"
-        f"CBOS Platform"
-    )
+    t = _scope("salesOrderCreated", locale)
+    amount = f"{currency} {total:,.2f}"
+    subject = t("subject", order=order_number)
+    text = t("text", order=order_number, amount=amount)
+    title = t("title")
+    body = t("body", order=order_number, amount=amount)
     html = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#2563eb">Nueva orden de venta</h2>
-      <p>Orden <strong>{order_number}</strong> creada por <strong>{currency} {total:,.2f}</strong>.</p>
+      <h2 style="color:#2563eb">{title}</h2>
+      <p>{body}</p>
       <hr style="border:1px solid #e5e7eb"/>
       <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
     </div>"""
@@ -184,14 +232,18 @@ def sales_order_created_email(
 def workflow_failed_email(
     workflow_name: str,
     error: str,
+    locale: str = DEFAULT_LOCALE,
 ) -> tuple[str, str, str]:
     """Email alert when a workflow fails."""
-    subject = f"Workflow falló: {workflow_name}"
-    text = f"El workflow '{workflow_name}' falló con el error:\n{error}\n\nCBOS Platform"
+    t = _scope("workflowFailed", locale)
+    subject = t("subject", name=workflow_name)
+    text = t("text", name=workflow_name, error=error)
+    title = t("title")
+    body = t("body", name=workflow_name)
     html = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#dc2626">Workflow falló</h2>
-      <p>El workflow <strong>{workflow_name}</strong> falló.</p>
+      <h2 style="color:#dc2626">{title}</h2>
+      <p>{body}</p>
       <pre style="background:#fef2f2;padding:12px;border-radius:4px;font-size:13px">{error}</pre>
       <hr style="border:1px solid #e5e7eb"/>
       <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
@@ -205,21 +257,24 @@ def invoice_overdue_email(
     amount_due: float,
     currency: str,
     due_date: str,
+    locale: str = DEFAULT_LOCALE,
 ) -> tuple[str, str, str]:
     """Email alert when an invoice becomes overdue."""
-    subject = f"Factura vencida: {invoice_number}"
-    text = (
-        f"La factura {invoice_number} por {currency} {total:,.2f} esta vencida.\n"
-        f"Monto pendiente: {currency} {amount_due:,.2f}\n"
-        f"Fecha de vencimiento: {due_date}\n\n"
-        f"CBOS Platform"
-    )
+    t = _scope("invoiceOverdue", locale)
+    amount = f"{currency} {total:,.2f}"
+    pending = f"{currency} {amount_due:,.2f}"
+    subject = t("subject", number=invoice_number)
+    text = t("text", number=invoice_number, amount=amount, pending=pending, dueDate=due_date)
+    title = t("title")
+    body = t("body", number=invoice_number, amount=amount)
+    pending_line = t("pending", pending=pending)
+    due_line = t("dueDate", dueDate=due_date)
     html = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#d97706">Factura vencida</h2>
-      <p>La factura <strong>{invoice_number}</strong> por <strong>{currency} {total:,.2f}</strong> ha vencido.</p>
-      <p>Monto pendiente: <strong>{currency} {amount_due:,.2f}</strong></p>
-      <p>Fecha de vencimiento: <strong>{due_date}</strong></p>
+      <h2 style="color:#d97706">{title}</h2>
+      <p>{body}</p>
+      <p>{pending_line}</p>
+      <p>{due_line}</p>
       <hr style="border:1px solid #e5e7eb"/>
       <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
     </div>"""
@@ -231,18 +286,20 @@ def low_stock_email(
     sku: str,
     current_stock: float,
     min_stock: float,
+    locale: str = DEFAULT_LOCALE,
 ) -> tuple[str, str, str]:
     """Email alert when inventory falls below threshold."""
-    subject = f"Stock bajo: {product_name} ({sku})"
-    text = (
-        f"El producto {product_name} (SKU: {sku}) tiene stock bajo.\n"
-        f"Stock actual: {current_stock} | Mínimo: {min_stock}\n\nCBOS Platform"
-    )
+    t = _scope("lowStock", locale)
+    subject = t("subject", product=product_name, sku=sku)
+    text = t("text", product=product_name, sku=sku, current=current_stock, min=min_stock)
+    title = t("title")
+    product_line = t("product", product=product_name, sku=sku)
+    stock_line = t("stock", current=current_stock, min=min_stock)
     html = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#d97706">Alerta de stock bajo</h2>
-      <p>Producto: <strong>{product_name}</strong> (SKU: {sku})</p>
-      <p>Stock actual: <strong>{current_stock}</strong> | Mínimo requerido: <strong>{min_stock}</strong></p>
+      <h2 style="color:#d97706">{title}</h2>
+      <p>{product_line}</p>
+      <p>{stock_line}</p>
       <hr style="border:1px solid #e5e7eb"/>
       <p style="color:#6b7280;font-size:12px">CBOS Platform</p>
     </div>"""
@@ -256,29 +313,38 @@ def seller_accept_email(
     order_number: str,
     total: float,
     currency: str,
+    locale: str = DEFAULT_LOCALE,
 ) -> tuple[str, str, str]:
     """Seller notification when a client accepts via portal."""
+    t = _scope("sellerAccept", locale)
     _client = _html.escape(client_name)
     _workspace = _html.escape(workspace_name)
-    subject = f"{client_name} aceptó la propuesta {quote_number}"
-    text = (
-        f"¡Buenas noticias!\n\n"
-        f"{client_name} ha aceptado la propuesta {quote_number}.\n\n"
-        f"  Orden creada: {order_number}\n"
-        f"  Total:        {currency} {total:,.2f}\n\n"
-        f"{workspace_name} · CBOS Platform"
+    amount = f"{currency} {total:,.2f}"
+    subject = t("subject", client=client_name, number=quote_number)
+    text = t(
+        "text",
+        client=client_name,
+        number=quote_number,
+        order=order_number,
+        amount=amount,
+        workspace=workspace_name,
     )
+    title = t("title")
+    body = t("body", client=_client, number=quote_number)
+    order_label = t("orderLabel")
+    total_line = t("total", amount=amount)
+    footer = translate("email:workspaceFooter", locale, workspace=_workspace)
     html = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#16a34a">✓ Propuesta aceptada</h2>
-      <p><strong>{_client}</strong> aceptó la propuesta <strong>{quote_number}</strong>.</p>
+      <h2 style="color:#16a34a">{title}</h2>
+      <p>{body}</p>
       <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0">
-        <p style="margin:0 0 8px;font-size:13px;color:#166534">Orden generada</p>
+        <p style="margin:0 0 8px;font-size:13px;color:#166534">{order_label}</p>
         <p style="margin:0;font-size:24px;font-weight:700;color:#15803d;font-family:monospace">{order_number}</p>
-        <p style="margin:8px 0 0;font-size:13px;color:#166534">Total: {currency} {total:,.2f}</p>
+        <p style="margin:8px 0 0;font-size:13px;color:#166534">{total_line}</p>
       </div>
       <hr style="border:1px solid #e5e7eb"/>
-      <p style="color:#6b7280;font-size:12px">{_workspace} · CBOS Platform</p>
+      <p style="color:#6b7280;font-size:12px">{footer}</p>
     </div>"""
     return subject, text, html
 
@@ -288,27 +354,35 @@ def seller_reject_email(
     workspace_name: str,
     quote_number: str,
     reason: str | None,
+    locale: str = DEFAULT_LOCALE,
 ) -> tuple[str, str, str]:
     """Seller notification when a client rejects via portal."""
+    t = _scope("sellerReject", locale)
     _client = _html.escape(client_name)
     _workspace = _html.escape(workspace_name)
     _reason = _html.escape(reason) if reason else None
-    subject = f"{client_name} rechazó la propuesta {quote_number}"
-    reason_line = f"\n  Motivo: {reason}" if reason else ""
-    text = (
-        f"{client_name} rechazó la propuesta {quote_number}.{reason_line}\n\n"
-        f"{workspace_name} · CBOS Platform"
+    subject = t("subject", client=client_name, number=quote_number)
+    reason_line = t("reasonLine", reason=reason) if reason else ""
+    text = t(
+        "text",
+        client=client_name,
+        number=quote_number,
+        reasonLine=reason_line,
+        workspace=workspace_name,
     )
+    title = t("title")
+    body = t("body", client=_client, number=quote_number)
     reason_html = (
-        f'<p style="color:#6b7280;font-size:13px">Motivo: {_reason}</p>' if _reason else ""
+        f'<p style="color:#6b7280;font-size:13px">{t("reason", reason=_reason)}</p>' if _reason else ""
     )
+    footer = translate("email:workspaceFooter", locale, workspace=_workspace)
     html = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#dc2626">✗ Propuesta rechazada</h2>
-      <p><strong>{_client}</strong> rechazó la propuesta <strong>{quote_number}</strong>.</p>
+      <h2 style="color:#dc2626">{title}</h2>
+      <p>{body}</p>
       {reason_html}
       <hr style="border:1px solid #e5e7eb"/>
-      <p style="color:#6b7280;font-size:12px">{_workspace} · CBOS Platform</p>
+      <p style="color:#6b7280;font-size:12px">{footer}</p>
     </div>"""
     return subject, text, html
 
@@ -317,24 +391,25 @@ def client_confirmation_email(
     workspace_name: str,
     quote_number: str,
     order_number: str,
+    locale: str = DEFAULT_LOCALE,
 ) -> tuple[str, str, str]:
     """Confirmation email sent to client after accepting a portal quote."""
+    t = _scope("clientConfirmation", locale)
     _workspace = _html.escape(workspace_name)
-    subject = f"Confirmación — {quote_number} aceptada"
-    text = (
-        f"Gracias por aceptar la propuesta {quote_number}.\n\n"
-        f"Tu número de orden es: {order_number}\n"
-        f"Guarda este número para consultas futuras.\n\n"
-        f"{workspace_name}"
-    )
+    subject = t("subject", number=quote_number)
+    text = t("text", number=quote_number, order=order_number, workspace=workspace_name)
+    title = t("title")
+    body = t("body", number=quote_number)
+    order_label = t("orderLabel")
+    save_note = t("saveNote")
     html = f"""
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-      <h2 style="color:#2563eb">Confirmación de propuesta</h2>
-      <p>Gracias por aceptar la propuesta <strong>{quote_number}</strong>.</p>
+      <h2 style="color:#2563eb">{title}</h2>
+      <p>{body}</p>
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin:16px 0;text-align:center">
-        <p style="margin:0 0 8px;font-size:13px;color:#1e40af">Tu número de orden</p>
+        <p style="margin:0 0 8px;font-size:13px;color:#1e40af">{order_label}</p>
         <p style="margin:0;font-size:28px;font-weight:700;color:#1d4ed8;font-family:monospace">{order_number}</p>
-        <p style="margin:8px 0 0;font-size:12px;color:#1e40af">Guarda este número para consultas</p>
+        <p style="margin:8px 0 0;font-size:12px;color:#1e40af">{save_note}</p>
       </div>
       <hr style="border:1px solid #e5e7eb"/>
       <p style="color:#6b7280;font-size:12px">{_workspace}</p>

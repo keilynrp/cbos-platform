@@ -6,10 +6,12 @@ Runs as a background task alongside the WebSocket notification handler.
 import asyncio
 import json
 import logging
+from dataclasses import dataclass
 
 from sqlalchemy import select
 
 from app.core.email import (
+    fallback_text,
     send_email,
     low_stock_email,
     quote_accepted_email,
@@ -18,6 +20,7 @@ from app.core.email import (
     invoice_overdue_email,
 )
 from app.core.database import AsyncSessionLocal
+from app.core.deps import resolve_user_locale
 from app.events.bus import get_redis
 
 logger = logging.getLogger(__name__)
@@ -32,9 +35,18 @@ EMAIL_NOTIFY_EVENTS = {
 }
 
 
-async def _get_eligible_recipients(workspace_id: str, event_type: str) -> list[str]:
+@dataclass(frozen=True)
+class Recipient:
+    """A user who gets the email, and the language it is written in."""
+
+    email: str
+    locale: str
+
+
+async def _get_eligible_recipients(workspace_id: str, event_type: str) -> list[Recipient]:
     """
-    Return email addresses of workspace users who should receive this event.
+    Return the workspace users who should receive this event, with their locale
+    (`users.locale` -> workspace default -> `es`, ADR 0016).
     Checks per-user notification_preferences:
     - email_enabled must be True (default: True)
     - email_events[event_type] must be True (default: True if not set)
@@ -60,7 +72,7 @@ async def _get_eligible_recipients(workspace_id: str, event_type: str) -> list[s
                 # Default: send if event not explicitly disabled
                 if not event_prefs.get(event_type, True):
                     continue
-                recipients.append(user.email)
+                recipients.append(Recipient(user.email, await resolve_user_locale(db, user)))
 
             return recipients
     except Exception as e:
@@ -68,8 +80,52 @@ async def _get_eligible_recipients(workspace_id: str, event_type: str) -> list[s
         return []
 
 
+def _build_event_email(event_type: str, payload: dict, locale: str) -> tuple[str, str, str] | None:
+    """The (subject, text, html) of an event's email in `locale`, or None if it has none."""
+    if event_type == "QuoteAccepted":
+        return quote_accepted_email(
+            contact_name="",
+            quote_number=payload.get("quote_number", ""),
+            total=payload.get("total", 0.0),
+            currency=payload.get("currency", "USD"),
+            order_number=payload.get("order_number", ""),
+            locale=locale,
+        )
+    if event_type == "SalesOrderCreated":
+        return sales_order_created_email(
+            order_number=payload.get("order_number", ""),
+            total=payload.get("total", 0.0),
+            currency=payload.get("currency", "USD"),
+            locale=locale,
+        )
+    if event_type == "WorkflowFailed":
+        return workflow_failed_email(
+            workflow_name=payload.get("workflow_name", fallback_text("workflowName", locale)),
+            error=payload.get("error", fallback_text("workflowError", locale)),
+            locale=locale,
+        )
+    if event_type == "InventoryLowThresholdDetected":
+        return low_stock_email(
+            product_name=payload.get("product_name", ""),
+            sku=payload.get("sku", ""),
+            current_stock=payload.get("current_stock", 0),
+            min_stock=payload.get("min_stock", 0),
+            locale=locale,
+        )
+    if event_type == "InvoiceOverdue":
+        return invoice_overdue_email(
+            invoice_number=payload.get("invoice_number", ""),
+            total=payload.get("total", 0.0),
+            amount_due=payload.get("amount_due", 0.0),
+            currency=payload.get("currency", "USD"),
+            due_date=payload.get("due_date", ""),
+            locale=locale,
+        )
+    return None
+
+
 async def _send_event_email(event: dict) -> None:
-    """Build and send email for a specific event type."""
+    """Build and send email for a specific event type, in each recipient's language."""
     event_type = event.get("event_type", "")
     workspace_id = event.get("workspace_id", "")
     payload = event.get("payload", {})
@@ -80,46 +136,19 @@ async def _send_event_email(event: dict) -> None:
         return
 
     try:
-        if event_type == "QuoteAccepted":
-            subject, text, html = quote_accepted_email(
-                contact_name="",
-                quote_number=payload.get("quote_number", ""),
-                total=payload.get("total", 0.0),
-                currency=payload.get("currency", "USD"),
-                order_number=payload.get("order_number", ""),
-            )
-        elif event_type == "SalesOrderCreated":
-            subject, text, html = sales_order_created_email(
-                order_number=payload.get("order_number", ""),
-                total=payload.get("total", 0.0),
-                currency=payload.get("currency", "USD"),
-            )
-        elif event_type == "WorkflowFailed":
-            subject, text, html = workflow_failed_email(
-                workflow_name=payload.get("workflow_name", "Unknown"),
-                error=payload.get("error", "Unknown error"),
-            )
-        elif event_type == "InventoryLowThresholdDetected":
-            subject, text, html = low_stock_email(
-                product_name=payload.get("product_name", ""),
-                sku=payload.get("sku", ""),
-                current_stock=payload.get("current_stock", 0),
-                min_stock=payload.get("min_stock", 0),
-            )
-        elif event_type == "InvoiceOverdue":
-            subject, text, html = invoice_overdue_email(
-                invoice_number=payload.get("invoice_number", ""),
-                total=payload.get("total", 0.0),
-                amount_due=payload.get("amount_due", 0.0),
-                currency=payload.get("currency", "USD"),
-                due_date=payload.get("due_date", ""),
-            )
-        else:
-            return
+        # One rendering per language, not per recipient.
+        built: dict[str, tuple[str, str, str] | None] = {}
+        for recipient in recipients:
+            if recipient.locale not in built:
+                built[recipient.locale] = _build_event_email(event_type, payload, recipient.locale)
 
-        for to_email in recipients:
-            await send_email(to=to_email, subject=subject, html_body=html, text_body=text)
-            logger.info(f"Email sent for {event_type} to {to_email}")
+        for recipient in recipients:
+            message = built[recipient.locale]
+            if message is None:
+                return
+            subject, text, html = message
+            await send_email(to=recipient.email, subject=subject, html_body=html, text_body=text)
+            logger.info(f"Email sent for {event_type} to {recipient.email}")
 
     except Exception as e:
         logger.error(f"Failed to send email for {event_type}: {e}")

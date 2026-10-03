@@ -264,7 +264,7 @@ migracion es el momento de arreglarlo, no de conservarlo.
 ## Artefactos que renderiza el servidor
 
 El backend responde codigos y datos y no tiene prosa (ADR 0014). Lo que el servidor
-*dibuja* y entrega hecho —hoy las etiquetas del PDF de factura, manana los correos—
+*dibuja* y entrega hecho —las etiquetas del PDF de factura y los nueve correos—
 no pasa por ningun catalogo del frontend, y tiene los suyos:
 
 | Que | Donde |
@@ -282,9 +282,11 @@ translate("invoice_pdf:footer", locale, number="INV-7")   # marcadores {nombre},
 
 - **Mismas reglas que el frontend**: un fichero por dominio, enviar un idioma es que
   aparezca su carpeta, y un tag regional (`es-MX`) cae al catalogo base.
-- **El idioma lo resuelve quien llama, una vez**, con `resolve_user_locale`, y se pasa
-  como parametro (`generate_invoice_pdf(..., locale=locale)`). Nadie lee `user.locale`
-  directamente.
+- **El idioma lo resuelve quien llama, una vez**, y se pasa como parametro
+  (`generate_invoice_pdf(..., locale=locale)`). Nadie lee `user.locale` directamente. Hay dos
+  resoluciones, segun quien lea el artefacto: `resolve_user_locale` para un usuario (el PDF, los
+  correos internos: el idioma es el del destinatario) y `resolve_portal_locale` para quien recibe
+  un enlace de portal (los dos correos al cliente: `portal_sessions.locale` -> workspace -> `es`).
 - **Una clave que no existe es un error** (`KeyError`), no un texto de reserva: se
   imprimiria `invoice_pdf:typo` en un documento que se entrega a un cliente. Un valor
   que llega del backend y puede ser nuevo (un estado) se pide con `exists()` y cae al valor.
@@ -294,3 +296,10 @@ translate("invoice_pdf:footer", locale, number="INV-7")   # marcadores {nombre},
   dijo, y el parametro `locale` con un catalogo pseudo-localizado inyectado en
   `load_catalogues` (`tests/test_invoice_pdf_locale.py`): una etiqueta cableada sale sin
   el prefijo `EN(`. `tests/test_i18n_catalogue.py` fija la paridad entre idiomas.
+  Para un artefacto de texto largo (los correos) el golden va aparte: la salida exacta *antes*
+  de migrar, congelada en `tests/data/`, y el segundo idioma pone en MAYUSCULAS cada mensaje
+  del catalogo; con datos de prueba tambien en mayusculas, toda palabra en minusculas que
+  sobreviva es texto cableado (`tests/test_email_templates.py`).
+- **HTML en el catalogo.** Un mensaje puede llevar etiquetas en linea (`<strong>{x}</strong>`)
+  cuando la frase es una sola, y la estructura (tablas, estilos) se queda en el codigo. Lo
+  que se interpola en un mensaje de HTML llega ya escapado: el catalogo no escapa nada.
