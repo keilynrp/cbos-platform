@@ -52,6 +52,15 @@ async def get_current_workspace_id(
     return current_user.workspace_id
 
 
+async def _workspace_default_locale(db: AsyncSession, workspace_id: str) -> str | None:
+    from app.modules.identity.models import Workspace
+
+    result = await db.execute(
+        select(Workspace.default_locale).where(Workspace.id == workspace_id)
+    )
+    return result.scalar_one_or_none()
+
+
 async def resolve_user_locale(db: AsyncSession, user) -> str:
     """El idioma efectivo de un usuario autenticado (ADR 0016, punto 3).
 
@@ -64,14 +73,28 @@ async def resolve_user_locale(db: AsyncSession, user) -> str:
     o workspace del que heredar, y la cabecera solo cuenta en el registro.
     """
     from app.core.i18n import resolve_locale
-    from app.modules.identity.models import Workspace
 
-    result = await db.execute(
-        select(Workspace.default_locale).where(Workspace.id == user.workspace_id)
-    )
     return resolve_locale(
         user_locale=user.locale,
-        workspace_default=result.scalar_one_or_none(),
+        workspace_default=await _workspace_default_locale(db, user.workspace_id),
+    )
+
+
+async def resolve_portal_locale(
+    db: AsyncSession, workspace_id: str, portal_locale: str | None
+) -> str:
+    """El idioma de un correo para quien recibio un enlace de portal (ADR 0016, punto 2).
+
+    `portal_sessions.locale` -> `workspaces.default_locale` -> `"es"`. Un cliente
+    externo no tiene `users.locale`: el idioma lo decidio quien compartio el enlace,
+    y si no lo hizo, el del workspace que lo envia. Es el complemento de
+    `resolve_user_locale` y, como el, el unico sitio que lo decide.
+    """
+    from app.core.i18n import resolve_locale
+
+    return resolve_locale(
+        portal_locale=portal_locale,
+        workspace_default=await _workspace_default_locale(db, workspace_id),
     )
 
 
