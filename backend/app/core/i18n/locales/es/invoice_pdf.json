@@ -1,0 +1,41 @@
+{
+  "title": "FACTURA",
+  "footer": "Factura {number}  |  Generado por CBOS",
+  "customer": {
+    "label": "Cliente",
+    "attention": "Atn: {name}"
+  },
+  "issuer": {
+    "taxIdFallback": "ID"
+  },
+  "meta": {
+    "issueDate": "Fecha de emisión",
+    "dueDate": "Fecha de vencimiento",
+    "currency": "Moneda"
+  },
+  "table": {
+    "description": "Descripción",
+    "quantity": "Cant.",
+    "unitPrice": "Precio unit.",
+    "discount": "Dto. %",
+    "subtotal": "Subtotal"
+  },
+  "totals": {
+    "subtotal": "Subtotal",
+    "discount": "Descuento",
+    "tax": "IVA ({rate}%)",
+    "total": "TOTAL",
+    "paid": "Pagado",
+    "balance": "Saldo pendiente"
+  },
+  "notes": "Notas",
+  "status": {
+    "draft": "Borrador",
+    "sent": "Enviada",
+    "paid": "Pagada",
+    "partial": "Pago parcial",
+    "overdue": "Vencida",
+    "cancelled": "Cancelada",
+    "void": "Anulada"
+  }
+}

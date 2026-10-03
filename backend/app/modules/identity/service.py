@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import status
 
 from app.core.exceptions import CBOSException
+from app.core.deps import resolve_user_locale
 from app.core.i18n import SUPPORTED_LOCALES, normalize_locale, resolve_locale
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, verify_token
 from app.events.bus import publish as publish_event
@@ -229,16 +230,9 @@ async def read_me(user: User, db: AsyncSession) -> UserRead:
     """
     out = UserRead.model_validate(user)
 
-    # Sin `accept_language`: con un usuario autenticado ya hay preferencia
-    # guardada o workspace del que heredar, y la cabecera solo cuenta en el
-    # registro (ADR 0016, punto 3).
-    workspace_default = await db.execute(
-        select(Workspace.default_locale).where(Workspace.id == user.workspace_id)
-    )
-    out.effective_locale = resolve_locale(
-        user_locale=user.locale,
-        workspace_default=workspace_default.scalar_one_or_none(),
-    )
+    # Sin `accept_language`, ver `resolve_user_locale`: la cadena del ADR 0016
+    # vive en un solo sitio, que el PDF de factura tambien usa.
+    out.effective_locale = await resolve_user_locale(db, user)
 
     if user.person_id:
         result = await db.execute(

@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING
 
 from fpdf import FPDF
 
+from app.core.i18n import DEFAULT_LOCALE
+from app.core.i18n.catalogue import exists, translate
 from app.modules.accounting.fonts import register_unicode_font
 from app.modules.accounting.models import CompanyProfile, Invoice
 
@@ -58,16 +60,11 @@ def _fmt_date(d: date | None) -> str:
     return d.strftime("%d/%m/%Y")
 
 
-def _status_label(status: str) -> str:
-    return {
-        "draft":     "Borrador",
-        "sent":      "Enviada",
-        "paid":      "Pagada",
-        "partial":   "Pago parcial",
-        "overdue":   "Vencida",
-        "cancelled": "Cancelada",
-        "void":      "Anulada",
-    }.get(status, status.capitalize())
+def _status_label(status: str, locale: str) -> str:
+    # Un estado nuevo en el backend no debe romper el PDF ni dejar un hueco: sin
+    # entrada en el catalogo sale el valor tal cual, como en el frontend.
+    key = f"invoice_pdf:status.{status}"
+    return translate(key, locale) if exists(key, locale) else status.capitalize()
 
 
 def _decode_logo(profile: CompanyProfile | None) -> BytesIO | None:
@@ -90,14 +87,15 @@ def _decode_logo(profile: CompanyProfile | None) -> BytesIO | None:
         return None
 
 
-def _issuer_lines(profile: CompanyProfile | None) -> list[str]:
+def _issuer_lines(profile: CompanyProfile | None, locale: str) -> list[str]:
     """Build the issuer detail lines, skipping empty fields entirely."""
     if profile is None:
         return []
 
     lines: list[str] = []
     if profile.tax_id:
-        lines.append(f"{profile.tax_id_label or 'ID'}: {profile.tax_id}")
+        tax_id_label = profile.tax_id_label or translate("invoice_pdf:issuer.taxIdFallback", locale)
+        lines.append(f"{tax_id_label}: {profile.tax_id}")
 
     locality = " ".join(
         part for part in [profile.postal_code, profile.city, profile.state] if part
@@ -118,13 +116,13 @@ def _issuer_lines(profile: CompanyProfile | None) -> list[str]:
     return lines
 
 
-def _customer_lines(party: "InvoiceParty | None") -> list[str]:
+def _customer_lines(party: "InvoiceParty | None", locale: str) -> list[str]:
     if party is None or party.is_empty:
         return []
 
     lines = [party.name]
     if party.contact_name:
-        lines.append(f"Atn: {party.contact_name}")
+        lines.append(translate("invoice_pdf:customer.attention", locale, name=party.contact_name))
     contact = "  ".join(part for part in [party.email, party.phone] if part)
     if contact:
         lines.append(contact)
@@ -138,9 +136,10 @@ def _customer_lines(party: "InvoiceParty | None") -> list[str]:
 class InvoicePDF(FPDF):
     """Custom FPDF subclass — adds header/footer."""
 
-    def __init__(self, invoice_number: str):
+    def __init__(self, invoice_number: str, locale: str = DEFAULT_LOCALE):
         super().__init__(unit="mm", format="A4")
         self._invoice_number = invoice_number
+        self._locale = locale
         self._family = "Helvetica"      # replaced by register_unicode_font
         self._footer_note: str | None = None
 
@@ -148,7 +147,7 @@ class InvoicePDF(FPDF):
         self.set_y(-12)
         self.set_font(self._family, size=8)
         self.set_text_color(*_MUTED)
-        base = f"Factura {self._invoice_number}  |  Generado por CBOS"
+        base = translate("invoice_pdf:footer", self._locale, number=self._invoice_number)
         text = f"{self._footer_note}  |  {base}" if self._footer_note else base
         self.cell(0, 5, text, align="C")
 
@@ -159,6 +158,7 @@ def generate_invoice_pdf(
     invoice: Invoice,
     profile: CompanyProfile | None = None,
     party: "InvoiceParty | None" = None,
+    locale: str = DEFAULT_LOCALE,
 ) -> bytes:
     """
     Build a PDF for the given Invoice ORM object (with .lines loaded).
@@ -166,8 +166,12 @@ def generate_invoice_pdf(
 
     `profile` and `party` are optional: with neither, output matches the
     original hardcoded-issuer rendition.
+
+    `locale` picks the language of the labels (catalogue `invoice_pdf`); the
+    caller resolves it with `app.core.deps.resolve_user_locale`. It does not
+    change how dates and amounts are formatted — see `app.core.i18n.catalogue`.
     """
-    pdf = InvoicePDF(invoice.invoice_number)
+    pdf = InvoicePDF(invoice.invoice_number, locale)
     family = register_unicode_font(pdf)
     pdf._family = family
     if profile is not None:
@@ -200,13 +204,13 @@ def generate_invoice_pdf(
 
     pdf.set_xy(15 + page_w / 2, 15)
     pdf.set_font(family, style="B", size=14)
-    pdf.cell(page_w / 2, 18, "FACTURA", align="R")
+    pdf.cell(page_w / 2, 18, translate("invoice_pdf:title", locale), align="R")
 
     pdf.ln(20)
 
     # ── Issuer / customer blocks ──────────────────────────────────────────────
-    issuer = _issuer_lines(profile)
-    customer = _customer_lines(party)
+    issuer = _issuer_lines(profile, locale)
+    customer = _customer_lines(party, locale)
 
     if issuer or customer:
         block_top = pdf.get_y()
@@ -223,7 +227,7 @@ def generate_invoice_pdf(
         if customer:
             pdf.set_xy(15 + page_w / 2, block_top)
             pdf.set_text_color(*_MUTED)
-            pdf.cell(page_w / 2, 4, "Cliente", align="R")
+            pdf.cell(page_w / 2, 4, translate("invoice_pdf:customer.label", locale), align="R")
             pdf.ln(4)
             pdf.set_text_color(*_DARK)
             for text in customer:
@@ -248,7 +252,7 @@ def generate_invoice_pdf(
 
     # Status badge (right-aligned)
     status_color = _STATUS_COLORS.get(invoice.status, _MUTED)
-    badge_label = _status_label(invoice.status)
+    badge_label = _status_label(invoice.status, locale)
     pdf.set_font(family, style="B", size=9)
     badge_w = pdf.get_string_width(badge_label) + 8
     badge_x = 15 + page_w - badge_w
@@ -266,7 +270,11 @@ def generate_invoice_pdf(
     pdf.set_font(family, size=8)
     col_w = page_w / 3
 
-    labels = ["Fecha de emisión", "Fecha de vencimiento", "Moneda"]
+    labels = [
+        translate("invoice_pdf:meta.issueDate", locale),
+        translate("invoice_pdf:meta.dueDate", locale),
+        translate("invoice_pdf:meta.currency", locale),
+    ]
     values = [_fmt_date(invoice.issue_date), _fmt_date(invoice.due_date), invoice.currency]
 
     for i, (lbl, val) in enumerate(zip(labels, values)):
@@ -305,11 +313,11 @@ def generate_invoice_pdf(
     pdf.set_text_color(*_MUTED)
     pdf.set_font(family, style="B", size=8)
     pdf.set_xy(15, header_y)
-    pdf.cell(desc_w,  7, "Descripción",      align="L")
-    pdf.cell(qty_w,   7, "Cant.",            align="C")
-    pdf.cell(price_w, 7, "Precio unit.",     align="R")
-    pdf.cell(disc_w,  7, "Dto. %",           align="R")
-    pdf.cell(sub_w,   7, "Subtotal",         align="R")
+    pdf.cell(desc_w,  7, translate("invoice_pdf:table.description", locale), align="L")
+    pdf.cell(qty_w,   7, translate("invoice_pdf:table.quantity", locale),    align="C")
+    pdf.cell(price_w, 7, translate("invoice_pdf:table.unitPrice", locale),   align="R")
+    pdf.cell(disc_w,  7, translate("invoice_pdf:table.discount", locale),    align="R")
+    pdf.cell(sub_w,   7, translate("invoice_pdf:table.subtotal", locale),    align="R")
     pdf.ln(8)
 
     # Rows
@@ -353,11 +361,17 @@ def generate_invoice_pdf(
         pdf.cell(value_w, 6, value, align="R")
         pdf.ln(6)
 
-    _total_row("Subtotal",   _fmt_currency(invoice.subtotal, invoice.currency))
+    _total_row(translate("invoice_pdf:totals.subtotal", locale), _fmt_currency(invoice.subtotal, invoice.currency))
     if invoice.discount_amount > 0:
-        _total_row("Descuento", f"- {_fmt_currency(invoice.discount_amount, invoice.currency)}")
+        _total_row(
+            translate("invoice_pdf:totals.discount", locale),
+            f"- {_fmt_currency(invoice.discount_amount, invoice.currency)}",
+        )
     if invoice.tax_rate > 0:
-        _total_row(f"IVA ({invoice.tax_rate:.0f}%)", _fmt_currency(invoice.tax_amount, invoice.currency))
+        _total_row(
+            translate("invoice_pdf:totals.tax", locale, rate=f"{invoice.tax_rate:.0f}"),
+            _fmt_currency(invoice.tax_amount, invoice.currency),
+        )
 
     # Total line with background
     total_row_y = pdf.get_y()
@@ -366,15 +380,15 @@ def generate_invoice_pdf(
     pdf.set_font(family, style="B", size=10)
     pdf.set_text_color(255, 255, 255)
     pdf.set_xy(totals_x, total_row_y)
-    pdf.cell(label_w, 8, "TOTAL", align="L")
+    pdf.cell(label_w, 8, translate("invoice_pdf:totals.total", locale), align="L")
     pdf.cell(value_w, 8, _fmt_currency(invoice.total, invoice.currency), align="R")
     pdf.ln(9)
 
     if invoice.amount_paid > 0:
-        _total_row("Pagado",       _fmt_currency(invoice.amount_paid, invoice.currency))
+        _total_row(translate("invoice_pdf:totals.paid", locale), _fmt_currency(invoice.amount_paid, invoice.currency))
         overdue = invoice.status == "overdue"
         _total_row(
-            "Saldo pendiente",
+            translate("invoice_pdf:totals.balance", locale),
             _fmt_currency(invoice.amount_due, invoice.currency),
             bold=True,
             color=(239, 68, 68) if overdue else _DARK,
@@ -390,7 +404,7 @@ def generate_invoice_pdf(
         pdf.set_font(family, style="B", size=8)
         pdf.set_text_color(*_MUTED)
         pdf.set_x(15)
-        pdf.cell(0, 5, "Notas")
+        pdf.cell(0, 5, translate("invoice_pdf:notes", locale))
         pdf.ln(5)
         pdf.set_font(family, size=8)
         pdf.set_text_color(*_DARK)

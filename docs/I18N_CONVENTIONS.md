@@ -260,3 +260,37 @@ migracion es el momento de arreglarlo, no de conservarlo.
 3. Falta por automatizar (plan de i18n, seccion Verificacion): la paridad entre
    catalogos y el chequeo de claves usadas y no definidas, o al reves. Hasta
    entonces, una clave que falte en el idioma nuevo cae al texto en espanol.
+
+## Artefactos que renderiza el servidor
+
+El backend responde codigos y datos y no tiene prosa (ADR 0014). Lo que el servidor
+*dibuja* y entrega hecho —hoy las etiquetas del PDF de factura, manana los correos—
+no pasa por ningun catalogo del frontend, y tiene los suyos:
+
+| Que | Donde |
+|---|---|
+| Catalogos | `backend/app/core/i18n/locales/<idioma>/<dominio>.json` |
+| Cargador y `translate()` | `backend/app/core/i18n/catalogue.py` |
+| Idioma efectivo de un usuario | `app.core.deps.resolve_user_locale` (`get_current_locale` en una ruta) |
+
+```python
+from app.core.i18n.catalogue import exists, translate
+
+translate("invoice_pdf:status.paid", locale)              # "Pagada"
+translate("invoice_pdf:footer", locale, number="INV-7")   # marcadores {nombre}, no {{nombre}}
+```
+
+- **Mismas reglas que el frontend**: un fichero por dominio, enviar un idioma es que
+  aparezca su carpeta, y un tag regional (`es-MX`) cae al catalogo base.
+- **El idioma lo resuelve quien llama, una vez**, con `resolve_user_locale`, y se pasa
+  como parametro (`generate_invoice_pdf(..., locale=locale)`). Nadie lee `user.locale`
+  directamente.
+- **Una clave que no existe es un error** (`KeyError`), no un texto de reserva: se
+  imprimiria `invoice_pdf:typo` en un documento que se entrega a un cliente. Un valor
+  que llega del backend y puede ser nuevo (un estado) se pide con `exists()` y cae al valor.
+- **No hay plurales ni formato de fechas e importes por idioma todavia.** Cuando un texto
+  tenga que contar cosas, o se envie el segundo idioma, se decide `babel` o una tabla propia.
+- **Como se prueba**: el catalogo `es` se comprueba contra lo que el artefacto siempre
+  dijo, y el parametro `locale` con un catalogo pseudo-localizado inyectado en
+  `load_catalogues` (`tests/test_invoice_pdf_locale.py`): una etiqueta cableada sale sin
+  el prefijo `EN(`. `tests/test_i18n_catalogue.py` fija la paridad entre idiomas.

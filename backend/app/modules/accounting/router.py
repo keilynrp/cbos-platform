@@ -3,7 +3,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_current_workspace_id
+from app.core.deps import get_current_locale, get_current_user, get_current_workspace_id
 from app.modules.accounting import service
 from app.modules.accounting.pdf import generate_invoice_pdf
 from app.modules.accounting.schemas import (
@@ -105,12 +105,13 @@ async def download_invoice_pdf(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
+    locale: str = Depends(get_current_locale),
 ):
-    """Download a PDF rendition of an invoice."""
+    """Download a PDF rendition of an invoice, in the requester's language."""
     inv = await service.get_invoice(db, workspace_id, invoice_id)
     profile = await service.get_or_create_company_profile(db, workspace_id)
     party = await service.resolve_invoice_party(db, workspace_id, inv)
-    pdf_bytes = generate_invoice_pdf(inv, profile=profile, party=party)
+    pdf_bytes = generate_invoice_pdf(inv, profile=profile, party=party, locale=locale)
     filename = f"{inv.invoice_number}.pdf"
     return Response(
         content=pdf_bytes,
