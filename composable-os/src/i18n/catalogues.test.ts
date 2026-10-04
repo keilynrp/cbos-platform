@@ -31,7 +31,7 @@ const BASE = "es";
  * idioma se ofrece solo (`releasedLocales`): no hay un interruptor aparte.
  */
 const TRANSLATED: Record<string, string[]> = {
-  en: ["common"],
+  en: ["common", "errors", "auth"],
 };
 
 /**
@@ -40,7 +40,7 @@ const TRANSLATED: Record<string, string[]> = {
  * es identica al base, y lo unico que la distingue de una legitima es que alguien
  * la apruebe aqui.
  */
-const IDENTICAL_TO_BASE = ["common:error.title"];
+const IDENTICAL_TO_BASE = ["common:error.title", "auth:login.tagline", "auth:login.emailLabel", "auth:register.emailLabel"];
 
 const pendingFor = (catalogues: Catalogues): Record<string, string[]> =>
   Object.fromEntries(
