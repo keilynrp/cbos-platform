@@ -114,6 +114,62 @@ export function compareCatalogues(catalogues: Catalogues, options: ParityOptions
   return problems;
 }
 
+// --------------------------------------------------------- sin traducir
+
+export interface UntranslatedOptions {
+  base: string;
+  /** Espacios que el idioma aun no tiene: no se comparan (igual que en la paridad). */
+  pending?: Record<string, string[]>;
+  /**
+   * Claves (`ns:ruta`) cuyo valor puede ser igual al del idioma base porque la
+   * palabra es la misma en los dos (`Error`, `Total`, un nombre de producto). Es
+   * explicita a proposito: una traduccion que se quedo en espanol es identica al
+   * base y lo unico que la distingue de una legitima es que alguien la apruebe.
+   */
+  allow?: string[];
+}
+
+/**
+ * Cadenas de un idioma que son identicas a las del base. La paridad de claves no
+ * lo ve: una clave copiada del espanol existe, tiene los mismos marcadores y se
+ * ve como una traduccion hasta que alguien la lee. Compara contra el *base*, no
+ * contra el propio catalogo, asi que no se deja enganar por lo que contiene.
+ */
+export function findUntranslated(catalogues: Catalogues, options: UntranslatedOptions): string[] {
+  const { base, pending = {}, allow = [] } = options;
+  const reference = catalogues[base];
+  if (!reference) return [];
+  const allowed = new Set(allow);
+  const problems: string[] = [];
+
+  for (const [language, namespaces] of Object.entries(catalogues)) {
+    if (language === base) continue;
+    const skipped = new Set(pending[language] ?? []);
+    for (const [ns, tree] of Object.entries(namespaces)) {
+      if (skipped.has(ns) || !(ns in reference)) continue;
+      const want = leaves(reference[ns]);
+      for (const [path, message] of leaves(tree)) {
+        const key = `${ns}:${path}`;
+        const original = want.get(path);
+        const hasWords = /\p{L}/u.test(message.replace(/\{\{[^}]*\}\}/g, ""));
+        if (original === message && hasWords && !allowed.has(key)) {
+          problems.push(`${language}: ${key} es igual que en ${base} (${JSON.stringify(message)})`);
+        }
+      }
+    }
+    for (const key of allowed) {
+      const [ns, ...rest] = key.split(":");
+      const path = rest.join(":");
+      const mine = namespaces[ns] ? leaves(namespaces[ns]).get(path) : undefined;
+      const original = reference[ns] ? leaves(reference[ns]).get(path) : undefined;
+      if (mine !== undefined && original !== undefined && mine !== original) {
+        problems.push(`${language}: ${key} esta permitida como igual pero ya difiere; quitala de la lista`);
+      }
+    }
+  }
+  return problems;
+}
+
 // -------------------------------------------------------------- huerfanas
 
 export interface KeyUse {

@@ -4,13 +4,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   compareCatalogues,
+  findUntranslated,
   crossCheck,
   findKeyUses,
   leaves,
   placeholders,
   type Catalogues,
 } from "./catalogueChecks";
-import { resources } from "./resources";
+import { releasedLocales, resources } from "./resources";
 
 /**
  * Paridad entre idiomas y cadenas huerfanas (plan de i18n, "Verificacion").
@@ -23,11 +24,33 @@ import { resources } from "./resources";
 const BASE = "es";
 
 /**
- * Espacios de nombres que otro idioma aun no ha traducido. Es un trinquete: solo
- * se encoge. Cada PR que traduce un dominio lo quita de aqui, y el check falla si
- * se queda un espacio listado que ya existe.
+ * Los espacios de nombres que cada idioma ya tiene traducidos. Lo demas es
+ * pendiente. Cada PR que traduce un dominio lo anade aqui en el mismo cambio: el
+ * check falla si el espacio existe y no esta listado (se anadio sin registrarlo) y
+ * si esta listado y no existe. Cuando la lista iguala a la del idioma base, el
+ * idioma se ofrece solo (`releasedLocales`): no hay un interruptor aparte.
  */
-const PENDING: Record<string, string[]> = {};
+const TRANSLATED: Record<string, string[]> = {
+  en: ["common"],
+};
+
+/**
+ * Claves cuyo valor es igual en el idioma base y en el otro porque la palabra es
+ * la misma (`Error`). Explicita a proposito: una traduccion que se quedo en espanol
+ * es identica al base, y lo unico que la distingue de una legitima es que alguien
+ * la apruebe aqui.
+ */
+const IDENTICAL_TO_BASE = ["common:error.title"];
+
+const pendingFor = (catalogues: Catalogues): Record<string, string[]> =>
+  Object.fromEntries(
+    Object.keys(catalogues)
+      .filter((language) => language !== BASE)
+      .map((language) => [
+        language,
+        Object.keys(catalogues[BASE]).filter((ns) => !(TRANSLATED[language] ?? []).includes(ns)),
+      ]),
+  );
 
 /**
  * Espacios cuyas claves no aparecen como literal en el codigo porque las pone el
@@ -111,6 +134,62 @@ describe("compareCatalogues (los controles pueden fallar)", () => {
   });
 });
 
+describe("findUntranslated (los controles pueden fallar)", () => {
+  const catalogues = (en: Record<string, unknown>): Catalogues => ({
+    es: { common: { save: "Guardar", error: "Error", hello: "Hola {{name}}", count: "{{n}}" } },
+    en: { common: en },
+  });
+  const run = (en: Record<string, unknown>, allow: string[] = []) =>
+    findUntranslated(catalogues(en), { base: "es", allow });
+
+  it("una traduccion de verdad no tiene problemas", () => {
+    expect(run({ save: "Save", error: "Error", hello: "Hi {{name}}", count: "{{n}}" }, ["common:error"])).toEqual([]);
+  });
+
+  it("detecta una cadena copiada del espanol", () => {
+    expect(run({ save: "Guardar", error: "Error", hello: "Hi {{name}}", count: "{{n}}" }, ["common:error"])).toEqual([
+      `en: common:save es igual que en es ("Guardar")`,
+    ]);
+  });
+
+  it("una palabra identica solo vale si alguien la aprobo", () => {
+    expect(run({ save: "Save", error: "Error", hello: "Hi {{name}}", count: "{{n}}" })).toEqual([
+      `en: common:error es igual que en es ("Error")`,
+    ]);
+  });
+
+  it("lo que no tiene palabras (un numero, un marcador) no cuenta como copia", () => {
+    expect(run({ save: "Save", error: "Failure", hello: "Hi {{name}}", count: "{{n}}" })).toEqual([]);
+  });
+
+  it("la lista de permitidas no puede quedarse vieja", () => {
+    expect(run({ save: "Save", error: "Failure", hello: "Hi {{name}}", count: "{{n}}" }, ["common:error"])).toEqual([
+      "en: common:error esta permitida como igual pero ya difiere; quitala de la lista",
+    ]);
+  });
+
+  it("no compara los espacios pendientes", () => {
+    const c = catalogues({ save: "Guardar" });
+    expect(findUntranslated(c, { base: "es", pending: { en: ["common"] } })).toEqual([]);
+  });
+});
+
+describe("releasedLocales (los controles pueden fallar)", () => {
+  const es = { common: { a: "a" }, sales: { b: "b" } };
+
+  it("un idioma al que le falta un espacio no se ofrece", () => {
+    expect(releasedLocales({ es, en: { common: { a: "a" } } })).toEqual(["es"]);
+  });
+
+  it("se ofrece en cuanto tiene el ultimo", () => {
+    expect(releasedLocales({ es, en: { common: { a: "a" }, sales: { b: "b" } } })).toEqual(["es", "en"]);
+  });
+
+  it("el base siempre se ofrece", () => {
+    expect(releasedLocales({ es })).toEqual(["es"]);
+  });
+});
+
 describe("leaves y placeholders", () => {
   it("aplana el arbol y no cuenta los grupos", () => {
     expect([...leaves({ a: { b: "x", c: { d: "y" } }, e: "z" }).keys()]).toEqual(["a.b", "a.c.d", "e"]);
@@ -178,7 +257,20 @@ describe("los catalogos que se envian", () => {
   });
 
   it("todos los idiomas estan en paridad con el base", () => {
-    expect(compareCatalogues(resources as Catalogues, { base: BASE, pending: PENDING })).toEqual([]);
+    expect(compareCatalogues(resources as Catalogues, { base: BASE, pending: pendingFor(resources as Catalogues) })).toEqual([]);
+  });
+
+  it("ninguna cadena traducida es una copia del idioma base", () => {
+    const catalogues = resources as Catalogues;
+    expect(
+      findUntranslated(catalogues, { base: BASE, pending: pendingFor(catalogues), allow: IDENTICAL_TO_BASE }),
+    ).toEqual([]);
+  });
+
+  it("un idioma se ofrece cuando esta completo, y no antes", () => {
+    const catalogues = resources as Catalogues;
+    const complete = Object.keys(catalogues).filter((language) => (pendingFor(catalogues)[language] ?? []).length === 0);
+    expect(releasedLocales(catalogues).sort()).toEqual(complete.sort());
   });
 
   it("ninguna clave del catalogo esta huerfana ni el codigo pide una que no existe", () => {

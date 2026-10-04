@@ -2,7 +2,7 @@ import i18n, { type InitOptions } from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import { FALLBACK_LOCALE, detectLocale, normalizeLocale } from "./locale";
-import { SUPPORTED_LOCALES, resources } from "./resources";
+import { SUPPORTED_LOCALES, UNRELEASED_LOCALES, resources } from "./resources";
 
 /**
  * Clave donde se recuerda la eleccion de idioma en este navegador. Sirve para
@@ -92,5 +92,5 @@ export async function setLocale(locale: string): Promise<string> {
   return next;
 }
 
-export { SUPPORTED_LOCALES, resources };
+export { SUPPORTED_LOCALES, UNRELEASED_LOCALES, resources };
 export default i18n;
