@@ -80,11 +80,11 @@ describe("a second language", () => {
   });
 
   it("does not activate a language that has no shipped catalogue", async () => {
-    // Con solo `es` enviado, pedir `en` no debe dejar la interfaz en un idioma
-    // sin texto: se queda en el de reserva.
+    // Pedir un idioma sin carpeta en `locales/` (`fr`) no debe dejar la interfaz en
+    // un idioma sin texto: se queda en el de reserva.
     const instance = i18next.createInstance();
     await instance.init(buildI18nOptions(resources, "es"));
-    await instance.changeLanguage("en");
+    await instance.changeLanguage("fr");
 
     expect(instance.t("auth:login.title")).toBe("Iniciar sesión");
   });

@@ -97,6 +97,7 @@ describe("the real English catalogue", () => {
     // usuario veria la pantalla mezclada. Se fija para que nadie lo descubra en
     // produccion.
     const instance = await english();
-    expect(instance.t("auth:login.title")).toBe("Iniciar sesión");
+    // `workflows` sigue pendiente: cuando se traduzca, este test pasa a otro dominio.
+    expect(instance.t("workflows:new")).toBe("Nuevo Workflow");
   });
 });
