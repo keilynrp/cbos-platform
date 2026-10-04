@@ -1,0 +1,52 @@
+{
+  "title": "Dashboard",
+  "greeting": "Hello, {{name}}",
+  "subtitle": "Your business at a glance, in real time.",
+  "kpi": {
+    "invoiced": "Total invoiced",
+    "invoicedSub": "cumulative revenue",
+    "openDeals": "Open deals",
+    "openDealsSub": "value: {{value}}",
+    "pendingOrders": "Pending orders",
+    "pendingOrdersSub_one": "{{count}} active workflow",
+    "pendingOrdersSub_other": "{{count}} active workflows",
+    "stockAlerts": "Stock alerts",
+    "stockAlertsSub": "items below minimum"
+  },
+  "revenue": {
+    "title": "Revenue — last {{months}} months",
+    "series": "Invoiced"
+  },
+  "pipeline": {
+    "title": "CRM pipeline",
+    "empty": "No opportunities yet.",
+    "create": "Create one"
+  },
+  "inventory": {
+    "title": "Inventory alerts",
+    "viewAll": "View all",
+    "allGood": "All inventory is at healthy levels.",
+    "available_one": "{{count}} available",
+    "available_other": "{{count}} available"
+  },
+  "activity": {
+    "title": "Recent activity",
+    "crm": "CRM",
+    "empty": "No activity recorded yet."
+  },
+  "insights": {
+    "title": "AI insights",
+    "sales": {
+      "agent": "Sales assistant",
+      "text": "Review your open quotes — some may be about to expire."
+    },
+    "inventory": {
+      "agent": "Inventory agent",
+      "text": "Check low-stock items before placing new orders."
+    },
+    "workflows": {
+      "agent": "Workflow engine",
+      "text": "Automate repetitive follow-ups with an event-triggered workflow."
+    }
+  }
+}
