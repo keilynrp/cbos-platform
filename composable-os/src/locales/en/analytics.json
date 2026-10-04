@@ -1,0 +1,100 @@
+{
+  "title": "Analytics",
+  "subtitle": "Business dashboards with real data — invoicing, pipeline, projects, contracts and team.",
+  "tabs": {
+    "revenue": "Revenue",
+    "pipeline": "Pipeline",
+    "projects": "Projects",
+    "contracts": "Contracts",
+    "hr": "Team"
+  },
+  "errors": {
+    "revenue": "Error loading revenue data.",
+    "pipeline": "Error loading pipeline data.",
+    "hr": "Error loading team data.",
+    "projects": "Error loading project data.",
+    "contracts": "Error loading contract data."
+  },
+  "revenue": {
+    "kpi": {
+      "invoiced": { "label": "Total invoiced", "sub": "cumulative" },
+      "paid": { "label": "Total collected", "sub": "payments received" },
+      "outstanding": { "label": "Receivable", "sub": "pending" },
+      "overdue": {
+        "label": "Overdue",
+        "sub_one": "{{count}} invoice",
+        "sub_other": "{{count}} invoices"
+      }
+    },
+    "chartTitle": "Revenue — last {{months}} months",
+    "empty": "No invoices recorded yet.",
+    "invoiced": "Invoiced",
+    "paid": "Collected"
+  },
+  "pipeline": {
+    "kpi": {
+      "open": "Open opportunities",
+      "value": "Pipeline value",
+      "winRate": "Win rate (30d)",
+      "avgDeal": "Average value / deal"
+    },
+    "monthly": {
+      "won": "Won this month",
+      "wonValue": "Value won this month",
+      "activeLeads": "Active leads",
+      "newLeads": "New leads (month)"
+    },
+    "stagesTitle": "Opportunities by stage",
+    "empty": "No open opportunities right now.",
+    "value": "Value",
+    "count": "Count"
+  },
+  "hr": {
+    "kpi": {
+      "active": "Active employees",
+      "onLeave": "On leave",
+      "newHires": "New hires (month)",
+      "terminations": "Terminations (month)"
+    },
+    "typeTitle": "Employment type (active)",
+    "typeEmpty": "No active employees recorded.",
+    "employees": "Employees",
+    "orgTitle": "Organisation structure",
+    "departments": "Departments",
+    "headcount": "Total headcount (active)",
+    "unassigned": "No department assigned",
+    "former": "Former employees"
+  },
+  "projects": {
+    "kpi": {
+      "active": "Active projects",
+      "budget": "Total active budget",
+      "completed": "Completed (month)",
+      "cancelled": "Cancelled (month)"
+    },
+    "statusTitle": "Projects by status",
+    "statusEmpty": "No projects recorded yet.",
+    "projects": "Projects",
+    "tasksTitle": "Task health (active projects)",
+    "completion": "Completion rate",
+    "totalTasks": "Total tasks (active)",
+    "done": "Completed",
+    "overdue": "Overdue"
+  },
+  "contracts": {
+    "kpi": {
+      "total": "Total contracts",
+      "signedValue": "Signed value",
+      "signedMonth": "Signed (month)",
+      "expiring": "Expiring (30d)"
+    },
+    "statusTitle": "Contracts by status",
+    "statusEmpty": "No contracts recorded yet.",
+    "contracts": "Contracts",
+    "valueTitle": "Committed value",
+    "signedExecuted": "Signed + executed value",
+    "executedValue": "Executed value",
+    "executedMonth": "Executed this month",
+    "expiring30": "Expiring in 30 days"
+  }
+}
