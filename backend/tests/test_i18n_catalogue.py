@@ -12,7 +12,7 @@ de que haya un segundo.
 """
 import pytest
 
-from app.core.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES
+from app.core.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, UNRELEASED_LOCALES, normalize_locale, resolve_locale
 from app.core.i18n import catalogue
 from app.core.i18n.catalogue import exists, translate
 
@@ -58,9 +58,22 @@ async def test_the_default_locale_has_a_catalogue():
 
 
 async def test_supported_locales_are_exactly_the_shipped_catalogues():
-    # Enviar un idioma es que aparezca su carpeta; la lista de `core/i18n` no
-    # puede quedarse atras (ni adelantada: aceptaria un locale sin texto).
-    assert set(catalogue.load_catalogues()) == set(SUPPORTED_LOCALES)
+    # Cada carpeta de `locales/` esta en una de las dos listas de `core/i18n`:
+    # ofrecida (`SUPPORTED_LOCALES`) o completa pero aun sin ofrecer
+    # (`UNRELEASED_LOCALES`). Ni una carpeta suelta, ni un idioma listado sin texto.
+    assert set(catalogue.load_catalogues()) == set(SUPPORTED_LOCALES) | set(UNRELEASED_LOCALES)
+
+
+async def test_a_language_is_either_offered_or_unreleased_not_both():
+    assert not set(SUPPORTED_LOCALES) & set(UNRELEASED_LOCALES)
+
+
+async def test_an_unreleased_language_is_not_reachable_on_its_own():
+    # Tiene catalogo y `translate` lo sirve, pero nadie llega a el solo: ni por el
+    # PATCH del locale, ni por `Accept-Language`, ni por el workspace.
+    assert normalize_locale("en") is None
+    assert resolve_locale(user_locale="en", accept_language="en-US,en;q=0.9") == DEFAULT_LOCALE
+    assert translate("invoice_pdf:title", "en") == "INVOICE"
 
 
 async def test_every_catalogue_has_the_same_keys_as_the_default():

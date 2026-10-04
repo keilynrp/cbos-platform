@@ -1,0 +1,110 @@
+{
+  "close": "Close",
+  "error": {
+    "generic": "Something went wrong",
+    "title": "Error"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "sidebar": {
+    "toggle": "Toggle sidebar"
+  },
+  "notFound": {
+    "message": "Oops! Page not found",
+    "home": "Return to home"
+  },
+  "projectStatus": {
+    "planning": "Planning",
+    "active": "Active",
+    "on_hold": "On hold",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "contractStatus": {
+    "draft": "Draft",
+    "sent": "Sent",
+    "signed": "Signed",
+    "executed": "Executed",
+    "expired": "Expired",
+    "terminated": "Terminated"
+  },
+  "employmentType": {
+    "full_time": "Full-time",
+    "part_time": "Part-time",
+    "contractor": "Contractor",
+    "intern": "Intern"
+  },
+  "crmStage": {
+    "new": "New",
+    "qualified": "Qualified",
+    "proposal": "Proposal",
+    "negotiation": "Negotiation",
+    "won": "Won",
+    "lost": "Lost"
+  },
+  "inventoryStatus": {
+    "in_stock": "in stock",
+    "low_stock": "low stock",
+    "out_of_stock": "out of stock"
+  },
+  "activityType": {
+    "call": "call",
+    "email": "email",
+    "meeting": "meeting",
+    "note": "note",
+    "task": "task",
+    "deal": "deal",
+    "document": "document"
+  },
+  "quoteStatus": {
+    "draft": "Draft",
+    "sent": "Sent",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "expired": "Expired"
+  },
+  "orderStatus": {
+    "draft": "Draft",
+    "confirmed": "Confirmed",
+    "in_fulfillment": "In fulfillment",
+    "fulfilled": "Fulfilled",
+    "cancelled": "Cancelled"
+  },
+  "invoiceStatus": {
+    "draft": "Draft",
+    "sent": "Sent",
+    "paid": "Paid",
+    "partial": "Partial",
+    "overdue": "Overdue",
+    "cancelled": "Cancelled",
+    "void": "Void"
+  },
+  "taskStatus": {
+    "todo": "To do",
+    "in_progress": "In progress",
+    "done": "Done",
+    "cancelled": "Cancelled"
+  },
+  "employeeStatus": {
+    "active": "Active",
+    "on_leave": "On leave",
+    "terminated": "Terminated"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "goToPrevious": "Go to previous page",
+    "goToNext": "Go to next page",
+    "more": "More pages"
+  },
+  "breadcrumb": {
+    "label": "Breadcrumb",
+    "more": "More"
+  },
+  "carousel": {
+    "previous": "Previous slide",
+    "next": "Next slide"
+  }
+}

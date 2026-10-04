@@ -1,0 +1,80 @@
+{
+  "workspaceFooter": "{workspace} · CBOS Platform",
+  "fallback": {
+    "clientName": "Customer",
+    "workflowName": "Unknown",
+    "workflowError": "Unknown error"
+  },
+  "quotePortal": {
+    "greeting": "Hi {name},",
+    "greetingAnonymous": "Hi,",
+    "noExpiry": "No expiry date",
+    "subject": "Quote {number} from {workspace}",
+    "text": "{greeting}\n\n{workspace} has sent you a quote for your review.\n\n  Number:      {number}\n  Total:       {amount}\n  Valid until: {validUntil}\n\nReview and accept your quote here:\n{url}\n\nBest regards,\n{workspace}",
+    "intro": "We have sent you a quote for your review and approval.",
+    "number": "Number",
+    "total": "Total",
+    "validUntil": "Valid until",
+    "cta": "View and Accept Quote →",
+    "fallbackLink": "If the button does not work, copy this link into your browser:",
+    "signoff": "Best regards,"
+  },
+  "quoteAccepted": {
+    "subject": "Quote {number} accepted",
+    "text": "Hi,\n\nQuote {number} for {amount} has been accepted.\nGenerated order number: {order}\n\nCBOS Platform",
+    "title": "Quote accepted ✓",
+    "body": "Quote <strong>{number}</strong> for <strong>{amount}</strong> was accepted.",
+    "order": "Generated order: <strong>{order}</strong>"
+  },
+  "salesOrderCreated": {
+    "subject": "New sales order {order}",
+    "text": "Sales order {order} for {amount} has been created.\n\nCBOS Platform",
+    "title": "New sales order",
+    "body": "Order <strong>{order}</strong> created for <strong>{amount}</strong>."
+  },
+  "workflowFailed": {
+    "subject": "Workflow failed: {name}",
+    "text": "The workflow '{name}' failed with the error:\n{error}\n\nCBOS Platform",
+    "title": "Workflow failed",
+    "body": "The workflow <strong>{name}</strong> failed."
+  },
+  "invoiceOverdue": {
+    "subject": "Overdue invoice: {number}",
+    "text": "Invoice {number} for {amount} is overdue.\nOutstanding amount: {pending}\nDue date: {dueDate}\n\nCBOS Platform",
+    "title": "Overdue invoice",
+    "body": "Invoice <strong>{number}</strong> for <strong>{amount}</strong> is overdue.",
+    "pending": "Outstanding amount: <strong>{pending}</strong>",
+    "dueDate": "Due date: <strong>{dueDate}</strong>"
+  },
+  "lowStock": {
+    "subject": "Low stock: {product} ({sku})",
+    "text": "The product {product} (SKU: {sku}) is low on stock.\nCurrent stock: {current} | Minimum: {min}\n\nCBOS Platform",
+    "title": "Low stock alert",
+    "product": "Product: <strong>{product}</strong> (SKU: {sku})",
+    "stock": "Current stock: <strong>{current}</strong> | Minimum required: <strong>{min}</strong>"
+  },
+  "sellerAccept": {
+    "subject": "{client} accepted proposal {number}",
+    "text": "Good news!\n\n{client} has accepted proposal {number}.\n\n  Order created: {order}\n  Total:         {amount}\n\n{workspace} · CBOS Platform",
+    "title": "✓ Proposal accepted",
+    "body": "<strong>{client}</strong> accepted proposal <strong>{number}</strong>.",
+    "orderLabel": "Generated order",
+    "total": "Total: {amount}"
+  },
+  "sellerReject": {
+    "subject": "{client} rejected proposal {number}",
+    "text": "{client} rejected proposal {number}.{reasonLine}\n\n{workspace} · CBOS Platform",
+    "reasonLine": "\n  Reason: {reason}",
+    "title": "✗ Proposal rejected",
+    "body": "<strong>{client}</strong> rejected proposal <strong>{number}</strong>.",
+    "reason": "Reason: {reason}"
+  },
+  "clientConfirmation": {
+    "subject": "Confirmation — {number} accepted",
+    "text": "Thank you for accepting proposal {number}.\n\nYour order number is: {order}\nKeep this number for future inquiries.\n\n{workspace}",
+    "title": "Proposal confirmation",
+    "body": "Thank you for accepting proposal <strong>{number}</strong>.",
+    "orderLabel": "Your order number",
+    "saveNote": "Keep this number for future inquiries"
+  }
+}

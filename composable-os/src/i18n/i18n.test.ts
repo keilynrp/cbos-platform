@@ -1,7 +1,14 @@
 import i18next from "i18next";
 import { afterEach, describe, expect, it } from "vitest";
 
-import i18n, { LOCALE_STORAGE_KEY, SUPPORTED_LOCALES, buildI18nOptions, resources, setLocale } from "@/i18n";
+import i18n, {
+  LOCALE_STORAGE_KEY,
+  SUPPORTED_LOCALES,
+  UNRELEASED_LOCALES,
+  buildI18nOptions,
+  resources,
+  setLocale,
+} from "@/i18n";
 
 afterEach(async () => {
   await i18n.changeLanguage("es");
@@ -9,10 +16,17 @@ afterEach(async () => {
 });
 
 describe("catalogues", () => {
-  it("ships Spanish only, for now", () => {
-    // Si esto cambia llego la tarea 12 y varios tests pasan a ser otro caso:
-    // hay que revisarlos, no solo actualizar el numero.
+  it("offers Spanish only while English is incomplete", () => {
+    // Si esto cambia, el ultimo dominio de `en` ya esta traducido y varios tests
+    // pasan a ser otro caso: hay que revisarlos, no solo actualizar el numero.
     expect(SUPPORTED_LOCALES).toEqual(["es"]);
+    expect(UNRELEASED_LOCALES).toEqual(["en"]);
+  });
+
+  it("keeps an unreleased language out of reach: setLocale and the browser language ignore it", async () => {
+    expect(resources.en).toBeDefined();
+    expect(await setLocale("en")).toBe("es");
+    expect(i18n.language).toBe("es");
   });
 
   it("resolves a key from the bundled catalogue", () => {

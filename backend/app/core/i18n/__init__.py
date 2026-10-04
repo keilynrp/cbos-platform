@@ -25,9 +25,19 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-# Catalogos enviados. Hasta la tarea 12 del plan de i18n solo existe `es`, asi
-# que el PATCH del locale propio solo acepta "es" y no cambia nada visible.
+# Idiomas que el producto ofrece: lo que acepta el PATCH del locale propio, lo
+# que lee `Accept-Language` al registrarse y lo que resuelve `resolve_locale`.
 SUPPORTED_LOCALES: tuple[str, ...] = ("es",)
+
+# Idiomas con catalogo en el repo que aun no se ofrecen (tarea 12 del plan de i18n).
+# Un idioma se ofrece cuando esta completo en las *dos* capas: el servidor
+# (`locales/<idioma>/`, aqui) y la interfaz (`composable-os/src/locales`). Con
+# solo el servidor listo, un usuario con el navegador en ingles se registraria con
+# `en` y recibiria el PDF y los correos en ingles con la interfaz en espanol.
+# `translate("...", "en")` ya funciona (los tests lo ejercitan); lo que no hace
+# todavia es que nadie llegue a `en` solo. Pasar un idioma de aqui a
+# `SUPPORTED_LOCALES` es el ultimo paso de la tarea 12.
+UNRELEASED_LOCALES: tuple[str, ...] = ("en",)
 
 DEFAULT_LOCALE = "es"
 

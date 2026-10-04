@@ -255,20 +255,36 @@ migracion es el momento de arreglarlo, no de conservarlo.
 
 ## Anadir un idioma
 
-1. Crear `locales/<idioma>/` con un fichero por dominio, las mismas claves que `es`.
-2. Nada mas: aparece en `SUPPORTED_LOCALES` y en el selector.
-3. Dos checks lo vigilan, y fallan en CI (`src/i18n/catalogues.test.ts`, vitest):
+1. Crear `locales/<idioma>/` con un fichero por dominio, las mismas claves que `es`. Se
+   puede ir dominio a dominio: el idioma entra en `resources` desde el primer fichero.
+2. **Se ofrece solo cuando esta completo.** `SUPPORTED_LOCALES` (selector, deteccion del
+   navegador, `setLocale`) lista los idiomas que tienen *todos* los espacios del base
+   (`releasedLocales` en `i18n/resources.ts`); los demas quedan en `UNRELEASED_LOCALES`. Una
+   pantalla a medio traducir se lee como rota y con `fallbackLng` caeria al espanol sin
+   avisar (ADR 0015). En el backend es explicito: la carpeta `locales/<idioma>/` pasa de
+   `UNRELEASED_LOCALES` a `SUPPORTED_LOCALES` (`core/i18n/__init__.py`) en el ultimo PR, cuando
+   la interfaz tambien esta completa; antes, un usuario con el navegador en ese idioma se
+   registraria con el y recibiria el PDF y los correos en un idioma que la interfaz no habla.
+3. Cada PR que traduce un dominio lo anade a `TRANSLATED` en `catalogues.test.ts`. Los checks
+   lo vigilan, y fallan en CI (`src/i18n/catalogues.test.ts`, vitest):
    - **Paridad con `es`**: el idioma nuevo no puede tener claves de menos (cae al
-     espanol sin avisar), de mas, ni un `{{marcador}}` distinto. Un idioma se puede
-     enviar por dominios: los que aun no tiene van en `PENDING` de ese test, y esa
-     lista es un trinquete: solo se encoge, y falla si queda un dominio listado que
-     ya existe.
+     espanol sin avisar), de mas, ni un `{{marcador}}` distinto. Lo que aun no
+     tiene se deriva de `TRANSLATED`; falla si un espacio existe y no esta registrado, o si
+     esta registrado y no existe.
+   - **Sin copias**: una cadena identica a la del idioma base es una traduccion que se quedo
+     en espanol, y la paridad no la ve (existe, tiene los mismos marcadores). Compara contra
+     el *base*, no contra el propio catalogo, y las palabras iguales de verdad (`Error`) se
+     aprueban una a una en `IDENTICAL_TO_BASE`.
    - **Claves huerfanas**: una clave del catalogo que ningun fichero menciona, o una
      que el codigo pide y no existe. El escaner lee los literales `espacio:ruta` del
      codigo (tambien los interpolados, que usan todo lo que casa) y un grupo
      (`label("ns:runStatus", ...)`) usa lo que cuelga de el. El espacio `errors` se
      indexa por el `code` del servidor y queda fuera del barrido; lo cubre
      `scripts/ci/check_error_registry.py`.
+
+   El render en el idioma nuevo usa su catalogo *real* (`src/i18n/english.test.tsx`), no el
+   pseudo-localizado de los tests de pagina: aquel prueba que nada esta cableado, este que lo
+   que se envia es de verdad ese idioma.
 
    Cada control se prueba contra catalogos inventados que *deben* fallar: con un solo
    idioma la paridad pasa trivialmente, y un escaner que no encuentra nada pasa igual
@@ -313,6 +329,11 @@ translate("invoice_pdf:footer", locale, number="INV-7")   # marcadores {nombre},
   de migrar, congelada en `tests/data/`, y el segundo idioma pone en MAYUSCULAS cada mensaje
   del catalogo; con datos de prueba tambien en mayusculas, toda palabra en minusculas que
   sobreviva es texto cableado (`tests/test_email_templates.py`).
+- **Ingles real en el backend** (`tests/test_english_artifacts.py`): el asunto de cada
+  correo y las etiquetas del PDF, literales, y que ninguna palabra que solo existe en el
+  catalogo `es` aparezca en lo que sale en `en`. El vocabulario compartido (`Total`, `stock`)
+  es una lista fija: restar el del catalogo `en` que se prueba seria circular, y una cadena
+  copiada del espanol entraria en el y se daria por buena.
 - **Huerfanas en el backend**: `tests/test_i18n_catalogue_usage.py` recorre `app/` con
   `ast` y cruza lo que el codigo pide (`translate("d:k")`, `t("k")` dentro de una
   funcion con `_scope("grupo")`, `fallback_text("k")`, y los f-string con prefijo como
