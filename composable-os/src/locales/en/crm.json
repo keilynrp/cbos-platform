@@ -13,7 +13,7 @@
     "pipeline": "Pipeline",
     "leads": "Leads",
     "contacts": "Contacts",
-    "organizations": "Organisations",
+    "organizations": "Organizations",
     "activity": "Activity"
   },
   "leads": {
@@ -46,7 +46,7 @@
     "lead": "lead",
     "opportunity": "opportunity",
     "contact": "contact",
-    "organization": "organisation"
+    "organization": "organization"
   },
   "stageDialog": {
     "title": "Change stage — {{title}}",

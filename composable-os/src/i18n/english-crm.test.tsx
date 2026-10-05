@@ -86,7 +86,7 @@ describe("CRM in English", () => {
   it("names the five tabs and the header buttons in English", async () => {
     renderPage(await english());
 
-    for (const tab of ["Pipeline", "Leads", "Contacts", "Organisations", "Activity"]) {
+    for (const tab of ["Pipeline", "Leads", "Contacts", "Organizations", "Activity"]) {
       expect(screen.getByRole("tab", { name: tab })).toBeInTheDocument();
     }
     expect(screen.getByRole("button", { name: /New lead/ })).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe("CRM in English", () => {
     openTab("Contacts");
     expect(await screen.findByText("Manager")).toBeInTheDocument();
 
-    openTab("Organisations");
+    openTab("Organizations");
     expect(await screen.findByText("Footwear")).toBeInTheDocument();
   });
 

@@ -144,14 +144,14 @@ describe("Analytics in English", () => {
     expect(await screen.findByText("No open opportunities right now.")).toBeInTheDocument();
   });
 
-  it("team: KPIs, organisation summary and employment types", async () => {
+  it("team: KPIs, organization summary and employment types", async () => {
     renderPageWithI18n(<Analytics />, await english());
     openTab("Team");
 
     expect(await screen.findByText("Active employees")).toBeInTheDocument();
     expect(screen.getByText("On leave")).toBeInTheDocument();
     expect(screen.getByText("New hires (month)")).toBeInTheDocument();
-    expect(screen.getByText("Organisation structure")).toBeInTheDocument();
+    expect(screen.getByText("Organization structure")).toBeInTheDocument();
     expect(screen.getByText("Total headcount (active)")).toBeInTheDocument();
     expect(screen.getByText("No department assigned")).toBeInTheDocument();
     expect(screen.getByText("Former employees")).toBeInTheDocument();
