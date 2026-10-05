@@ -1,0 +1,56 @@
+{
+  "loading": "Loading proposal…",
+  "closed": "This link is no longer available for further actions",
+  "error": {
+    "expiredTitle": "This link has expired",
+    "invalidTitle": "Invalid link",
+    "expiredBody": "Contact {{name}} to request a new one.",
+    "theCompany": "the company",
+    "invalidBody": "Check that you copied the full URL."
+  },
+  "accepted": {
+    "title": "Proposal accepted!",
+    "received": "We have received your confirmation.",
+    "orderNumber": "Your order number",
+    "checkEmail": "Check your confirmation email",
+    "keepNumber": "Keep this number for any questions",
+    "nextSteps": "Next steps",
+    "emailStep": "📧 You will receive a confirmation email",
+    "contactStep": "📞 {{name}} will get in touch",
+    "referenceStep": "🗂️ Reference:"
+  },
+  "rejected": {
+    "title": "Proposal declined",
+    "changedMind": "If you change your mind, contact {{name}}."
+  },
+  "quote": {
+    "sentYou": "Sent you a proposal",
+    "expires": "⏰ Expires",
+    "details": "Details",
+    "noLines": "No line items",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "tax": "Tax ({{rate}})",
+    "total": "Total",
+    "terms": "Terms and conditions",
+    "accept": "✓ Accept and sign proposal",
+    "reject": "✗ Decline proposal",
+    "questions": "Questions? Contact {{name}}"
+  },
+  "acceptForm": {
+    "title": "Confirm acceptance",
+    "name": "Your name",
+    "namePlaceholder": "Your full name",
+    "notes": "Notes (optional)",
+    "notesPlaceholder": "Additional instructions...",
+    "cancel": "Cancel",
+    "confirm": "Confirm acceptance"
+  },
+  "rejectForm": {
+    "title": "Confirm decline",
+    "reason": "Reason (optional)",
+    "reasonPlaceholder": "Reason for declining...",
+    "cancel": "Cancel",
+    "confirm": "Confirm decline"
+  }
+}
