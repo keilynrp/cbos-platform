@@ -1,0 +1,49 @@
+{
+  "title": "Billing details",
+  "subtitle": "These details appear as the issuer on printed and exported invoices",
+  "save": "Save",
+  "saved": "Details saved",
+  "saveFailed": "Could not save",
+  "loadFailed": "Could not load the billing details",
+  "unknownError": "Unknown error",
+  "retry": "Retry",
+  "identity": {
+    "title": "Identity",
+    "logoAlt": "Logo",
+    "upload": "Upload logo",
+    "remove": "Remove",
+    "hint": "PNG or JPG, up to {{max}} KB",
+    "legalName": "Legal name",
+    "legalNamePlaceholder": "My Company Inc.",
+    "taxIdType": "ID type",
+    "taxId": "Tax ID"
+  },
+  "address": {
+    "title": "Address",
+    "line": "Street and number",
+    "city": "City",
+    "state": "State / Province",
+    "postalCode": "Postal code",
+    "country": "Country"
+  },
+  "contact": {
+    "title": "Contact",
+    "email": "Email",
+    "phone": "Phone",
+    "website": "Website"
+  },
+  "defaults": {
+    "title": "Defaults",
+    "currency": "Currency",
+    "taxRate": "Default tax rate (%)",
+    "footerNote": "Invoice footer note",
+    "footerNotePlaceholder": "Thank you for your business · Payment terms…"
+  },
+  "logo": {
+    "badFormatTitle": "Unsupported format",
+    "badFormat": "The logo must be a PNG or JPG.",
+    "tooBigTitle": "Logo too large",
+    "tooBig": "It is {{size}} KB and the maximum is {{max}} KB.",
+    "readFailed": "Could not read the file"
+  }
+}
