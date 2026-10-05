@@ -1,0 +1,88 @@
+{
+  "title": "Commerce operations center",
+  "subtitle": "Unified management of inventory, orders and fulfillment across every channel.",
+  "kpi": {
+    "totalSkus": "Total SKUs",
+    "totalSkusHint": "products in inventory",
+    "value": "Inventory value",
+    "valueHint": "cost in stock",
+    "health": "Inventory health",
+    "healthHint": "items at healthy levels",
+    "lowStock": "Low stock alerts",
+    "lowStockHint": "SKUs need restocking"
+  },
+  "tabs": {
+    "catalog": "Catalog",
+    "inventory": "Inventory",
+    "orders": "Orders",
+    "fulfillment": "Fulfillment",
+    "pricing": "Pricing",
+    "crm": "CRM sync",
+    "revpath": "RevPath",
+    "channels": "Channels",
+    "ai": "AI assistant",
+    "analytics": "Analytics"
+  },
+  "catalog": {
+    "title": "Product catalog builder",
+    "description": "Manage products, variants, categories, bundles and services.",
+    "addProduct": "Add product",
+    "addProductHint": "SKU, price, cost, barcode"
+  },
+  "inventory": {
+    "title": "Inventory management",
+    "description": "Real stock, synced with the backend.",
+    "empty": "No inventory items. Add products from the Sales module.",
+    "product": "Product",
+    "sku": "SKU",
+    "onHand": "On hand",
+    "reserved": "Reserved",
+    "available": "Available",
+    "reorderPoint": "Reorder point",
+    "unitCost": "Unit cost",
+    "totalValue": "Total value",
+    "status": "Status"
+  },
+  "orders": {
+    "title": "Unified order management",
+    "description": "Orders from the point of sale, the online store, the B2B portal and events.",
+    "demoOnline": "via Online store • Sarah Jenkins",
+    "demoPos": "via POS terminal • Walk-in customer",
+    "processing": "Processing",
+    "completed": "Completed"
+  },
+  "fulfillment": {
+    "title": "Fulfillment engine",
+    "description": "Workflows for picking, packing, shipping and in-store pickup."
+  },
+  "pricing": {
+    "title": "Pricing and promotions",
+    "description": "Manage discounts, bundle pricing, promo codes and campaigns."
+  },
+  "crm": {
+    "title": "CRM integration",
+    "description": "Connect orders to CRM profiles to see lifetime value and buying behavior."
+  },
+  "revpath": {
+    "title": "RevPath integration",
+    "description": "See how orders contribute to the revenue flow.",
+    "lead": "Lead",
+    "opportunity": "Opportunity",
+    "order": "Order",
+    "revenue": "Revenue",
+    "repeat": "Repeat purchase"
+  },
+  "channels": {
+    "title": "Omnichannel commerce",
+    "description": "Sync across the point of sale, online stores and customer portals."
+  },
+  "ai": {
+    "title": "AI supply assistant",
+    "description": "Forecast demand, get restocking recommendations and spot unusual sales patterns.",
+    "insight": "Insight: high demand is expected for \"Enterprise bundles\" next week based on the historical B2B trend."
+  },
+  "analytics": {
+    "title": "Commerce analytics",
+    "description": "Dashboards for sales performance, profit margins and inventory turnover."
+  }
+}
