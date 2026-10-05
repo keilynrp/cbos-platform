@@ -1,0 +1,64 @@
+{
+  "title": "Contracts",
+  "subtitle": "Customer contract lifecycle management.",
+  "new": "New contract",
+  "kpi": {
+    "total": "Total contracts",
+    "inProgress": "In progress",
+    "executed": "Executed",
+    "totalValue": "Total value"
+  },
+  "list": {
+    "title": "All contracts",
+    "empty": "No contracts yet.",
+    "createFirst": "Create the first one",
+    "number": "Number",
+    "contractTitle": "Title",
+    "status": "Status",
+    "value": "Value",
+    "due": "Due",
+    "view": "View details",
+    "delete": "Delete"
+  },
+  "create": {
+    "title": "New contract",
+    "contractTitle": "Title *",
+    "titlePlaceholder": "E.g. Q4 2026 services agreement",
+    "value": "Value",
+    "currency": "Currency",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "notes": "Notes",
+    "notesPlaceholder": "Description or remarks...",
+    "cancel": "Cancel",
+    "submit": "Create contract"
+  },
+  "detail": {
+    "value": "Value",
+    "start": "Start",
+    "end": "Expiry",
+    "clauses": "Clauses ({{count}})",
+    "add": "Add",
+    "clauseTitlePlaceholder": "Clause title",
+    "clauseBodyPlaceholder": "Clause text...",
+    "cancel": "Cancel",
+    "save": "Save",
+    "noClauses": "No clauses. Add the first one.",
+    "clauseN": "Clause {{n}}",
+    "notes": "Notes"
+  },
+  "actions": {
+    "send": "Send to customer",
+    "sign": "Mark as signed",
+    "execute": "Execute contract",
+    "expire": "Mark as expired",
+    "terminate": "Terminate"
+  },
+  "toast": {
+    "created": "Contract created",
+    "deleted": "Contract deleted",
+    "statusUpdated": "Status updated",
+    "clauseAdded": "Clause added",
+    "clauseDeleted": "Clause deleted"
+  }
+}
