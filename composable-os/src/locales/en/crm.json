@@ -1,0 +1,104 @@
+{
+  "title": "CRM",
+  "subtitle": "Manage leads, deals and relationships — connected to the backend in real time.",
+  "newLead": "New lead",
+  "newOpportunity": "New opportunity",
+  "kpi": {
+    "totalPipeline": "Total pipeline",
+    "openDeals": "Open opportunities",
+    "winRate": "Win rate",
+    "avgDealSize": "Average size"
+  },
+  "tabs": {
+    "pipeline": "Pipeline",
+    "leads": "Leads",
+    "contacts": "Contacts",
+    "organizations": "Organizations",
+    "activity": "Activity"
+  },
+  "leads": {
+    "empty": "No leads recorded",
+    "log": "Log",
+    "convert": "Convert"
+  },
+  "activity": {
+    "title": "Activity timeline",
+    "recent": "Recent",
+    "empty": "No activity recorded"
+  },
+  "leadStatus": {
+    "new": "new",
+    "contacted": "contacted",
+    "qualified": "qualified",
+    "disqualified": "disqualified",
+    "converted": "converted"
+  },
+  "leadSource": {
+    "web": "web",
+    "email": "email",
+    "referral": "referral",
+    "social": "social media",
+    "cold_outreach": "cold outreach",
+    "event": "event",
+    "other": "other"
+  },
+  "entityType": {
+    "lead": "lead",
+    "opportunity": "opportunity",
+    "contact": "contact",
+    "organization": "organization"
+  },
+  "stageDialog": {
+    "title": "Change stage — {{title}}",
+    "newStage": "New stage",
+    "lostReason": "Reason for loss *",
+    "lostReasonPlaceholder": "Why was this opportunity lost?",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "convertDialog": {
+    "title": "Convert lead — {{name}}",
+    "opportunityTitle": "Opportunity title *",
+    "value": "Value ($)",
+    "closeDate": "Close date",
+    "cancel": "Cancel",
+    "submit": "Convert"
+  },
+  "logDialog": {
+    "title": "Log activity — {{name}}",
+    "type": "Type",
+    "activityTitle": "Title *",
+    "description": "Description",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "leadDialog": {
+    "title": "New lead",
+    "firstName": "First name *",
+    "lastName": "Last name",
+    "email": "Email",
+    "company": "Company",
+    "source": "Source",
+    "cancel": "Cancel",
+    "submit": "Create"
+  },
+  "opportunityDialog": {
+    "title": "New opportunity",
+    "opportunityTitle": "Title *",
+    "value": "Value ($)",
+    "probability": "Probability (%)",
+    "stage": "Stage",
+    "closeDate": "Close date",
+    "cancel": "Cancel",
+    "submit": "Create"
+  },
+  "toast": {
+    "stageUpdated": "Stage updated",
+    "leadConverted": "Lead converted to opportunity",
+    "activityLogged": "Activity logged",
+    "leadCreated": "Lead created",
+    "opportunityCreated": "Opportunity created",
+    "opportunitiesLoadFailed": "Error loading opportunities: {{message}}",
+    "leadsLoadFailed": "Error loading leads: {{message}}"
+  }
+}

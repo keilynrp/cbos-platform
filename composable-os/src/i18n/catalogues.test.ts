@@ -31,7 +31,7 @@ const BASE = "es";
  * idioma se ofrece solo (`releasedLocales`): no hay un interruptor aparte.
  */
 const TRANSLATED: Record<string, string[]> = {
-  en: ["common", "errors", "auth", "layout", "dashboard", "analytics", "companyProfile", "customerPortal", "contracts"],
+  en: ["common", "errors", "auth", "layout", "dashboard", "analytics", "companyProfile", "customerPortal", "contracts", "crm"],
 };
 
 /**
@@ -45,7 +45,9 @@ const IDENTICAL_TO_BASE = [
   "layout:brand.tagline", "layout:nav.items.dashboard", "layout:nav.items.crm",
   "layout:nav.items.workflows", "layout:nav.items.discovery", "layout:nav.items.portal",
   "dashboard:title", "dashboard:activity.crm",
-  "analytics:tabs.pipeline", "companyProfile:identity.logoAlt", "companyProfile:contact.email",
+  "crm:title", "crm:tabs.pipeline", "crm:tabs.leads", "crm:leadSource.web", "crm:entityType.lead",
+  "crm:leadDialog.email",
+  "analytics:tabs.pipeline","companyProfile:identity.logoAlt", "companyProfile:contact.email",
   "customerPortal:quote.subtotal", "customerPortal:quote.total",
 ];
 
