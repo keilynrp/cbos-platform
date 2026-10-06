@@ -31,7 +31,7 @@ const BASE = "es";
  * idioma se ofrece solo (`releasedLocales`): no hay un interruptor aparte.
  */
 const TRANSLATED: Record<string, string[]> = {
-  en: ["common", "errors", "auth", "layout", "dashboard", "analytics", "companyProfile", "customerPortal", "contracts", "crm", "discovery", "hr", "inventory"],
+  en: ["common", "errors", "auth", "layout", "dashboard", "analytics", "companyProfile", "customerPortal", "contracts", "crm", "discovery", "hr", "inventory", "invoicing"],
 };
 
 /**
@@ -51,6 +51,8 @@ const IDENTICAL_TO_BASE = [
   "discovery:packageName.growth", "discovery:packageName.operations_plus",
   "hr:createEmployee.email",
   "inventory:tabs.revpath", "inventory:inventory.sku", "inventory:revpath.lead",
+  "invoicing:list.total", "invoicing:detail.total", "invoicing:detail.subtotal", "invoicing:detail.grandTotal",
+  "invoicing:newDialog.subtotal", "invoicing:newDialog.total",
   "analytics:tabs.pipeline","companyProfile:identity.logoAlt", "companyProfile:contact.email",
   "customerPortal:quote.subtotal", "customerPortal:quote.total",
 ];
