@@ -1,0 +1,277 @@
+{
+  "title": "Portal builder",
+  "subtitle": "Design customer portals and manage access by quote.",
+  "tabs": {
+    "sessions": "Active sessions",
+    "builder": "Page builder"
+  },
+  "builder": {
+    "hint": "Drag blocks to build the customer portal page.",
+    "edit": "Edit",
+    "preview": "Preview",
+    "viewport": {
+      "desktop": "Desktop",
+      "tablet": "Tablet",
+      "mobile": "Mobile"
+    },
+    "all": "All",
+    "emptyCanvas": "Drag blocks here or click in the palette",
+    "properties": "Properties",
+    "selectBlock": "Select a block to edit it",
+    "toolbar": {
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "duplicate": "Duplicate",
+      "remove": "Delete"
+    }
+  },
+  "categories": {
+    "layout": "Layout",
+    "content": "Content",
+    "data": "Data",
+    "navigation": "Navigation",
+    "shop": "Shop"
+  },
+  "blockTypes": {
+    "section": "Section",
+    "columns-2": "2 columns",
+    "columns-3": "3 columns",
+    "spacer": "Spacer",
+    "divider": "Divider",
+    "heading": "Heading",
+    "text": "Text block",
+    "image": "Image",
+    "button": "Button",
+    "card": "Card",
+    "list": "List",
+    "table": "Data table",
+    "chart": "Chart",
+    "kpi": "KPI card",
+    "form": "Form",
+    "navbar": "Navigation bar",
+    "breadcrumb": "Breadcrumb",
+    "tabs-nav": "Tabs",
+    "footer": "Footer",
+    "product-grid": "Product grid",
+    "cart-widget": "Cart",
+    "checkout-form": "Checkout form",
+    "chatbot-widget": "Chatbot"
+  },
+  "defaults": {
+    "heading": { "text": "Heading text" },
+    "text": { "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt." },
+    "image": { "alt": "Image" },
+    "button": { "text": "Click here" },
+    "card": {
+      "title": "Card title",
+      "description": "The card description goes here."
+    },
+    "list": {
+      "item1": "Item one",
+      "item2": "Item two",
+      "item3": "Item three"
+    },
+    "table": {
+      "col1": "Name",
+      "col2": "Status",
+      "col3": "Value"
+    },
+    "chart": { "title": "Revenue summary" },
+    "kpi": { "label": "Total revenue" },
+    "form": {
+      "field1": "Name",
+      "field2": "Email",
+      "field3": "Message",
+      "submit": "Submit"
+    },
+    "navbar": {
+      "brand": "My portal",
+      "link1": "Home",
+      "link2": "About",
+      "link3": "Contact"
+    },
+    "breadcrumb": {
+      "item1": "Home",
+      "item2": "Dashboard",
+      "item3": "Settings"
+    },
+    "tabsNav": {
+      "tab1": "Overview",
+      "tab2": "Details",
+      "tab3": "Settings"
+    },
+    "footer": {
+      "text": "© {{year}} Composable OS. All rights reserved.",
+      "link1": "Privacy",
+      "link2": "Terms"
+    },
+    "checkout": {
+      "step1": "Shipping",
+      "step2": "Payment",
+      "step3": "Review",
+      "submit": "Place order"
+    },
+    "chatbot": {
+      "botName": "Support assistant",
+      "greeting": "Hi! 👋 How can I help you today?",
+      "placeholder": "Type a message..."
+    }
+  },
+  "initial": {
+    "brand": "Customer portal",
+    "link1": "Dashboard",
+    "link2": "Documents",
+    "link3": "Support",
+    "heading": "Welcome to your portal",
+    "kpiLabel": "Active projects",
+    "kpiChange": "+3 this month"
+  },
+  "preview": {
+    "sectionBlock": "Section block",
+    "column": "Column {{n}}",
+    "spacer": "Spacer ({{height}})",
+    "sampleData": "Sample data",
+    "enterField": "Enter {{field}}...",
+    "unknownBlock": "Unknown block",
+    "product": "Product {{n}}",
+    "addToCart": "Add to cart",
+    "cart": {
+      "title": "Shopping cart",
+      "items_one": "{{count}} item",
+      "items_other": "{{count}} items",
+      "item1": "Wireless headphones",
+      "item2": "USB-C hub",
+      "item3": "Phone case",
+      "subtotal": "Subtotal"
+    },
+    "checkout": {
+      "title": "Checkout",
+      "fullName": "Full name",
+      "address": "Address",
+      "city": "City",
+      "zip": "ZIP code",
+      "summary": "Order summary",
+      "items": "Items ({{count}})",
+      "shipping": "Shipping",
+      "tax": "Tax",
+      "total": "Total",
+      "placeOrder": "Place order"
+    },
+    "chat": {
+      "status": "Online · Usually replies instantly",
+      "quick1": "Product information",
+      "quick2": "Pricing",
+      "quick3": "Support",
+      "userMessage": "I would like to know about pricing",
+      "botReply": "Good question! We have 3 plans starting at {{price}}. Would you like me to help you pick the best one?"
+    }
+  },
+  "editor": {
+    "on": "Yes",
+    "off": "No",
+    "add": "Add",
+    "newItem": "New item",
+    "removeItem": "Remove item"
+  },
+  "props": {
+    "padding": "Padding",
+    "background": "Background",
+    "gap": "Gap",
+    "height": "Height",
+    "width": "Width",
+    "color": "Color",
+    "text": "Text",
+    "level": "Level",
+    "align": "Alignment",
+    "src": "Source",
+    "alt": "Alt text",
+    "variant": "Variant",
+    "size": "Size",
+    "title": "Title",
+    "description": "Description",
+    "showImage": "Show image",
+    "items": "Items",
+    "style": "Style",
+    "columns": "Columns",
+    "rows": "Rows",
+    "chartType": "Chart type",
+    "label": "Label",
+    "value": "Value",
+    "change": "Change",
+    "fields": "Fields",
+    "submitText": "Submit button text",
+    "brand": "Brand",
+    "links": "Links",
+    "tabs": "Tabs",
+    "productsCount": "Number of products",
+    "showPrice": "Show price",
+    "showRating": "Show rating",
+    "showAddToCart": "Show add to cart",
+    "showThumbnails": "Show thumbnails",
+    "showQuantity": "Show quantity",
+    "showSubtotal": "Show subtotal",
+    "steps": "Steps",
+    "showOrderSummary": "Show order summary",
+    "botName": "Bot name",
+    "greeting": "Greeting",
+    "position": "Position",
+    "showAvatar": "Show avatar",
+    "accentColor": "Accent color",
+    "placeholder": "Placeholder text"
+  },
+  "options": {
+    "variant": {
+      "primary": "Primary",
+      "outline": "Outline",
+      "secondary": "Secondary"
+    },
+    "align": {
+      "left": "Left",
+      "center": "Center",
+      "right": "Right"
+    },
+    "size": {
+      "sm": "Small",
+      "md": "Medium",
+      "lg": "Large"
+    },
+    "chartType": {
+      "bar": "Bars",
+      "line": "Lines",
+      "area": "Area"
+    },
+    "style": {
+      "bullet": "Bullets",
+      "numbered": "Numbered"
+    }
+  },
+  "sessions": {
+    "count_one": "{{count}} portal session",
+    "count_other": "{{count}} portal sessions",
+    "create": "Create portal link",
+    "dialogTitle": "Create portal session",
+    "quote": "Quote *",
+    "quotePlaceholder": "Select a quote",
+    "clientName": "Customer name",
+    "clientNamePlaceholder": "E.g. John Smith",
+    "clientEmail": "Customer email",
+    "clientEmailPlaceholder": "customer@company.com",
+    "expireHours": "Expires in (hours)",
+    "submit": "Create link",
+    "creating": "Creating...",
+    "empty": "No portal sessions yet.",
+    "emptyHint": "Create a link so your customer can view and accept their quote.",
+    "unnamed": "Unnamed customer",
+    "noEmail": "no email",
+    "expires": "{{email}} · expires {{date}}",
+    "copy": "Copy",
+    "view": "View",
+    "email": "Email"
+  },
+  "sessionStatus": {
+    "accepted": "Accepted",
+    "rejected": "Declined",
+    "viewed": "Viewed",
+    "pending": "Pending"
+  }
+}
