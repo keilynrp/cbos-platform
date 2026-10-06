@@ -1,0 +1,80 @@
+{
+  "title": "Projects",
+  "subtitle": "Project lifecycle management",
+  "new": "New project",
+  "kpi": {
+    "total": "Total projects",
+    "active": "Active",
+    "completed": "Completed",
+    "budget": "Total budget"
+  },
+  "list": {
+    "title": "Project list",
+    "loading": "Loading...",
+    "empty": "No projects yet",
+    "createFirst": "Create the first project",
+    "number": "Number",
+    "projectTitle": "Title",
+    "status": "Status",
+    "budget": "Budget",
+    "start": "Start",
+    "end": "End",
+    "view": "View details",
+    "delete": "Delete"
+  },
+  "create": {
+    "title": "New project",
+    "projectTitle": "Title *",
+    "titlePlaceholder": "Project name",
+    "description": "Description",
+    "descriptionPlaceholder": "Scope description",
+    "budget": "Budget",
+    "currency": "Currency",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional remarks",
+    "cancel": "Cancel",
+    "submit": "Create project"
+  },
+  "taskDialog": {
+    "title": "New task",
+    "taskTitle": "Title *",
+    "titlePlaceholder": "Task description",
+    "description": "Description",
+    "dueDate": "Due date",
+    "cancel": "Cancel",
+    "submit": "Add"
+  },
+  "detail": {
+    "loading": "Loading...",
+    "budget": "Budget",
+    "period": "Period",
+    "periodRange": "{{start}} → {{end}}",
+    "description": "Description",
+    "activate": "Activate",
+    "pause": "Pause",
+    "complete": "Complete",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "tasks": "Tasks ({{count}})",
+    "add": "Add",
+    "noTasks": "No tasks",
+    "start": "Start",
+    "markDone": "Mark as done",
+    "reopen": "Reopen",
+    "delete": "Delete",
+    "notes": "Notes"
+  },
+  "toast": {
+    "created": "Project created",
+    "createFailed": "Could not create the project",
+    "taskAdded": "Task added",
+    "taskAddFailed": "Could not add the task",
+    "statusUpdated": "Status updated",
+    "transitionNotAllowed": "Transition not allowed",
+    "taskDeleted": "Task deleted",
+    "deleted": "Project deleted",
+    "deleteFailed": "This project cannot be deleted"
+  }
+}
