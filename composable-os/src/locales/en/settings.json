@@ -1,0 +1,131 @@
+{
+  "title": "Settings",
+  "subtitle": "Platform configuration, architecture and system status.",
+  "tabs": {
+    "architecture": "Architecture",
+    "health": "System health",
+    "notifications": "Notifications",
+    "general": "General",
+    "team": "Team"
+  },
+  "architecture": {
+    "title": "Platform architecture",
+    "hint": "Hover over the components to follow the data flow paths.",
+    "layers": {
+      "presentation": "PRESENTATION",
+      "api": "API LAYER",
+      "microservices": "MICROSERVICES",
+      "messaging": "MESSAGING",
+      "data": "DATA LAYER"
+    },
+    "nodes": {
+      "client": { "label": "Client apps", "sublabel": "React SPA / Mobile" },
+      "gateway": { "label": "API Gateway", "sublabel": "Auth · Rate Limit · Routing" },
+      "projects": { "label": "Projects", "sublabel": "Microservice" },
+      "crm": { "label": "CRM", "sublabel": "Microservice" },
+      "docs": { "label": "Documents", "sublabel": "Microservice" },
+      "knowledge": { "label": "Knowledge", "sublabel": "Microservice" },
+      "analytics": { "label": "Analytics", "sublabel": "Microservice" },
+      "ai": { "label": "AI agents", "sublabel": "Microservice" },
+      "eventbus": { "label": "Event Bus", "sublabel": "Async messaging · Pub/Sub" },
+      "postgres": { "label": "PostgreSQL", "sublabel": "Primary data store" },
+      "graph": { "label": "Graph database", "sublabel": "Neo4j · Relationships" },
+      "vector": { "label": "Vector database", "sublabel": "Embeddings · Semantic search" }
+    },
+    "cards": {
+      "gateway": {
+        "title": "API Gateway",
+        "description": "Handles authentication, rate limiting, validation and smart routing to the microservices. Supports REST and GraphQL."
+      },
+      "eventbus": {
+        "title": "Event Bus",
+        "description": "Asynchronous pub/sub messaging keeps the modules loosely coupled. When a deal is closed in the CRM, events create the project automatically."
+      },
+      "data": {
+        "title": "Data layer",
+        "description": "PostgreSQL for structured data, Neo4j for the knowledge graph relationships and a vector database for semantic search and AI embeddings."
+      }
+    }
+  },
+  "health": {
+    "loading": "Loading system status...",
+    "updated": "Updated {{when}}",
+    "refresh": "Refresh",
+    "error": "Could not connect to the system. Check that the backend is running.",
+    "latency": "Latency",
+    "overall": "Overall status:",
+    "version": "v{{version}}",
+    "services": {
+      "api": "API Gateway",
+      "postgres": "PostgreSQL"
+    },
+    "status": {
+      "healthy": "healthy",
+      "degraded": "degraded",
+      "unhealthy": "unhealthy"
+    }
+  },
+  "notifications": {
+    "title": "Email notifications",
+    "saving": "Saving...",
+    "intro": "Control which business events send email alerts. Changes are saved automatically.",
+    "loading": "Loading preferences...",
+    "master": "Email notifications",
+    "masterHint": "Master switch — turn it off to stop all email alerts",
+    "eventTypes": "Event types",
+    "summaryOn": "{{active}} of {{total}} event types active",
+    "summaryOff": "All email notifications are turned off",
+    "realtimeTitle": "Real-time notifications",
+    "realtimeBody": "In-app notifications are delivered over WebSocket and are always on while you are connected. They cover 13 event types, including workflow status, sales activity, inventory alerts, portal interactions and accounting updates. Use the bell icon in the header to see them.",
+    "events": {
+      "QuoteAccepted": {
+        "label": "Quotes accepted",
+        "desc": "When a customer accepts a quote"
+      },
+      "SalesOrderCreated": {
+        "label": "Sales orders created",
+        "desc": "When a new sales order is generated"
+      },
+      "WorkflowFailed": {
+        "label": "Failed workflows",
+        "desc": "When an automated workflow fails"
+      },
+      "InventoryLowThresholdDetected": {
+        "label": "Low stock",
+        "desc": "When a product reaches its minimum inventory threshold"
+      },
+      "InvoiceOverdue": {
+        "label": "Overdue invoices",
+        "desc": "When an invoice passes its due date without payment"
+      }
+    }
+  },
+  "general": {
+    "title": "Workspace settings",
+    "name": "Workspace name",
+    "url": "Workspace URL",
+    "preferences": "Preferences",
+    "prefs": {
+      "ai": {
+        "label": "Enable AI recommendations",
+        "desc": "Show AI suggestions across all modules"
+      },
+      "projects": {
+        "label": "Create projects automatically from deals",
+        "desc": "Automatically generate a project when a CRM deal is closed"
+      },
+      "graph": {
+        "label": "Automatic knowledge graph linking",
+        "desc": "Automatically detect and link entities in documents"
+      }
+    }
+  },
+  "team": {
+    "title": "Team members",
+    "invite": "Invite",
+    "role": {
+      "admin": "Admin",
+      "member": "Member"
+    }
+  }
+}
