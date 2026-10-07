@@ -1,0 +1,141 @@
+{
+  "title": "Sales",
+  "subtitle": "Manage quotes and orders — connected to the backend in real time.",
+  "tabs": {
+    "dashboard": "Dashboard",
+    "quotes": "Quotes",
+    "orders": "Orders"
+  },
+  "kpi": {
+    "openQuotes": "Open quotes",
+    "pipelineValue": "Pipeline value",
+    "conversionRate": "Conversion rate",
+    "activeOrders": "Active orders",
+    "notAvailable": "N/A"
+  },
+  "dashboard": {
+    "quotesByStatus": "Quotes by status",
+    "ordersByStatus": "Orders by status"
+  },
+  "filters": {
+    "all": "All"
+  },
+  "quotes": {
+    "new": "New quote",
+    "empty": "No quotes",
+    "number": "Quote no.",
+    "quoteTitle": "Title",
+    "status": "Status",
+    "total": "Total",
+    "actions": "Actions",
+    "send": "Send",
+    "accept": "Accept",
+    "reject": "Reject",
+    "pdf": "PDF"
+  },
+  "orders": {
+    "empty": "No orders",
+    "number": "Order no.",
+    "quoteId": "Quote ID",
+    "status": "Status",
+    "total": "Total",
+    "actions": "Actions",
+    "confirm": "Confirm",
+    "startFulfillment": "Start fulfillment",
+    "fulfill": "Fulfill",
+    "cancel": "Cancel"
+  },
+  "rejectDialog": {
+    "title": "Reject quote",
+    "reason": "Reason (optional)",
+    "placeholder": "Reason for rejection...",
+    "defaultReason": "No reason given",
+    "cancel": "Cancel",
+    "confirm": "Reject"
+  },
+  "newQuoteDialog": {
+    "title": "New quote",
+    "quoteTitle": "Title *",
+    "placeholder": "E.g. Q1 services proposal",
+    "defaultLine": "Item",
+    "cancel": "Cancel",
+    "submit": "Create"
+  },
+  "toast": {
+    "quoteCreated": "Quote created",
+    "quoteSent": "Quote sent",
+    "quoteAccepted": "Quote accepted — order created",
+    "quoteRejected": "Quote rejected",
+    "orderConfirmed": "Order confirmed",
+    "fulfillmentStarted": "Fulfillment started",
+    "orderFulfilled": "Order fulfilled",
+    "orderCancelled": "Order cancelled",
+    "quotesLoadFailed": "Error loading quotes: {{message}}",
+    "ordersLoadFailed": "Error loading orders: {{message}}"
+  },
+  "detail": {
+    "back": "Quotes",
+    "backToSales": "Back to Sales",
+    "notFound": "Quote not found.",
+    "send": "Send",
+    "accept": "Accept",
+    "reject": "Reject",
+    "pdf": "PDF",
+    "share": "Share",
+    "alreadyProcessed": "Quote already processed",
+    "activeLink": "✓ Active link · expires {{date}}",
+    "activeLinkSentTo": "✓ Active link — sent to {{email}} · expires {{date}}",
+    "resend": "Resend / new link",
+    "shareDialog": {
+      "title": "Share quote",
+      "clientName": "Customer name",
+      "namePlaceholder": "John Smith",
+      "clientEmail": "Customer email",
+      "emailPlaceholder": "john@company.com",
+      "validFor": "Valid for",
+      "copyLink": "Copy link",
+      "sendEmail": "Send email"
+    },
+    "lines": {
+      "title": "Lines",
+      "index": "#",
+      "sku": "SKU",
+      "description": "Description",
+      "unit": "Unit",
+      "quantity": "Qty",
+      "unitPrice": "Unit price",
+      "discount": "Disc%",
+      "tax": "Tax%",
+      "lineTotal": "Line total",
+      "notes": "Notes",
+      "empty": "No lines.",
+      "emptyDraft": "No lines. Add one to get started.",
+      "add": "Add line",
+      "newLine": "New line"
+    },
+    "totals": {
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "taxes": "Taxes",
+      "total": "Total"
+    },
+    "notes": {
+      "title": "General notes",
+      "placeholder": "Notes visible to the customer..."
+    },
+    "terms": {
+      "title": "Terms and conditions",
+      "placeholder": "Quote terms..."
+    },
+    "history": {
+      "title": "History",
+      "empty": "No events recorded."
+    },
+    "toast": {
+      "saveFailed": "Could not save: {{message}}",
+      "linkCopied": "Link copied",
+      "copyFailed": "Could not copy automatically",
+      "emailSent": "Email sent to {{email}}"
+    }
+  }
+}
