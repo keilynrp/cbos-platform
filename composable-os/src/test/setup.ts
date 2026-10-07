@@ -1,4 +1,6 @@
 import "@testing-library/jest-dom";
+// Antes que `@/i18n`, que lee el idioma del navegador al importarse.
+import "./pin-locale";
 // Inicializa i18next como lo hace main.tsx: sin esto, cualquier codigo que llame
 // a `t()` o a translateApiError devolveria la clave cruda.
 import "@/i18n";

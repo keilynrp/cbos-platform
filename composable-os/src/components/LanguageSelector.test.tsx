@@ -24,7 +24,7 @@ describe("LanguageSelector", () => {
   it("draws nothing while there is only one language to choose", () => {
     // Un desplegable de una opcion es ruido: el selector aparece cuando hay
     // algo que elegir, sin tocar nada mas.
-    const { container } = render(<LanguageSelector />);
+    const { container } = render(<LanguageSelector locales={["es"]} />);
 
     expect(container).toBeEmptyDOMElement();
   });

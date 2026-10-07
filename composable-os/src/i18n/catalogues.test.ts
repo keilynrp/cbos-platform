@@ -31,7 +31,7 @@ const BASE = "es";
  * idioma se ofrece solo (`releasedLocales`): no hay un interruptor aparte.
  */
 const TRANSLATED: Record<string, string[]> = {
-  en: ["common", "errors", "auth", "layout", "dashboard", "analytics", "companyProfile", "customerPortal", "contracts", "crm", "discovery", "hr", "inventory", "invoicing", "portalBuilder", "projects", "sales", "settings"],
+  en: ["common", "errors", "auth", "layout", "dashboard", "analytics", "companyProfile", "customerPortal", "contracts", "crm", "discovery", "hr", "inventory", "invoicing", "portalBuilder", "projects", "sales", "settings", "workflows"],
 };
 
 /**
@@ -58,6 +58,7 @@ const IDENTICAL_TO_BASE = [
   "portalBuilder:sessions.email",
   "sales:quotes.total", "sales:quotes.pdf", "sales:orders.total", "sales:detail.pdf", "sales:detail.lines.sku",
   "sales:detail.totals.subtotal", "sales:detail.totals.total",
+  "workflows:title", "workflows:kpi.total", "workflows:actionType.log",
   "settings:tabs.general", "settings:architecture.nodes.gateway.label", "settings:architecture.nodes.gateway.sublabel",
   "settings:architecture.nodes.crm.label", "settings:architecture.nodes.eventbus.label",
   "settings:architecture.nodes.postgres.label", "settings:architecture.cards.gateway.title",

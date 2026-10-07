@@ -16,17 +16,23 @@ afterEach(async () => {
 });
 
 describe("catalogues", () => {
-  it("offers Spanish only while English is incomplete", () => {
-    // Si esto cambia, el ultimo dominio de `en` ya esta traducido y varios tests
-    // pasan a ser otro caso: hay que revisarlos, no solo actualizar el numero.
-    expect(SUPPORTED_LOCALES).toEqual(["es"]);
-    expect(UNRELEASED_LOCALES).toEqual(["en"]);
+  it("offers every language that has all the namespaces of Spanish", () => {
+    // `en` completo (tarea 12, ultimo dominio) entra solo: no hay un interruptor aparte.
+    expect([...SUPPORTED_LOCALES].sort()).toEqual(["en", "es"]);
+    expect(UNRELEASED_LOCALES).toEqual([]);
   });
 
-  it("keeps an unreleased language out of reach: setLocale and the browser language ignore it", async () => {
-    expect(resources.en).toBeDefined();
-    expect(await setLocale("en")).toBe("es");
+  it("keeps a language without a shipped catalogue out of reach: setLocale ignores it", async () => {
+    expect(resources.fr).toBeUndefined();
+    expect(await setLocale("fr")).toBe("es");
     expect(i18n.language).toBe("es");
+  });
+
+  it("switches to a released language and remembers it", async () => {
+    expect(await setLocale("en")).toBe("en");
+    expect(i18n.language).toBe("en");
+    expect(i18n.t("auth:login.title")).toBe("Sign in");
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en");
   });
 
   it("resolves a key from the bundled catalogue", () => {

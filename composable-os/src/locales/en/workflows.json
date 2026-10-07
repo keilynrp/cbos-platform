@@ -1,0 +1,58 @@
+{
+  "title": "Workflows",
+  "subtitle": "Event-driven automation — triggers, conditions and actions.",
+  "new": "New workflow",
+  "deleted": "Workflow deleted",
+  "kpi": {
+    "total": "Total",
+    "active": "Active",
+    "runs": "Runs"
+  },
+  "empty": {
+    "title": "No workflows yet",
+    "createFirst": "Create the first one"
+  },
+  "card": {
+    "conditions_one": "{{count}} condition",
+    "conditions_other": "{{count}} conditions",
+    "moreActions": "+{{count}} more",
+    "runs_one": "{{count}} run",
+    "runs_other": "{{count}} runs",
+    "toggle": "Turn {{name}} on or off",
+    "viewRuns": "View runs",
+    "delete": "Delete workflow"
+  },
+  "create": {
+    "title": "New workflow",
+    "name": "Name",
+    "namePlaceholder": "E.g. Notify new lead",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "What this workflow does",
+    "event": "Trigger event",
+    "eventPlaceholder": "E.g. LeadCaptured, QuoteAccepted",
+    "availableEvents": "Available events: {{events}}",
+    "actionMessage": "Action message (log)",
+    "actionMessagePlaceholder": "Use {field} for event values",
+    "defaultMessage": "Workflow executed",
+    "cancel": "Cancel",
+    "submit": "Create",
+    "created": "Workflow created"
+  },
+  "runs": {
+    "title": "Run history",
+    "empty": "No runs yet",
+    "event": "Event: {{type}}"
+  },
+  "runStatus": {
+    "completed": "completed",
+    "failed": "failed",
+    "running": "running",
+    "skipped": "skipped"
+  },
+  "triggerType": {
+    "event": "event"
+  },
+  "actionType": {
+    "log": "log"
+  }
+}

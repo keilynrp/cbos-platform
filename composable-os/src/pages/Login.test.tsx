@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
 import { ApiError } from "@/lib/api";
 import Login from "@/pages/Login";
-import { createPseudoInstance, renderWithI18n, visibleStrings } from "@/test/i18n";
+import { LANGUAGE_NAMES, createPseudoInstance, renderWithI18n, visibleStrings } from "@/test/i18n";
 
 const loginMock = vi.fn();
 const navigateMock = vi.fn();
@@ -92,7 +92,7 @@ describe("Login, in a second language", () => {
     const { container } = renderWithI18n(<Login />, english);
 
     const hardcoded = visibleStrings(container).filter(
-      (text) => !text.startsWith("EN(") && text !== BRAND,
+      (text) => !text.startsWith("EN(") && text !== BRAND && !LANGUAGE_NAMES.test(text),
     );
 
     expect(hardcoded).toEqual([]);
