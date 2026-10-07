@@ -81,6 +81,14 @@ export function renderPageWithI18n(
 }
 
 /**
+ * Cada idioma escrito en si mismo, como lo pinta `LanguageSelector` (el nombre de un
+ * idioma no se traduce: quien busca el suyo lo reconoce asi). Se descarta siempre:
+ * en cuanto hay mas de un idioma ofrecido el selector aparece en login, registro y
+ * ajustes, y no es texto que falte en un catalogo.
+ */
+export const LANGUAGE_NAMES =/^(Español|English)$/;
+
+/**
  * Lo que una pagina pinta sin que venga del catalogo de la app: texto que llega
  * del backend (nombres, descripciones) y fechas o numeros ya formateados. La
  * comprobacion "no queda nada cableado" los descarta para no dar falsos
@@ -89,6 +97,7 @@ export function renderPageWithI18n(
  * - `data`: valores del backend que el test sembro (se descartan si el texto los contiene).
  * - se descarta tambien todo texto con un ano de cuatro cifras (una fecha formateada)
  *   y los numeros con unidad abreviada (`12ms`, `1,234.5ms`), que los produce `Intl`.
+ * - se descartan los nombres de idioma (`LANGUAGE_NAMES`).
  */
 export function notFromCatalogue(
   texts: string[],
@@ -99,6 +108,7 @@ export function notFromCatalogue(
   return texts.filter(
     (text) =>
       !text.startsWith(prefix) &&
+      !LANGUAGE_NAMES.test(text) &&
       !data.some((value) => text.includes(value)) &&
       !/\d{4}/.test(text) &&
       !/^\d[\d.,]*\s?[a-zA-Zµ]{0,3}$/.test(text) &&

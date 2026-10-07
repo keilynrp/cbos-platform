@@ -93,11 +93,13 @@ describe("the real English catalogue", () => {
   });
 
   it("falls back to Spanish for a namespace English does not have yet", async () => {
-    // Es la razon por la que `en` no se ofrece hasta estar completo: sin esto un
+    // Es la razon por la que un idioma no se ofrece hasta estar completo: sin esto un
     // usuario veria la pantalla mezclada. Se fija para que nadie lo descubra en
-    // produccion.
-    const instance = await english();
-    // `workflows` sigue pendiente: cuando se traduzca, este test pasa a otro dominio.
+    // produccion. `en` ya esta completo, asi que se le quita un espacio a mano.
+    const { workflows: _pending, ...partial } = resources.en;
+    const instance = i18next.createInstance();
+    await instance.init(buildI18nOptions({ ...resources, en: partial }, "en"));
+
     expect(instance.t("workflows:new")).toBe("Nuevo Workflow");
   });
 });
