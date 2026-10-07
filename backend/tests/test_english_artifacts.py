@@ -15,9 +15,10 @@ fuente embebida impide buscar literales en los bytes):
   palabras menos las del `en`) no aparece en lo que sale en `en`. Un texto que se
   quedo en espanol tiene palabras que ningun catalogo ingles contiene.
 
-Lo que NO cubre: fechas e importes siguen sin seguir al idioma (ver tarea 10), y el
-idioma no se ofrece aun a nadie (`UNRELEASED_LOCALES`): se llega a el pasando
-`locale="en"` directamente.
+Lo que NO cubre: fechas e importes siguen sin seguir al idioma (ver tarea 10). El
+idioma ya se ofrece (`SUPPORTED_LOCALES`), pero estos tests pasan `locale="en"` a
+mano: no ejercitan la cadena de resolucion, que cubren `test_locale.py` y
+`test_locale_resolution.py`.
 """
 import re
 
