@@ -5,10 +5,10 @@ Cubre las tres columnas —`users.locale`, `workspaces.default_locale`,
 `portal_sessions.locale`—, el PATCH del locale propio, el unico sitio donde
 `Accept-Language` importa (el registro) y el campo en `PortalSessionCreate`.
 
-Hasta la tarea 12 el unico catalogo enviado es `es`: los casos "valido" usan
-`es` y `es-MX`, y "no soportado" usa `fr`. Ese `fr` dejara de servir el dia que
-se envie un segundo idioma; el test de `test_locale_resolution.py` que fija
-`SUPPORTED_LOCALES == ("es",)` es el aviso.
+Se ofrecen `es` y `en` (tarea 12): los casos "valido" usan `es`, `es-MX` y `en`,
+y "no soportado" usa `fr`. Ese `fr` dejara de servir el dia que se envie un
+tercer idioma; el test de `test_locale_resolution.py` que fija
+`SUPPORTED_LOCALES == ("es", "en")` es el aviso.
 """
 import pytest
 from httpx import AsyncClient
@@ -139,7 +139,20 @@ async def test_patch_unsupported_locale_is_rejected_with_a_registered_code(
     assert resp.status_code == 422
     err = resp.json()["error"]
     assert err["code"] == "IDENTITY_LOCALE_UNSUPPORTED"
-    assert err["detail"]["supported"] == ["es"]
+    assert err["detail"]["supported"] == ["es", "en"]
+
+
+async def test_patch_own_locale_accepts_english_and_canonicalises_it(
+    client: AsyncClient, auth_headers: dict
+):
+    # `en` se ofrece desde que esta completo en el servidor y en la interfaz.
+    resp = await client.patch(f"{AUTH}/me", json={"locale": "en_us"}, headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["locale"] == "en-US"
+    assert resp.json()["effective_locale"] == "en-US"
+
+    again = await client.get(f"{AUTH}/me", headers=auth_headers)
+    assert again.json()["locale"] == "en-US"
 
 
 async def test_rejected_locale_does_not_change_the_stored_one(
@@ -193,6 +206,15 @@ async def test_register_takes_the_default_from_accept_language(client: AsyncClie
     assert ws["default_locale"] == "es-MX"
     # El usuario no expreso preferencia: sigue al workspace, no la copia.
     assert me["locale"] is None
+
+
+async def test_register_with_an_english_browser_gets_an_english_workspace(
+    client: AsyncClient,
+):
+    ws, me = await _workspace_and_me(client, await _register(client, "en-US,en;q=0.9"))
+    assert ws["default_locale"] == "en-US"
+    assert me["locale"] is None
+    assert me["effective_locale"] == "en-US"
 
 
 async def test_register_with_an_unshipped_language_falls_back_to_es(
@@ -262,4 +284,15 @@ async def test_portal_session_rejects_an_unsupported_locale(
     assert resp.status_code == 422
     err = resp.json()["error"]
     assert err["code"] == "PORTAL_LOCALE_UNSUPPORTED"
-    assert err["detail"]["supported"] == ["es"]
+    assert err["detail"]["supported"] == ["es", "en"]
+
+
+async def test_portal_session_accepts_english(client: AsyncClient, auth_headers: dict):
+    quote_id = await _quote(client, auth_headers)
+    resp = await client.post(
+        f"{PORTAL}/sessions",
+        json={"quote_id": quote_id, "locale": "en"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["locale"] == "en"

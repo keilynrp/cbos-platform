@@ -56,15 +56,18 @@ async def test_normalize_rejects_unsupported_or_malformed(raw):
 
 
 async def test_normalize_checks_the_base_language_against_supported():
-    assert normalize_locale("en-US") is None
-    assert normalize_locale("en-US", supported=TWO) == "en-US"
+    # `fr` no tiene catalogo: ningun test debe depender de que un idioma "real" falte.
+    assert normalize_locale("fr-FR") is None
+    assert normalize_locale("fr-FR", supported=("es", "fr")) == "fr-FR"
 
 
-async def test_shipped_catalogues_today_are_spanish_only():
-    # Si esto cambia, la tarea 12 ya llego y varios tests de esta suite dejan
-    # de ser el caso limite que pretenden ser: hay que revisarlos.
-    assert SUPPORTED_LOCALES == ("es",)
+async def test_shipped_catalogues_today_are_spanish_and_english():
+    # Si esto cambia, se ha ofrecido o retirado un idioma y varios tests de esta
+    # suite dejan de ser el caso limite que pretenden ser: hay que revisarlos.
+    assert SUPPORTED_LOCALES == ("es", "en")
     assert DEFAULT_LOCALE == "es"
+    # El idioma por defecto sigue siendo el primero: es el de reserva de todo lo demas.
+    assert SUPPORTED_LOCALES[0] == DEFAULT_LOCALE
 
 
 # ── catalogue_for ────────────────────────────────────────────

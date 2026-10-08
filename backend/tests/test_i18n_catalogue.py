@@ -68,12 +68,24 @@ async def test_a_language_is_either_offered_or_unreleased_not_both():
     assert not set(SUPPORTED_LOCALES) & set(UNRELEASED_LOCALES)
 
 
-async def test_an_unreleased_language_is_not_reachable_on_its_own():
-    # Tiene catalogo y `translate` lo sirve, pero nadie llega a el solo: ni por el
-    # PATCH del locale, ni por `Accept-Language`, ni por el workspace.
-    assert normalize_locale("en") is None
-    assert resolve_locale(user_locale="en", accept_language="en-US,en;q=0.9") == DEFAULT_LOCALE
+async def test_a_language_outside_the_offered_list_is_not_reachable_on_its_own():
+    # Un idioma con catalogo pero fuera de la lista ofrecida (el caso de `UNRELEASED_LOCALES`
+    # mientras se traduce) no lo alcanza nadie solo: ni por el PATCH del locale, ni por
+    # `Accept-Language`, ni por el workspace. Hoy no hay ninguno, asi que se ejercita con
+    # la lista explicita: lo que importa es el mecanismo, no que `en` siga sin ofrecerse.
+    only_spanish = ("es",)
+    assert normalize_locale("en", supported=only_spanish) is None
+    assert (
+        resolve_locale(user_locale="en", accept_language="en-US,en;q=0.9", supported=only_spanish)
+        == DEFAULT_LOCALE
+    )
     assert translate("invoice_pdf:title", "en") == "INVOICE"
+
+
+async def test_english_is_offered_and_reachable():
+    assert normalize_locale("en") == "en"
+    assert resolve_locale(accept_language="en-US,en;q=0.9") == "en-US"
+    assert resolve_locale(user_locale="en") == "en"
 
 
 async def test_every_catalogue_has_the_same_keys_as_the_default():

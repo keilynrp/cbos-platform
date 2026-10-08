@@ -40,7 +40,7 @@ El sistema está construido como un **monolito modular** con límites de dominio
 Discovery → Lead → Opportunity → Quote → Order → Inventory → Portal → Invoice → Payment
 ```
 
-**928 tests** (contrato + integración + e2e) en 48 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
+**932 tests** (contrato + integración + e2e) en 48 archivos. Dashboard con datos reales (facturación, pipeline CRM, operaciones).
 
 ---
 
@@ -106,7 +106,7 @@ cbos-platform/
 │   │   │   ├── accounting/         Facturación, pagos, overdue scanner
 │   │   │   └── analytics/          Agregación cross-módulo
 │   │   └── main.py                 Lifespan, routers, CORS, background tasks
-│   ├── tests/                      928 tests (pytest-asyncio)
+│   ├── tests/                      932 tests (pytest-asyncio)
 │   ├── alembic/                    Migraciones de base de datos
 │   └── requirements.txt
 ├── composable-os/                  React 18 + Vite frontend
@@ -232,7 +232,7 @@ docker compose exec backend pytest --tb=short -q
 cd backend && pytest --tb=short -q
 ```
 
-**928 tests** en 48 archivos. Las categorías no se solapan: cada archivo cuenta
+**932 tests** en 48 archivos. Las categorías no se solapan: cada archivo cuenta
 una sola vez y las filas suman 41.
 
 | Categoría | Archivos | Cobertura |
