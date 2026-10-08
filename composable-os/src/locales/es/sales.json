@@ -93,6 +93,8 @@
       "clientEmail": "Email del cliente",
       "emailPlaceholder": "juan@empresa.com",
       "validFor": "Válida por",
+      "clientLanguage": "Idioma del cliente",
+      "clientLanguageHint": "El correo al cliente sale en este idioma.",
       "copyLink": "Copiar link",
       "sendEmail": "Enviar email"
     },

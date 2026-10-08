@@ -3,21 +3,12 @@ import { useTranslation } from "react-i18next";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { SUPPORTED_LOCALES } from "@/i18n";
+import { languageName } from "@/i18n/languageName";
 import { catalogueFor } from "@/i18n/locale";
 import { useT } from "@/i18n/useT";
 import { useAuth } from "@/lib/auth";
 import { translateApiError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
-
-/** El idioma escrito en si mismo ("Espanol", "English"), sin pasar por un catalogo. */
-function languageName(code: string): string {
-  try {
-    const name = new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
-    return name.charAt(0).toLocaleUpperCase(code) + name.slice(1);
-  } catch {
-    return code;
-  }
-}
 
 interface Props {
   /** Idiomas ofrecidos. Por defecto, los que tienen catalogo enviado. */

@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import i18n from "@/i18n";
@@ -160,6 +160,42 @@ describe("QuoteDetail, in Spanish", () => {
     expect(screen.getByText("Válida por")).toBeInTheDocument();
     for (const d of ["7d", "14d", "30d"]) expect(screen.getByRole("button", { name: d })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("juan@empresa.com")).toBeInTheDocument();
+  });
+
+  it("proposes the interface language for the customer and sends it with the session", async () => {
+    render();
+    fireEvent.click(await screen.findByRole("button", { name: /Compartir/ }));
+
+    const select = await screen.findByLabelText("Idioma del cliente");
+    expect(select).toHaveValue("es");
+    expect(within(select).getByRole("option", { name: "Español" })).toBeInTheDocument();
+    expect(within(select).getByRole("option", { name: "English" })).toBeInTheDocument();
+    expect(screen.getByText("El correo al cliente sale en este idioma.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Copiar link/ }));
+    await waitFor(() => expect(portal.createSession).toHaveBeenCalledWith(expect.objectContaining({ locale: "es" })));
+  });
+
+  it("lets the seller write to the customer in another language", async () => {
+    render();
+    fireEvent.click(await screen.findByRole("button", { name: /Compartir/ }));
+    fireEvent.change(await screen.findByLabelText("Idioma del cliente"), { target: { value: "en" } });
+    fireEvent.change(screen.getByPlaceholderText("juan@empresa.com"), { target: { value: "ana@sol.co" } });
+    fireEvent.click(screen.getByRole("button", { name: /Enviar email/ }));
+
+    await waitFor(() => expect(portal.createSession).toHaveBeenCalledWith(expect.objectContaining({ locale: "en", client_email: "ana@sol.co" })));
+    await waitFor(() => expect(portal.sendEmail).toHaveBeenCalledWith("s1"));
+  });
+
+  it("goes back to the interface language when the dialog is closed and reopened", async () => {
+    render();
+    fireEvent.click(await screen.findByRole("button", { name: /Compartir/ }));
+    fireEvent.change(await screen.findByLabelText("Idioma del cliente"), { target: { value: "en" } });
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: /Compartir/ }));
+    expect(await screen.findByLabelText("Idioma del cliente")).toHaveValue("es");
   });
 
   it("copies the link and confirms", async () => {
