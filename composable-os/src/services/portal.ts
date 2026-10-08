@@ -11,6 +11,8 @@ export interface PortalSession {
   action: string | null;      // "accepted" | "rejected" | null
   client_name: string | null;
   client_email: string | null;
+  /** Idioma del cliente (`es`, `en-US`); `null` sigue al workspace. */
+  locale: string | null;
   created_by_id: string | null;
   portal_url: string;
   created_at: string;
@@ -20,6 +22,8 @@ export interface CreateSessionDto {
   quote_id: string;
   client_name?: string;
   client_email?: string;
+  /** Idioma en que el servidor redacta lo que le manda al cliente (el correo). */
+  locale?: string;
   expire_hours?: number;
 }
 

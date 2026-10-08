@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import i18next, { type i18n as I18n } from "i18next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -339,6 +339,25 @@ describe("QuoteDetail in English", () => {
     expect(screen.getByText("Valid for")).toBeInTheDocument();
     for (const d of ["7d", "14d", "30d"]) expect(screen.getByRole("button", { name: d })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("john@company.com")).toBeInTheDocument();
+  });
+
+  it("proposes English for the customer and lets the seller switch to Spanish", async () => {
+    renderDetail(await english());
+    fireEvent.click(await screen.findByRole("button", { name: /Share/ }));
+
+    const select = await screen.findByLabelText("Customer language");
+    expect(select).toHaveValue("en");
+    expect(within(select).getByRole("option", { name: "English" })).toBeInTheDocument();
+    expect(within(select).getByRole("option", { name: "Español" })).toBeInTheDocument();
+    expect(screen.getByText("The email to the customer is sent in this language.")).toBeInTheDocument();
+
+    // «Copy link» no cierra el diálogo, así que se puede probar con los dos idiomas seguidos.
+    fireEvent.click(screen.getByRole("button", { name: /Copy link/ }));
+    await waitFor(() => expect(portal.createSession).toHaveBeenLastCalledWith(expect.objectContaining({ locale: "en" })));
+
+    fireEvent.change(select, { target: { value: "es" } });
+    fireEvent.click(screen.getByRole("button", { name: /Copy link/ }));
+    await waitFor(() => expect(portal.createSession).toHaveBeenLastCalledWith(expect.objectContaining({ locale: "es" })));
   });
 
   it("copies the link and sends the email, saying to whom", async () => {

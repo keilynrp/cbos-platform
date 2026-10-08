@@ -21,6 +21,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { translateApiError } from "@/lib/errors";
 import { ArrowLeft, Plus, Trash2, Download, Loader2, Share2, Copy, Mail } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { SUPPORTED_LOCALES } from "@/i18n";
+import { languageName } from "@/i18n/languageName";
+import { catalogueFor } from "@/i18n/locale";
 import { useFormat } from "@/i18n/useFormat";
 import { useT } from "@/i18n/useT";
 
@@ -166,6 +170,11 @@ export default function QuoteDetail() {
   const [shareEmail, setShareEmail] = useState("");
   const [shareName, setShareName] = useState("");
   const [shareDays, setShareDays] = useState<7 | 14 | 30>(14);
+  // `null` = no lo ha tocado: se propone el idioma de la interfaz, que es en el que el
+  // vendedor suele escribirle al cliente. Se manda siempre un idioma concreto.
+  const { i18n } = useTranslation();
+  const [shareLocale, setShareLocale] = useState<string | null>(null);
+  const clientLocale = shareLocale ?? catalogueFor(i18n.language, SUPPORTED_LOCALES);
 
   const { data: sessions = [] } = useQuery({
     queryKey: ["portal-sessions", id],
@@ -185,6 +194,7 @@ export default function QuoteDetail() {
             quote_id: id!,
             client_name: shareName || undefined,
             client_email: shareEmail || undefined,
+            locale: clientLocale,
             expire_hours: shareDays * 24,
           }),
     onSuccess: (s) => {
@@ -203,6 +213,7 @@ export default function QuoteDetail() {
         quote_id: id!,
         client_name: shareName || undefined,
         client_email: shareEmail || undefined,
+        locale: clientLocale,
         expire_hours: shareDays * 24,
       });
       return portalService.sendEmail(s.id);
@@ -329,7 +340,7 @@ export default function QuoteDetail() {
       )}
 
       {/* Share dialog */}
-      <Dialog open={shareOpen} onOpenChange={(o) => { setShareOpen(o); if (!o) { setShareEmail(""); setShareName(""); setShareDays(14); } }}>
+      <Dialog open={shareOpen} onOpenChange={(o) => { setShareOpen(o); if (!o) { setShareEmail(""); setShareName(""); setShareDays(14); setShareLocale(null); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{t("sales:detail.shareDialog.title")}</DialogTitle>
@@ -361,6 +372,23 @@ export default function QuoteDetail() {
                 className="h-8 text-sm"
               />
             </div>
+            {/* Como el selector de la interfaz: con un solo idioma ofrecido no hay nada que elegir */}
+            {SUPPORTED_LOCALES.length > 1 && (
+              <div className="space-y-1.5">
+                <Label htmlFor="share-locale" className="text-xs">{t("sales:detail.shareDialog.clientLanguage")}</Label>
+                <select
+                  id="share-locale"
+                  value={clientLocale}
+                  onChange={(e) => setShareLocale(e.target.value)}
+                  className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  {SUPPORTED_LOCALES.map((code) => (
+                    <option key={code} value={code}>{languageName(code)}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground">{t("sales:detail.shareDialog.clientLanguageHint")}</p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-xs">{t("sales:detail.shareDialog.validFor")}</Label>
               <div className="flex gap-2">
