@@ -12,9 +12,11 @@ import { useAuth } from "@/lib/auth";
 import { useNotifications } from "@/lib/useNotifications";
 import { useFormat } from "@/i18n/useFormat";
 import { useT } from "@/i18n/useT";
+import { useEnumLabel } from "@/i18n/enumLabel";
 
 export function AppLayout() {
   const t = useT();
+  const label = useEnumLabel();
   const { formatRelativeTime } = useFormat();
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAllRead, dismiss } = useNotifications();
@@ -77,7 +79,7 @@ export function AppLayout() {
                         <div key={n.id}
                           className={`flex items-start gap-3 px-4 py-3 border-b last:border-0 transition-colors ${n.read ? "" : "bg-primary/5"}`}>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium leading-tight">{n.title}</p>
+                            <p className="text-sm font-medium leading-tight">{label("layout:notifications.events", n.event_type)}</p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">
                               {n.event_type} · {formatRelativeTime(n.timestamp)}
                             </p>

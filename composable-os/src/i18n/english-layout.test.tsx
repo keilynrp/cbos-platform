@@ -88,13 +88,15 @@ describe("AppLayout in English", () => {
     unmount();
 
     notif.notifications = [{
-      id: "n1", event_type: "quote.accepted", title: "Quote accepted", payload: {}, entity_id: null,
+      id: "n1", event_type: "QuoteAccepted", payload: {}, entity_id: null,
       timestamp: new Date(Date.now() - 5 * 60_000).toISOString(), read: false,
     }];
     notif.unreadCount = 1;
     renderWithI18n(<AppLayout />, instance);
     fireEvent.click(screen.getByRole("button", { name: "Notifications" }));
 
+    expect(screen.getByText("Quote accepted")).toBeInTheDocument();
+    expect(screen.queryByText("Cotización aceptada")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Mark all as read" }));
     expect(notif.markAllRead).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));

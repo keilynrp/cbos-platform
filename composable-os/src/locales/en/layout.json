@@ -39,6 +39,22 @@
     "title": "Notifications",
     "markAll": "Mark all as read",
     "empty": "No notifications",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "events": {
+      "WorkflowTriggered": "Workflow executed",
+      "WorkflowCompleted": "Workflow completed",
+      "WorkflowFailed": "Workflow failed",
+      "InventoryLowThresholdDetected": "Low stock",
+      "QuoteAccepted": "Quote accepted",
+      "QuoteRejected": "Quote rejected",
+      "SalesOrderCreated": "New sales order",
+      "CustomerActionPerformed": "Customer action",
+      "OpportunityWon": "Deal won 🎉",
+      "OpportunityLost": "Deal lost",
+      "PortalSessionCreated": "Portal shared with customer",
+      "InvoiceCreated": "Invoice created",
+      "InvoicePaid": "Invoice paid 💰",
+      "InvoiceOverdue": "Invoice overdue ⚠️"
+    }
   }
 }

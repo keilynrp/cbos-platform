@@ -39,6 +39,22 @@
     "title": "Notificaciones",
     "markAll": "Marcar todas",
     "empty": "Sin notificaciones",
-    "dismiss": "Descartar"
+    "dismiss": "Descartar",
+    "events": {
+      "WorkflowTriggered": "Workflow ejecutado",
+      "WorkflowCompleted": "Workflow completado",
+      "WorkflowFailed": "Workflow falló",
+      "InventoryLowThresholdDetected": "Stock bajo",
+      "QuoteAccepted": "Cotización aceptada",
+      "QuoteRejected": "Cotización rechazada",
+      "SalesOrderCreated": "Nueva orden de venta",
+      "CustomerActionPerformed": "Acción del cliente",
+      "OpportunityWon": "Deal ganado 🎉",
+      "OpportunityLost": "Deal perdido",
+      "PortalSessionCreated": "Portal compartido con cliente",
+      "InvoiceCreated": "Factura generada",
+      "InvoicePaid": "Factura pagada 💰",
+      "InvoiceOverdue": "Factura vencida ⚠️"
+    }
   }
 }

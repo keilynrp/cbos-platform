@@ -336,7 +336,7 @@ async def portal_accept(
         return PortalActionResult(
             success=False,
             action=session.action,
-            message=f"Ya realizaste una acción ({session.action}) en esta cotización.",
+            message="This session already has a recorded action.",
         )
 
     quote = await _load_quote_with_lines(db, session.quote_id)
@@ -486,7 +486,7 @@ async def portal_accept(
     return PortalActionResult(
         success=True,
         action="accepted",
-        message="Cotización aceptada. Tu orden de compra ha sido creada.",
+        message="Quote accepted; the sales order was created.",
         order_number=order_number,
     )
 
@@ -500,7 +500,7 @@ async def portal_reject(
         return PortalActionResult(
             success=False,
             action=session.action,
-            message=f"Ya realizaste una acción ({session.action}) en esta cotización.",
+            message="This session already has a recorded action.",
         )
 
     quote = await _load_quote_with_lines(db, session.quote_id)
@@ -570,7 +570,7 @@ async def portal_reject(
     return PortalActionResult(
         success=True,
         action="rejected",
-        message="Cotización rechazada. Hemos notificado al equipo.",
+        message="Quote rejected; the team was notified.",
     )
 
 

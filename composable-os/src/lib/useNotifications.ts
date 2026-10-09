@@ -4,7 +4,6 @@ import { getToken } from "@/lib/api";
 export interface AppNotification {
   id: string;
   event_type: string;
-  title: string;
   payload: Record<string, unknown>;
   entity_id: string | null;
   timestamp: string;
@@ -48,7 +47,6 @@ export function useNotifications() {
           {
             id: String(++idCounter),
             event_type: msg.event_type,
-            title: msg.title,
             payload: msg.payload ?? {},
             entity_id: msg.entity_id ?? null,
             timestamp: msg.timestamp ?? new Date().toISOString(),

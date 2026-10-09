@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timezone
 
 from app.events.types import Event
-from app.modules.notifications.router import NOTIFY_EVENTS, NOTIFY_LABELS
+from app.modules.notifications.router import NOTIFY_EVENTS
 
 
 # ── Override DB fixture (no DB needed for this file) ─────────────────────────
@@ -113,14 +113,13 @@ async def test_notify_event_forwarded_with_correct_shape():
     message = {
         "type": "notification",
         "event_type": event_type,
-        "title": NOTIFY_LABELS.get(event_type, event_type),
         "payload": event.get("payload", {}),
         "entity_id": event.get("entity_id"),
         "timestamp": event.get("timestamp"),
     }
 
     assert message["type"] == "notification"
-    assert message["title"] == NOTIFY_LABELS["QuoteAccepted"]
+    assert "title" not in message  # el texto lo pone la interfaz (ADR 0014)
     assert message["payload"]["total"] == 1500.0
     assert message["entity_id"] == "quote-abc"
 
@@ -172,7 +171,7 @@ async def test_forward_events_calls_websocket_send_json():
     sent = ws.send_json.call_args[0][0]
     assert sent["type"] == "notification"
     assert sent["event_type"] == "OpportunityWon"
-    assert sent["title"] == NOTIFY_LABELS["OpportunityWon"]
+    assert "title" not in sent  # el texto lo pone la interfaz (ADR 0014)
     assert sent["payload"]["deal_value"] == 50000.0
     assert sent["entity_id"] == "opp-99"
 
@@ -291,13 +290,12 @@ async def test_full_pipeline_quote_accepted_reaches_ws_client():
     ws_message = {
         "type": "notification",
         "event_type": event_type,
-        "title": NOTIFY_LABELS.get(event_type, event_type),
         "payload": parsed.get("payload", {}),
         "entity_id": parsed.get("entity_id"),
         "timestamp": parsed.get("timestamp"),
     }
 
-    assert ws_message["title"] == "Cotización aceptada"
+    assert "title" not in ws_message
     assert ws_message["payload"]["total"] == 2500.0
     assert ws_message["entity_id"] == "quote-xyz"
     assert ws_message["type"] == "notification"
@@ -334,12 +332,11 @@ async def test_full_pipeline_inventory_low_threshold_reaches_ws():
     ws_message = {
         "type": "notification",
         "event_type": parsed["event_type"],
-        "title": NOTIFY_LABELS.get(parsed["event_type"], parsed["event_type"]),
         "payload": parsed.get("payload", {}),
         "entity_id": parsed.get("entity_id"),
         "timestamp": parsed.get("timestamp"),
     }
-    assert ws_message["title"] == "Stock bajo"
+    assert "title" not in ws_message
     assert ws_message["payload"]["current_stock"] == 3
 
 

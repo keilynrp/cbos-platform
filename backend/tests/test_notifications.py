@@ -1,13 +1,16 @@
 """
 Notifications module tests.
 Strategy: unit tests with mocks — no real WebSocket or Redis connection required.
-Tests cover: event filtering, label mapping, token validation, message shape,
+Tests cover: event filtering, token validation, message shape (language-neutral),
 and ConnectionManager behaviour.
 """
+import json
+from pathlib import Path
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.modules.notifications.router import NOTIFY_EVENTS, NOTIFY_LABELS
+from app.modules.notifications.router import NOTIFY_EVENTS
 
 
 # ── Override the per-test DB autouse fixture so this unit-test file  ─────────
@@ -60,25 +63,29 @@ def test_notify_events_does_not_include_internal_events():
     assert "LeadCaptured" not in NOTIFY_EVENTS
 
 
-# ── NOTIFY_LABELS coverage ────────────────────────────────────────────────────
+# ── Labels live in the interface catalogue ───────────────────────────────────
+# The server sends the event type; the text is `layout:notifications.events.<EventType>`
+# in each frontend locale (ADR 0014). This is the check that used to be on NOTIFY_LABELS:
+# a notifiable event without a label would show its raw name to the user.
 
-def test_every_notify_event_has_a_label():
-    """Every event in NOTIFY_EVENTS must have a human-readable label."""
-    for event_type in NOTIFY_EVENTS:
-        assert event_type in NOTIFY_LABELS, f"Missing label for {event_type}"
-
-
-def test_labels_are_non_empty_strings():
-    for event_type, label in NOTIFY_LABELS.items():
-        assert isinstance(label, str), f"Label for {event_type} is not a string"
-        assert len(label) > 0, f"Empty label for {event_type}"
+LOCALES_DIR = Path(__file__).resolve().parents[2] / "composable-os" / "src" / "locales"
 
 
-def test_labels_dict_covers_all_notify_events():
-    """NOTIFY_LABELS must be a superset of NOTIFY_EVENTS (no orphan labels required,
-    but every notifiable event needs a label)."""
-    missing = NOTIFY_EVENTS - set(NOTIFY_LABELS.keys())
-    assert missing == set(), f"Events without labels: {missing}"
+@pytest.mark.skipif(not LOCALES_DIR.is_dir(), reason="the frontend catalogues are not in this checkout")
+@pytest.mark.parametrize("language", ["es", "en"])
+def test_every_notify_event_has_a_label_in_each_language(language):
+    layout = json.loads((LOCALES_DIR / language / "layout.json").read_text(encoding="utf-8"))
+    labels = layout["notifications"]["events"]
+
+    missing = NOTIFY_EVENTS - set(labels)
+    assert missing == set(), f"Events without a '{language}' label: {sorted(missing)}"
+    assert all(isinstance(v, str) and v for v in labels.values())
+
+
+@pytest.mark.skipif(not LOCALES_DIR.is_dir(), reason="the frontend catalogues are not in this checkout")
+def test_the_catalogues_do_not_label_events_the_server_never_sends():
+    layout = json.loads((LOCALES_DIR / "es" / "layout.json").read_text(encoding="utf-8"))
+    assert set(layout["notifications"]["events"]) - NOTIFY_EVENTS == set()
 
 
 # ── Message filtering logic ───────────────────────────────────────────────────
@@ -111,59 +118,64 @@ def test_all_notify_events_pass_filter():
 
 # ── Message transformation ────────────────────────────────────────────────────
 
-def test_notification_message_shape():
-    """Verify the shape of a forwarded notification matches the contract."""
-    event_type = "QuoteAccepted"
-    raw_event = {
-        "event_type": event_type,
+async def _forwarded(events: list[dict]) -> list[dict]:
+    """Run the real `notifications_ws` over `events` and return what the client got."""
+    import asyncio
+    import json
+
+    ws = AsyncMock()
+
+    async def disconnect_later():
+        await asyncio.sleep(0.2)  # time for forward_events to drain the pub/sub
+        raise Exception("disconnect")
+
+    ws.receive_text = AsyncMock(side_effect=disconnect_later)
+
+    messages = [{"type": "message", "data": json.dumps(e)} for e in events]
+    mock_pubsub = AsyncMock()
+    mock_pubsub.listen = MagicMock(return_value=_async_iter(messages))
+    mock_redis = AsyncMock()
+    mock_redis.pubsub = MagicMock(return_value=mock_pubsub)
+
+    with patch(
+        "app.modules.notifications.router.verify_token",
+        return_value={"sub": "user-1", "workspace_id": "ws-42"},
+    ), patch("app.modules.notifications.router.manager") as mock_manager, patch(
+        "app.modules.notifications.router.get_redis", return_value=mock_redis
+    ):
+        mock_manager.connect = AsyncMock()
+        mock_manager.disconnect = MagicMock()
+        from app.modules.notifications.router import notifications_ws
+        await notifications_ws(ws, token="good-token")
+
+    return [call.args[0] for call in ws.send_json.call_args_list]
+
+
+async def test_a_notification_carries_the_event_type_and_no_prose():
+    """The interface words the notification in the reader's language (ADR 0014)."""
+    sent = await _forwarded([{
+        "event_type": "QuoteAccepted",
         "payload": {"quote_id": "q-123", "amount": 1500.0},
         "entity_id": "q-123",
         "timestamp": "2026-04-05T12:00:00Z",
-    }
+    }])
 
-    # Simulate the transformation from router.py forward_events()
-    message = {
+    assert sent == [{
         "type": "notification",
-        "event_type": raw_event["event_type"],
-        "title": NOTIFY_LABELS.get(raw_event["event_type"], raw_event["event_type"]),
-        "payload": raw_event.get("payload", {}),
-        "entity_id": raw_event.get("entity_id"),
-        "timestamp": raw_event.get("timestamp"),
-    }
-
-    assert message["type"] == "notification"
-    assert message["event_type"] == "QuoteAccepted"
-    assert message["title"] == NOTIFY_LABELS["QuoteAccepted"]
-    assert message["payload"]["quote_id"] == "q-123"
-    assert message["entity_id"] == "q-123"
-    assert message["timestamp"] == "2026-04-05T12:00:00Z"
+        "event_type": "QuoteAccepted",
+        "payload": {"quote_id": "q-123", "amount": 1500.0},
+        "entity_id": "q-123",
+        "timestamp": "2026-04-05T12:00:00Z",
+    }]
 
 
-def test_notification_message_has_all_required_keys():
-    """The forwarded message must always contain all six required fields."""
-    raw_event = {
-        "event_type": "WorkflowTriggered",
-        "payload": {"workflow_id": "wf-1"},
-        "entity_id": "wf-1",
-        "timestamp": "2026-04-05T08:00:00Z",
-    }
-    message = {
-        "type": "notification",
-        "event_type": raw_event["event_type"],
-        "title": NOTIFY_LABELS.get(raw_event["event_type"], raw_event["event_type"]),
-        "payload": raw_event.get("payload", {}),
-        "entity_id": raw_event.get("entity_id"),
-        "timestamp": raw_event.get("timestamp"),
-    }
-    for key in ("type", "event_type", "title", "payload", "entity_id", "timestamp"):
-        assert key in message
+async def test_events_outside_the_whitelist_are_not_forwarded():
+    sent = await _forwarded([
+        {"event_type": "SomethingInternal", "payload": {}},
+        {"event_type": "WorkflowTriggered", "payload": {}, "entity_id": "wf-1"},
+    ])
 
-
-def test_notification_title_falls_back_to_event_type():
-    """If event_type has no label, event_type itself is used as title."""
-    event_type = "UnknownEvent"
-    title = NOTIFY_LABELS.get(event_type, event_type)
-    assert title == event_type
+    assert [m["event_type"] for m in sent] == ["WorkflowTriggered"]
 
 
 def test_missing_payload_defaults_to_empty_dict():
