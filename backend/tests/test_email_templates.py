@@ -13,8 +13,8 @@ Dos garantias, las mismas que el PDF de factura:
    intactos. Los datos de prueba tambien van en mayusculas, asi que *cualquier* palabra
    en minusculas que sobreviva en el correo es texto cableado.
 
-Lo que NO cubre: el formato de importes (`USD 1,234.50`) sigue sin seguir al idioma, como
-en el PDF (ver el plan, tarea 10).
+El importe sigue a la region del idioma (`core/i18n/format.py`); las fechas de los correos
+salen en ISO (`2026-09-01`), que no depende del idioma, y por eso no se tocan.
 """
 import json
 import re
@@ -190,3 +190,14 @@ async def test_a_message_missing_in_a_language_falls_back_to_spanish(monkeypatch
     monkeypatch.setattr(catalogue, "load_catalogues", lambda: {**real, "en": {"email": {}}})
 
     assert render(CASES["quote_accepted"], locale="en") == GOLDEN["quote_accepted"]
+
+
+async def test_the_amount_follows_the_region_of_the_locale():
+    def amounts(locale):
+        _, text, html = templates.quote_accepted_email("Ana", "Q-1", 12345.5, "USD", "SO-1", locale=locale)
+        return text, html
+
+    for locale, shown in (("es", "USD 12,345.50"), ("en-US", "USD 12,345.50"), ("es-ES", "USD 12.345,50")):
+        text, html = amounts(locale)
+        assert shown in text, locale
+        assert shown in html, locale

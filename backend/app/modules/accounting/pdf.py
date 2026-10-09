@@ -15,6 +15,7 @@ from fpdf import FPDF
 
 from app.core.i18n import DEFAULT_LOCALE
 from app.core.i18n.catalogue import exists, translate
+from app.core.i18n.format import format_date, format_number
 from app.modules.accounting.fonts import register_unicode_font
 from app.modules.accounting.models import CompanyProfile, Invoice
 
@@ -48,16 +49,16 @@ _STATUS_COLORS: dict[str, tuple[int, int, int]] = {
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _fmt_currency(amount: float, currency: str = "USD") -> str:
+def _fmt_currency(amount: float, currency: str = "USD", locale: str = DEFAULT_LOCALE) -> str:
     # Only ASCII/latin-1 safe symbols — fpdf2 built-in fonts use latin-1
     symbol = {"USD": "$", "MXN": "$"}.get(currency, currency + " ")
-    return f"{symbol}{amount:,.2f}"
+    return f"{symbol}{format_number(amount, locale)}"
 
 
-def _fmt_date(d: date | None) -> str:
+def _fmt_date(d: date | None, locale: str = DEFAULT_LOCALE) -> str:
     if d is None:
         return "-"
-    return d.strftime("%d/%m/%Y")
+    return format_date(d, locale)
 
 
 def _status_label(status: str, locale: str) -> str:
@@ -275,7 +276,7 @@ def generate_invoice_pdf(
         translate("invoice_pdf:meta.dueDate", locale),
         translate("invoice_pdf:meta.currency", locale),
     ]
-    values = [_fmt_date(invoice.issue_date), _fmt_date(invoice.due_date), invoice.currency]
+    values = [_fmt_date(invoice.issue_date, locale), _fmt_date(invoice.due_date, locale), invoice.currency]
 
     for i, (lbl, val) in enumerate(zip(labels, values)):
         x = 15 + i * col_w
@@ -335,9 +336,9 @@ def generate_invoice_pdf(
         desc = line.description[:55] + "..." if len(line.description) > 55 else line.description
         pdf.cell(desc_w,  7, desc,                                     align="L")
         pdf.cell(qty_w,   7, f"{line.quantity:g}",                     align="C")
-        pdf.cell(price_w, 7, _fmt_currency(line.unit_price, invoice.currency), align="R")
+        pdf.cell(price_w, 7, _fmt_currency(line.unit_price, invoice.currency, locale), align="R")
         pdf.cell(disc_w,  7, f"{line.discount_pct:.0f}%" if line.discount_pct else "-", align="R")
-        pdf.cell(sub_w,   7, _fmt_currency(line.subtotal, invoice.currency),   align="R")
+        pdf.cell(sub_w,   7, _fmt_currency(line.subtotal, invoice.currency, locale),   align="R")
         pdf.ln(8)
 
     # Divider after rows
@@ -361,16 +362,16 @@ def generate_invoice_pdf(
         pdf.cell(value_w, 6, value, align="R")
         pdf.ln(6)
 
-    _total_row(translate("invoice_pdf:totals.subtotal", locale), _fmt_currency(invoice.subtotal, invoice.currency))
+    _total_row(translate("invoice_pdf:totals.subtotal", locale), _fmt_currency(invoice.subtotal, invoice.currency, locale))
     if invoice.discount_amount > 0:
         _total_row(
             translate("invoice_pdf:totals.discount", locale),
-            f"- {_fmt_currency(invoice.discount_amount, invoice.currency)}",
+            f"- {_fmt_currency(invoice.discount_amount, invoice.currency, locale)}",
         )
     if invoice.tax_rate > 0:
         _total_row(
             translate("invoice_pdf:totals.tax", locale, rate=f"{invoice.tax_rate:.0f}"),
-            _fmt_currency(invoice.tax_amount, invoice.currency),
+            _fmt_currency(invoice.tax_amount, invoice.currency, locale),
         )
 
     # Total line with background
@@ -381,15 +382,15 @@ def generate_invoice_pdf(
     pdf.set_text_color(255, 255, 255)
     pdf.set_xy(totals_x, total_row_y)
     pdf.cell(label_w, 8, translate("invoice_pdf:totals.total", locale), align="L")
-    pdf.cell(value_w, 8, _fmt_currency(invoice.total, invoice.currency), align="R")
+    pdf.cell(value_w, 8, _fmt_currency(invoice.total, invoice.currency, locale), align="R")
     pdf.ln(9)
 
     if invoice.amount_paid > 0:
-        _total_row(translate("invoice_pdf:totals.paid", locale), _fmt_currency(invoice.amount_paid, invoice.currency))
+        _total_row(translate("invoice_pdf:totals.paid", locale), _fmt_currency(invoice.amount_paid, invoice.currency, locale))
         overdue = invoice.status == "overdue"
         _total_row(
             translate("invoice_pdf:totals.balance", locale),
-            _fmt_currency(invoice.amount_due, invoice.currency),
+            _fmt_currency(invoice.amount_due, invoice.currency, locale),
             bold=True,
             color=(239, 68, 68) if overdue else _DARK,
         )
