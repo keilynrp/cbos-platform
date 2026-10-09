@@ -15,8 +15,8 @@ fuente embebida impide buscar literales en los bytes):
   palabras menos las del `en`) no aparece en lo que sale en `en`. Un texto que se
   quedo en espanol tiene palabras que ningun catalogo ingles contiene.
 
-Lo que NO cubre: fechas e importes siguen sin seguir al idioma (ver tarea 10). El
-idioma ya se ofrece (`SUPPORTED_LOCALES`), pero estos tests pasan `locale="en"` a
+Cubre tambien el PDF de cotizacion (al final). Fechas e importes tienen sus propios
+tests (`test_i18n_format.py`). El idioma ya se ofrece (`SUPPORTED_LOCALES`), pero estos tests pasan `locale="en"` a
 mano: no ejercitan la cadena de resolucion, que cubren `test_locale.py` y
 `test_locale_resolution.py`.
 """
@@ -29,6 +29,7 @@ from app.modules.accounting.pdf import generate_invoice_pdf
 from tests.test_email_templates import CASES, render
 from tests.test_invoice_pdf_locale import STATUSES, _full_invoice, _party, _profile, _with_status
 from tests.test_invoice_pdf_rendering import _text
+from tests.test_quote_pdf_locale import _pdf as _quote_pdf
 
 pytestmark = pytest.mark.asyncio
 
@@ -57,7 +58,7 @@ def _vocabulary(domains: dict) -> set[str]:
 # Palabras que los dos catalogos comparten de verdad (cognados, siglas, marca). Es una
 # lista fija a proposito: restar el vocabulario del catalogo `en` que se esta probando
 # seria circular, y una cadena copiada del espanol entraria en el y se daria por buena.
-SHARED_WITH_SPANISH = {"cbos", "error", "platform", "sku", "stock", "subtotal", "total", "unit", "workflow"}
+SHARED_WITH_SPANISH = {"attn", "cbos", "error", "platform", "sku", "stock", "subtotal", "total", "unit", "workflow"}
 
 
 def spanish_only_words() -> set[str]:
@@ -193,3 +194,30 @@ async def test_every_invoice_status_has_an_english_label(status, spanish):
     text = _text(generate_invoice_pdf(_with_status(status), locale="en"))
     assert english in text
     assert spanish not in text
+
+
+# ── PDF de cotizacion ────────────────────────────────────────────────────────
+
+# Datos de la cotizacion de prueba: texto de una persona, que ningun catalogo traduce.
+_QUOTE_DATA = ("Q-2026-0001", "Implementacion CRM", "Acme SA", "Comercial Norte SA", "Consultoria",
+               "Licencia", "Gracias por su preferencia", "Pago a 30 dias")
+
+
+async def test_the_quote_pdf_labels_are_english():
+    text = _quote_pdf(locale="en")
+    for label in ("QUOTE", "Number", "Title", "Status", "Valid until", "Currency", "CUSTOMER",
+                  "LINE ITEMS", "Description", "Qty.", "Unit price", "Amount", "Subtotal",
+                  "Discount", "Tax (16%)", "TOTAL", "NOTES", "TERMS AND CONDITIONS", "Page 1"):
+        assert label in text, label
+
+
+async def test_the_quote_pdf_has_no_spanish_left_in_english():
+    data = words_in(" ".join(_QUOTE_DATA))
+    leaked = {w for w in words_in(_quote_pdf(locale="en")) & spanish_only_words() if w not in data}
+    assert leaked == set()
+
+
+async def test_the_check_detects_spanish_left_in_the_quote_pdf():
+    # El mismo PDF en espanol debe dar palabras que solo existen en espanol.
+    leaked = words_in(_quote_pdf(locale="es")) & spanish_only_words()
+    assert {"cotización", "cliente", "notas"} <= leaked

@@ -5,7 +5,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_current_workspace_id
+from app.core.deps import get_current_locale, get_current_user, get_current_workspace_id
 from app.modules.identity.models import User
 from app.modules.sales import service
 
@@ -177,8 +177,9 @@ async def download_quote_pdf(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     workspace_id: str = Depends(get_current_workspace_id),
+    locale: str = Depends(get_current_locale),
 ):
-    """Returns the quote as a downloadable PDF."""
+    """Returns the quote as a downloadable PDF, in the requester's language."""
     quote, contact_name, org_name = await service.get_quote_pdf_data(
         db, workspace_id, quote_id
     )
@@ -191,7 +192,7 @@ async def download_quote_pdf(
     ws = result.scalar_one_or_none()
     workspace_name = ws.name if ws else workspace_id
 
-    pdf_bytes = generate_quote_pdf(quote, workspace_name, contact_name, org_name)
+    pdf_bytes = generate_quote_pdf(quote, workspace_name, contact_name, org_name, locale=locale)
 
     filename = f"{quote.quote_number}.pdf"
     return Response(
