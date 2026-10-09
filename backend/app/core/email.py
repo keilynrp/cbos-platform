@@ -13,6 +13,7 @@ from typing import Any
 from app.core.config import settings
 from app.core.i18n import DEFAULT_LOCALE
 from app.core.i18n.catalogue import translate
+from app.core.i18n.format import format_money
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +116,7 @@ def quote_portal_email(
     t = _scope("quotePortal", locale)
     greeting = t("greeting", name=contact_name) if contact_name else t("greetingAnonymous")
     valid_str = str(valid_until) if valid_until else t("noExpiry")
-    amount = f"{currency} {total:,.2f}"
+    amount = format_money(total, currency, locale)
 
     subject = t("subject", number=quote_number, workspace=workspace_name)
 
@@ -189,7 +190,7 @@ def quote_accepted_email(
 ) -> tuple[str, str, str]:
     """Email notification when a quote is accepted by the customer."""
     t = _scope("quoteAccepted", locale)
-    amount = f"{currency} {total:,.2f}"
+    amount = format_money(total, currency, locale)
     subject = t("subject", number=quote_number)
     text = t("text", number=quote_number, amount=amount, order=order_number)
     title = t("title")
@@ -214,7 +215,7 @@ def sales_order_created_email(
 ) -> tuple[str, str, str]:
     """Email notification when a new sales order is created."""
     t = _scope("salesOrderCreated", locale)
-    amount = f"{currency} {total:,.2f}"
+    amount = format_money(total, currency, locale)
     subject = t("subject", order=order_number)
     text = t("text", order=order_number, amount=amount)
     title = t("title")
@@ -261,8 +262,8 @@ def invoice_overdue_email(
 ) -> tuple[str, str, str]:
     """Email alert when an invoice becomes overdue."""
     t = _scope("invoiceOverdue", locale)
-    amount = f"{currency} {total:,.2f}"
-    pending = f"{currency} {amount_due:,.2f}"
+    amount = format_money(total, currency, locale)
+    pending = format_money(amount_due, currency, locale)
     subject = t("subject", number=invoice_number)
     text = t("text", number=invoice_number, amount=amount, pending=pending, dueDate=due_date)
     title = t("title")
@@ -319,7 +320,7 @@ def seller_accept_email(
     t = _scope("sellerAccept", locale)
     _client = _html.escape(client_name)
     _workspace = _html.escape(workspace_name)
-    amount = f"{currency} {total:,.2f}"
+    amount = format_money(total, currency, locale)
     subject = t("subject", client=client_name, number=quote_number)
     text = t(
         "text",

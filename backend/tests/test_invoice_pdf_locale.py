@@ -6,9 +6,8 @@ siempre sale en espanol se ve igual que uno que ignora el parametro. Por eso los
 casos de segundo idioma inyectan un catalogo pseudo-localizado (`EN(<original>)`):
 si una etiqueta del PDF sigue cableada, sale sin el prefijo y el test lo dice.
 
-Lo que NO cubre: el formato de fechas e importes del PDF (`dd/mm/aaaa`, `$1,160.00`)
-sigue siendo el de siempre en cualquier idioma. Es una decision pendiente (anadir
-Babel o escribir una tabla de formatos), no un olvido; ver el plan, tarea 10.
+Las fechas y los importes siguen al idioma (`core/i18n/format.py`): las reglas estan en
+`test_i18n_format.py` y el ultimo caso de aqui comprueba que llegan al PDF.
 """
 import re
 from datetime import date
@@ -172,14 +171,21 @@ async def test_invoice_data_is_never_translated(with_pseudo_english):
         assert f"EN({data})" not in text, data
 
 
-async def test_dates_and_amounts_keep_their_format_in_every_language(with_pseudo_english):
-    # Decision pendiente (docstring): hoy el formato no sigue al idioma.
+async def test_dates_and_amounts_follow_the_language(with_pseudo_english):
     inv = _invoice()
     assert inv.issue_date == date(2026, 8, 3)
-    for locale in ("es", "en"):
+    # (locale, fecha, importe): en espanol nada cambia respecto a siempre.
+    cases = [
+        ("es", "03/08/2026", "$1,160.00"),
+        ("es-MX", "03/08/2026", "$1,160.00"),
+        ("en", "08/03/2026", "$1,160.00"),
+        ("en-GB", "03/08/2026", "$1,160.00"),
+        ("es-ES", "03/08/2026", "$1160,00"),
+    ]
+    for locale, day, amount in cases:
         text = _text(generate_invoice_pdf(inv, locale=locale))
-        assert "03/08/2026" in text
-        assert "$1,160.00" in text
+        assert day in text, locale
+        assert amount in text, locale
 
 
 async def test_a_locale_without_catalogue_renders_in_spanish():

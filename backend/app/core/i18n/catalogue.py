@@ -30,8 +30,8 @@ Que hace cuando algo falta, y por que:
   `invoice_pdf:typo` en un documento que se le entrega a un cliente.
 
 No hay plurales: ningun texto de estos artefactos cuenta cosas. Cuando uno lo
-haga, es la hora de decidir entre reglas CLDR (`babel`) y una tabla propia, junto
-con el formato de fechas e importes, que tampoco sigue al idioma todavia.
+haga, es la hora de ampliar `core/i18n/format.py` (que ya da formato a fechas e
+importes con una tabla propia) con reglas de plural, o de pasar a CLDR (`babel`).
 """
 from __future__ import annotations
 
