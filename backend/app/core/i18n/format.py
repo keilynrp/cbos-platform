@@ -60,10 +60,18 @@ def _rule_for(locale: str | None) -> _Rule:
     return _RULES[default]
 
 
-def format_number(value: float, locale: str | None = DEFAULT_LOCALE, *, decimals: int = 2) -> str:
-    """`1160` -> `1,160.00` en `es`/`en`, con los separadores de la region."""
+def format_number(
+    value: float, locale: str | None = DEFAULT_LOCALE, *, decimals: int | None = 2
+) -> str:
+    """`1160` -> `1,160.00` en `es`/`en`, con los separadores de la region.
+
+    `decimals=None` no fija decimales: `10` -> `10`, `2.5` -> `2.5` (una cantidad).
+    """
     rule = _rule_for(locale)
-    text = f"{value:,.{decimals}f}"
+    if decimals is None:
+        text = f"{value:,.6f}".rstrip("0").rstrip(".")
+    else:
+        text = f"{value:,.{decimals}f}"
     integer_digits = len(text.split(".")[0].lstrip("-").replace(",", ""))
     if integer_digits < rule.min_grouping + 3:
         text = text.replace(",", "")

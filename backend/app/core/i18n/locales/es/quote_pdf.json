@@ -1,0 +1,38 @@
+{
+  "title": "COTIZACIÓN",
+  "footer": "Página {number}",
+  "meta": {
+    "number": "Número",
+    "title": "Título",
+    "status": "Estado",
+    "validUntil": "Válida hasta",
+    "currency": "Moneda"
+  },
+  "customer": {
+    "label": "CLIENTE",
+    "attention": "Attn: {name}"
+  },
+  "items": "DETALLE DE SERVICIOS / PRODUCTOS",
+  "table": {
+    "description": "Descripción",
+    "quantity": "Cant.",
+    "unitPrice": "Precio Unit.",
+    "discount": "Desc.%",
+    "amount": "Importe"
+  },
+  "totals": {
+    "subtotal": "Subtotal",
+    "discount": "Descuento",
+    "tax": "Impuesto ({rate}%)",
+    "total": "TOTAL"
+  },
+  "notes": "NOTAS",
+  "terms": "TÉRMINOS Y CONDICIONES",
+  "status": {
+    "draft": "Borrador",
+    "sent": "Enviada",
+    "accepted": "Aceptada",
+    "rejected": "Rechazada",
+    "expired": "Vencida"
+  }
+}

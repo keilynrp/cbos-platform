@@ -1,0 +1,38 @@
+{
+  "title": "QUOTE",
+  "footer": "Page {number}",
+  "meta": {
+    "number": "Number",
+    "title": "Title",
+    "status": "Status",
+    "validUntil": "Valid until",
+    "currency": "Currency"
+  },
+  "customer": {
+    "label": "CUSTOMER",
+    "attention": "Attn: {name}"
+  },
+  "items": "LINE ITEMS",
+  "table": {
+    "description": "Description",
+    "quantity": "Qty.",
+    "unitPrice": "Unit price",
+    "discount": "Disc.%",
+    "amount": "Amount"
+  },
+  "totals": {
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "tax": "Tax ({rate}%)",
+    "total": "TOTAL"
+  },
+  "notes": "NOTES",
+  "terms": "TERMS AND CONDITIONS",
+  "status": {
+    "draft": "Draft",
+    "sent": "Sent",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "expired": "Expired"
+  }
+}

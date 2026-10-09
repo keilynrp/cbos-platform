@@ -1,0 +1,23 @@
+Acme SA
+COTIZACIÓN
+Número: Q-2026-0001
+Título: Implementacion CRM
+Estado: ENVIADA
+Válida hasta: 01/09/2026
+Moneda: USD
+CLIENTE
+Comercial Norte SA
+Attn: Ana
+DETALLE DE SERVICIOS / PRODUCTOS
+Descripción Cant. Precio Unit. Desc.% Importe
+Consultoria 10 USD 100.00 0% 1,000.00
+Licencia 2.5 USD 250.00 20% 500.00
+Subtotal: USD 1,500.00
+Descuento: -USD 50.00
+Impuesto (16%): USD 232.00
+TOTAL: USD 1,682.00
+NOTAS
+Gracias por su preferencia
+TÉRMINOS Y CONDICIONES
+Pago a 30 dias
+Página 1
