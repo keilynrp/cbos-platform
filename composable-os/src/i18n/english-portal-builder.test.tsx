@@ -71,7 +71,7 @@ describe("PortalBuilder sessions in English", () => {
     expect(screen.getByRole("tab", { name: "Page builder" })).toBeInTheDocument();
     expect(await screen.findByText("Ana Torres")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
-    expect(screen.getByText(`ana@sol.co · expires ${formatDate("2026-10-05T12:00:00Z", "en", "short")}`)).toBeInTheDocument();
+    expect(screen.getByText(`ana@sol.co · expires ${formatDate("2026-10-05T12:00:00Z", "en", "medium")}`)).toBeInTheDocument();
     expect(screen.queryByText("Pendiente")).not.toBeInTheDocument();
   });
 

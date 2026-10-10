@@ -61,7 +61,7 @@ describe("PortalBuilder: sesiones, en español", () => {
     expect(screen.getByRole("tab", { name: "Constructor de páginas" })).toBeInTheDocument();
     expect(await screen.findByText("Ana Torres")).toBeInTheDocument();
     expect(screen.getByText("Pendiente")).toBeInTheDocument();
-    expect(screen.getByText(`ana@sol.co · expira ${formatDate("2026-10-05T12:00:00Z", "es", "short")}`)).toBeInTheDocument();
+    expect(screen.getByText(`ana@sol.co · expira ${formatDate("2026-10-05T12:00:00Z", "es", "medium")}`)).toBeInTheDocument();
   });
 
   it("agrees the session count in the singular and the plural", async () => {

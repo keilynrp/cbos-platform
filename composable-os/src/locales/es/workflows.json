@@ -53,6 +53,7 @@
     "event": "evento"
   },
   "actionType": {
-    "log": "log"
+    "log": "log",
+    "send_email": "enviar correo"
   }
 }

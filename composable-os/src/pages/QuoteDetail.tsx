@@ -329,8 +329,8 @@ export default function QuoteDetail() {
         <div className="flex items-center justify-between px-4 py-2.5 rounded-lg border border-emerald-300/40 bg-emerald-500/10 text-sm">
           <span className="text-emerald-400 text-xs">
             {activeSession.client_email
-              ? t("sales:detail.activeLinkSentTo", { email: activeSession.client_email, date: formatDate(activeSession.expires_at, "short") })
-              : t("sales:detail.activeLink", { date: formatDate(activeSession.expires_at, "short") })}
+              ? t("sales:detail.activeLinkSentTo", { email: activeSession.client_email, date: formatDate(activeSession.expires_at, "medium") })
+              : t("sales:detail.activeLink", { date: formatDate(activeSession.expires_at, "medium") })}
           </span>
           <button
             className="text-blue-400 text-xs hover:underline"
