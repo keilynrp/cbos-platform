@@ -224,7 +224,11 @@ async def create_quote(
     await db.refresh(quote, attribute_names=["lines"])
     await _recalculate_totals(db, quote)
 
-    _log_event(db, workspace_id, quote.id, actor_id, "created", f"Cotización creada: {quote.quote_number}")
+    _log_event(
+        db, workspace_id, quote.id, actor_id, "created",
+        f"Quote created: {quote.quote_number}",
+        metadata={"quote_number": quote.quote_number},
+    )
 
     await publish_event(Event(
         event_type=QUOTE_CREATED,
@@ -330,7 +334,11 @@ async def add_line(
 
     await db.refresh(quote, attribute_names=["lines"])
     await _recalculate_totals(db, quote)
-    _log_event(db, workspace_id, quote_id, None, "line_added", f"Línea agregada: {data.description}")
+    _log_event(
+        db, workspace_id, quote_id, None, "line_added",
+        f"Line added: {data.description}",
+        metadata={"description": data.description},
+    )
     await db.commit()
     return await _reload_quote(db, workspace_id, quote_id)
 
@@ -363,7 +371,11 @@ async def remove_line(
     await db.flush()
     await db.refresh(quote, attribute_names=["lines"])
     await _recalculate_totals(db, quote)
-    _log_event(db, workspace_id, quote_id, None, "line_removed", f"Línea eliminada: {line.description}")
+    _log_event(
+        db, workspace_id, quote_id, None, "line_removed",
+        f"Line removed: {line.description}",
+        metadata={"description": line.description},
+    )
     await db.commit()
     return await _reload_quote(db, workspace_id, quote_id)
 
@@ -407,7 +419,7 @@ async def update_line(
     desc_parts = [f"{k}: {v}" for k, v in changes.items()]
     _log_event(
         db, workspace_id, quote_id, actor_id, "line_updated",
-        f"Línea modificada — {', '.join(desc_parts)}",
+        f"Line updated — {', '.join(desc_parts)}",
         metadata=changes,
     )
 
@@ -494,7 +506,7 @@ async def replace_lines(
     await db.flush()
     await db.refresh(quote, attribute_names=["lines"])
     await _recalculate_totals(db, quote)
-    _log_event(db, workspace_id, quote_id, actor_id, "updated", "Líneas actualizadas (batch)")
+    _log_event(db, workspace_id, quote_id, actor_id, "updated", "Lines updated (batch)")
 
     await db.commit()
     return await _reload_quote(db, workspace_id, quote_id)
@@ -537,7 +549,7 @@ async def send_quote(
 
     quote.status = "sent"
     quote.sent_at = datetime.now(timezone.utc)
-    _log_event(db, workspace_id, quote_id, actor_id, "sent", "Cotización enviada")
+    _log_event(db, workspace_id, quote_id, actor_id, "sent", "Quote sent")
 
     await publish_event(Event(
         event_type=QUOTE_SENT,
@@ -570,7 +582,7 @@ async def accept_quote(
     now = datetime.now(timezone.utc)
     quote.status = "accepted"
     quote.accepted_at = now
-    _log_event(db, workspace_id, quote_id, actor_id, "accepted", "Cotización aceptada — orden de venta creada")
+    _log_event(db, workspace_id, quote_id, actor_id, "accepted", "Quote accepted — sales order created")
 
     order_number = await _next_order_number(db, workspace_id)
     order = SalesOrder(
@@ -650,7 +662,11 @@ async def reject_quote(
 
     quote.status = "rejected"
     quote.rejected_at = datetime.now(timezone.utc)
-    _log_event(db, workspace_id, quote_id, actor_id, "rejected", f"Cotización rechazada. Razón: {data.reason or '—'}")
+    _log_event(
+        db, workspace_id, quote_id, actor_id, "rejected",
+        f"Quote rejected. Reason: {data.reason or '—'}",
+        metadata={"reason": data.reason},
+    )
     if data.reason:
         quote.notes = (quote.notes or "") + f"\nRejection reason: {data.reason}"
 

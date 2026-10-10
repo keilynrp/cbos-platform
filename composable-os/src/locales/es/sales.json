@@ -131,7 +131,17 @@
     },
     "history": {
       "title": "Historial",
-      "empty": "Sin eventos registrados."
+      "empty": "Sin eventos registrados.",
+      "events": {
+        "created": "Cotización creada: {{number}}",
+        "line_added": "Línea agregada: {{description}}",
+        "line_removed": "Línea eliminada: {{description}}",
+        "line_updated": "Línea modificada — {{changes}}",
+        "updated": "Líneas actualizadas (batch)",
+        "sent": "Cotización enviada",
+        "accepted": "Cotización aceptada — orden de venta creada",
+        "rejected": "Cotización rechazada. Razón: {{reason}}"
+      }
     },
     "toast": {
       "saveFailed": "Error al guardar: {{message}}",

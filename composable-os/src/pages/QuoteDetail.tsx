@@ -10,6 +10,7 @@ import {
 } from "@/services/sales";
 import { portalService, type PortalSession } from "@/services/portal";
 import { QuoteStatusBadge } from "@/components/sales/QuoteStatusBadge";
+import { useQuoteEventText } from "@/components/sales/useQuoteEventText";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -90,6 +91,7 @@ export default function QuoteDetail() {
     queryFn: () => salesService.getQuoteHistory(id!),
     enabled: !!id,
   });
+  const eventText = useQuoteEventText();
 
   const invalidateQuote = () => {
     qc.invalidateQueries({ queryKey: ["quote", id] });
@@ -620,7 +622,7 @@ export default function QuoteDetail() {
                   <span className="text-muted-foreground text-xs whitespace-nowrap pt-0.5">
                     {formatDateTime(ev.created_at)}
                   </span>
-                  <span>{ev.description}</span>
+                  <span>{eventText(ev)}</span>
                 </li>
               ))}
             </ul>
