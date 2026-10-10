@@ -125,7 +125,8 @@ export interface QuoteEvent {
   user_id: string | null;
   event_type: string;
   description: string;
-  metadata: Record<string, unknown> | null;
+  /** Los datos del evento (el servidor lo manda como `event_metadata`). */
+  event_metadata: Record<string, unknown> | null;
   created_at: string;
 }
 

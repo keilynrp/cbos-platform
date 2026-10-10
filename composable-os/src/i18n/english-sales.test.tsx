@@ -87,7 +87,9 @@ beforeEach(() => {
   svc.getQuotePdfUrl.mockReturnValue("/pdf");
   svc.getQuote.mockResolvedValue(fullQuote());
   svc.getQuoteHistory.mockResolvedValue([
-    { id: "e1", quote_id: "q1", user_id: null, event_type: "sent", description: "Quote sent by email", metadata: null, created_at: "2026-03-05T10:00:00Z" },
+    // Un evento guardado por un servidor anterior, con la prosa en español: en inglés sale del catálogo.
+    { id: "e1", quote_id: "q1", user_id: null, event_type: "sent", description: "Cotización enviada", event_metadata: null, created_at: "2026-03-05T10:00:00Z" },
+    { id: "e2", quote_id: "q1", user_id: null, event_type: "rejected", description: "Quote rejected. Reason: Too expensive", event_metadata: { reason: "Too expensive" }, created_at: "2026-03-05T11:00:00Z" },
   ]);
   svc.updateLine.mockResolvedValue({});
   svc.addLine.mockResolvedValue({});
@@ -262,7 +264,9 @@ describe("QuoteDetail in English", () => {
     }
     expect(screen.getByPlaceholderText("Notes visible to the customer...")).toHaveValue("Customer notes");
     expect(screen.getByPlaceholderText("Quote terms...")).toHaveValue("Conditions");
-    expect(await screen.findByText("Quote sent by email")).toBeInTheDocument();
+    expect(await screen.findByText("Quote sent")).toBeInTheDocument();
+    expect(screen.getByText("Quote rejected. Reason: Too expensive")).toBeInTheDocument();
+    expect(screen.queryByText("Cotización enviada")).not.toBeInTheDocument();
   });
 
   it("offers the draft actions and adds a line with an English description", async () => {

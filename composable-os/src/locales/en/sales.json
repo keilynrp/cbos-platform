@@ -131,7 +131,17 @@
     },
     "history": {
       "title": "History",
-      "empty": "No events recorded."
+      "empty": "No events recorded.",
+      "events": {
+        "created": "Quote created: {{number}}",
+        "line_added": "Line added: {{description}}",
+        "line_removed": "Line removed: {{description}}",
+        "line_updated": "Line updated — {{changes}}",
+        "updated": "Lines updated (batch)",
+        "sent": "Quote sent",
+        "accepted": "Quote accepted — sales order created",
+        "rejected": "Quote rejected. Reason: {{reason}}"
+      }
     },
     "toast": {
       "saveFailed": "Could not save: {{message}}",

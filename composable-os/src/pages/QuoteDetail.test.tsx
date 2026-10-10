@@ -19,7 +19,7 @@ vi.mock("@/services/portal", () => ({ portalService: portal }));
 vi.mock("sonner", () => ({ toast }));
 
 /** Datos del usuario (numeros, lineas, notas, eventos): no son texto de la interfaz. */
-const DATA = ["Q-001", "Propuesta Sol", "Zapatos", "Notas del cliente", "Condiciones", "Cotización enviada por correo", "ana@sol.co", "Z-1", "par"];
+const DATA = ["Q-001", "Propuesta Sol", "Zapatos", "Notas del cliente", "Condiciones", "Archivada por el equipo", "ana@sol.co", "Z-1", "par"];
 const FORMATTED_DATE = /^\d{1,2}\/\d{1,2}\/\d{2,4}$/;
 const FORMATTED_DATETIME = /\d{1,2}:\d{2}/;
 const PERCENT = /^-?[\d.]+$/;
@@ -44,7 +44,11 @@ beforeEach(() => {
   Object.values(toast).forEach((fn) => fn.mockReset());
   svc.getQuote.mockResolvedValue(quote());
   svc.getQuoteHistory.mockResolvedValue([
-    { id: "e1", quote_id: "q1", user_id: null, event_type: "sent", description: "Cotización enviada por correo", metadata: null, created_at: "2026-03-05T10:00:00Z" },
+    // Lo que guarda el servidor: el tipo y sus datos; `description` va en ingles de desarrollador.
+    { id: "e1", quote_id: "q1", user_id: null, event_type: "sent", description: "Quote sent", event_metadata: null, created_at: "2026-03-05T10:00:00Z" },
+    { id: "e2", quote_id: "q1", user_id: null, event_type: "created", description: "Quote created: Q-001", event_metadata: { quote_number: "Q-001" }, created_at: "2026-03-05T09:00:00Z" },
+    // Un tipo que el catalogo no conoce muestra lo que se guardo.
+    { id: "e3", quote_id: "q1", user_id: null, event_type: "archived", description: "Archivada por el equipo", event_metadata: null, created_at: "2026-03-05T11:00:00Z" },
   ]);
   svc.updateLine.mockResolvedValue({});
   svc.addLine.mockResolvedValue({});
@@ -75,7 +79,11 @@ describe("QuoteDetail, in Spanish", () => {
     }
     expect(screen.getByPlaceholderText("Notas visibles al cliente...")).toHaveValue("Notas del cliente");
     expect(screen.getByPlaceholderText("Términos de la cotización...")).toHaveValue("Condiciones");
-    expect(await screen.findByText("Cotización enviada por correo")).toBeInTheDocument();
+    // El historial sale en el idioma de la interfaz, no en el que escribio el servidor.
+    expect(await screen.findByText("Cotización creada: Q-001")).toBeInTheDocument();
+    expect(screen.getByText("Archivada por el equipo")).toBeInTheDocument();
+    expect(screen.queryByText("Quote sent")).not.toBeInTheDocument();
+    expect(screen.getByText("Cotización enviada")).toBeInTheDocument();
   });
 
   it("offers the draft actions and adds a line with a Spanish description", async () => {
