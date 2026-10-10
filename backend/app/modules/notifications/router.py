@@ -39,22 +39,9 @@ NOTIFY_EVENTS = {
     "InvoiceOverdue",
 }
 
-NOTIFY_LABELS = {
-    "WorkflowTriggered":              "Workflow ejecutado",
-    "WorkflowCompleted":              "Workflow completado",
-    "WorkflowFailed":                 "Workflow falló",
-    "InventoryLowThresholdDetected":  "Stock bajo",
-    "QuoteAccepted":                  "Cotización aceptada",
-    "QuoteRejected":                  "Cotización rechazada",
-    "SalesOrderCreated":              "Nueva orden de venta",
-    "CustomerActionPerformed":        "Acción del cliente",
-    "OpportunityWon":                 "Deal ganado 🎉",
-    "OpportunityLost":                "Deal perdido",
-    "PortalSessionCreated":           "Portal compartido con cliente",
-    "InvoiceCreated":                 "Factura generada",
-    "InvoicePaid":                    "Factura pagada 💰",
-    "InvoiceOverdue":                 "Factura vencida ⚠️",
-}
+# El servidor manda el tipo de evento y la interfaz pone el texto en el idioma de
+# quien lo lee (`layout:notifications.events.<EventType>`): ADR 0014. Un evento sin
+# entrada alla se muestra con su nombre.
 
 
 # ── Email Notification Preferences ─────────────────────────────────────
@@ -164,7 +151,6 @@ async def notifications_ws(
                 await websocket.send_json({
                     "type": "notification",
                     "event_type": event_type,
-                    "title": NOTIFY_LABELS.get(event_type, event_type),
                     "payload": event.get("payload", {}),
                     "entity_id": event.get("entity_id"),
                     "timestamp": event.get("timestamp"),

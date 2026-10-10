@@ -22,10 +22,10 @@ vi.mock("@/lib/useNotifications", () => ({ useNotifications: () => notif }));
 const NOT_TEXT = [/^AT$/, /^CBOS$/];
 
 /** Lo que llega del servidor o del usuario: no es texto de la interfaz. */
-const DATA = ["Ana Torres", "ana@sol.co", "Cotización aceptada", "quote.accepted"];
+const DATA = ["Ana Torres", "ana@sol.co", "QuoteAccepted"];
 
 const note = (over: Record<string, unknown> = {}) => ({
-  id: "n1", event_type: "quote.accepted", title: "Cotización aceptada", payload: {}, entity_id: null,
+  id: "n1", event_type: "QuoteAccepted", payload: {}, entity_id: null,
   timestamp: new Date(Date.now() - 5 * 60_000).toISOString(), read: false, ...over,
 });
 
@@ -102,7 +102,7 @@ describe("AppLayout / AppSidebar en español", () => {
     openBell("Notificaciones");
 
     expect(screen.getByText("Cotización aceptada")).toBeInTheDocument();
-    expect(screen.getByText(/quote\.accepted · hace 5 min/)).toBeInTheDocument();
+    expect(screen.getByText(/QuoteAccepted · hace 5 min/)).toBeInTheDocument();
     expect(notif.markAllRead).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Marcar todas" }));
@@ -110,6 +110,20 @@ describe("AppLayout / AppSidebar en español", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Descartar" }));
     expect(notif.dismiss).toHaveBeenCalledWith("n1");
+  });
+
+  it("el texto de la notificacion sale del catalogo segun el tipo de evento", () => {
+    notif.notifications = [
+      note({ id: "n1", event_type: "InvoiceOverdue" }),
+      note({ id: "n2", event_type: "EventoNuevo" }),
+    ];
+    renderLayout();
+
+    openBell("Notificaciones");
+
+    expect(screen.getByText("Factura vencida ⚠️")).toBeInTheDocument();
+    // Un evento sin entrada en el catalogo se muestra con su nombre, no con un hueco.
+    expect(screen.getByText("EventoNuevo")).toBeInTheDocument();
   });
 
   it("sin notificaciones lo dice", () => {

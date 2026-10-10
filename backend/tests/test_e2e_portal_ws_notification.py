@@ -100,28 +100,15 @@ async def test_portal_session_created_is_notification_eligible():
     )
 
 
-async def test_portal_session_created_has_ws_label():
-    """PortalSessionCreated must have a human-readable label in NOTIFY_LABELS."""
-    from app.modules.notifications.router import NOTIFY_LABELS
-
-    label = NOTIFY_LABELS.get("PortalSessionCreated")
-    assert label is not None, "No label for PortalSessionCreated in NOTIFY_LABELS"
-    assert len(label) > 0
-
-
 # ── Layer 3: WS payload transform ───────────────────────────────────────────
 
 async def test_portal_session_created_transforms_to_ws_payload():
     """The router's transform logic produces the expected WS payload shape."""
-    from app.modules.notifications.router import NOTIFY_LABELS
-
     event = _portal_session_event()
-    label = NOTIFY_LABELS.get(event.event_type, event.event_type)
 
     ws_payload = {
         "type": "notification",
         "event_type": event.event_type,
-        "title": label,
         "entity_id": event.entity_id,
         "payload": event.payload,
         "timestamp": event.timestamp.isoformat(),
@@ -129,7 +116,6 @@ async def test_portal_session_created_transforms_to_ws_payload():
 
     assert ws_payload["type"] == "notification"
     assert ws_payload["event_type"] == "PortalSessionCreated"
-    assert ws_payload["title"] == label
     assert ws_payload["entity_id"] == "session-abc-123"
     assert ws_payload["payload"]["client_name"] == "Test Client"
 
@@ -142,10 +128,10 @@ async def test_full_pipeline_portal_session_created_reaches_ws_client():
     publish(PortalSessionCreated) → Redis pub/sub → ConnectionManager.send_to_workspace().
 
     Verifies that a WS client subscribed to workspace ws-portal-001 would receive
-    a notification payload with title from NOTIFY_LABELS["PortalSessionCreated"].
+    a notification payload for PortalSessionCreated.
     """
     from app.events.bus import publish
-    from app.modules.notifications.router import NOTIFY_EVENTS, NOTIFY_LABELS
+    from app.modules.notifications.router import NOTIFY_EVENTS
 
     workspace_id = "ws-portal-001"
     event = _portal_session_event(workspace_id)
@@ -167,11 +153,9 @@ async def test_full_pipeline_portal_session_created_reaches_ws_client():
     event_type = parsed.get("event_type", "")
     assert event_type in NOTIFY_EVENTS, f"{event_type} filtered out — not in NOTIFY_EVENTS"
 
-    label = NOTIFY_LABELS.get(event_type, event_type)
     ws_payload = json.dumps({
         "type": "notification",
         "event_type": event_type,
-        "title": label,
         "entity_id": parsed.get("entity_id"),
         "payload": parsed.get("payload", {}),
         "timestamp": parsed.get("timestamp"),
@@ -184,7 +168,6 @@ async def test_full_pipeline_portal_session_created_reaches_ws_client():
     delivered = json.loads(mock_manager.send_to_workspace.call_args[0][1])
     assert delivered["type"] == "notification"
     assert delivered["event_type"] == "PortalSessionCreated"
-    assert delivered["title"] == NOTIFY_LABELS["PortalSessionCreated"]
     assert delivered["payload"]["quote_id"] == "quote-xyz-456"
 
 
@@ -198,7 +181,7 @@ async def test_portal_session_creation_triggers_notification_pipeline(
     PortalSessionCreated is published to Redis (bus.publish mocked),
     and that the pub/sub data is notification-eligible and correctly shaped.
     """
-    from app.modules.notifications.router import NOTIFY_EVENTS, NOTIFY_LABELS
+    from app.modules.notifications.router import NOTIFY_EVENTS
 
     # 1. Create a quote (Sales)
     resp = await client.post("/api/v1/sales/quotes", headers=auth_headers, json={
@@ -261,7 +244,3 @@ async def test_portal_session_creation_triggers_notification_pipeline(
     # 4. Verify it would pass the WS filter
     assert emitted.event_type in NOTIFY_EVENTS
 
-    # 5. Verify it has a label for WS delivery
-    assert emitted.event_type in NOTIFY_LABELS
-    label = NOTIFY_LABELS[emitted.event_type]
-    assert len(label) > 0
