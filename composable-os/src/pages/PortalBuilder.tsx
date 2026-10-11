@@ -1167,7 +1167,7 @@ function PortalSessions() {
                       {statusLabel(s.action, s.accessed_at)}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                      {t("portalBuilder:sessions.expires", { email: s.client_email ?? t("portalBuilder:sessions.noEmail"), date: formatDate(s.expires_at, "short") })}
+                      {t("portalBuilder:sessions.expires", { email: s.client_email ?? t("portalBuilder:sessions.noEmail"), date: formatDate(s.expires_at, "medium") })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

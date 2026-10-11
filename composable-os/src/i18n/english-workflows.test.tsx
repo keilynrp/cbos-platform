@@ -100,6 +100,15 @@ describe("Workflows in English", () => {
     expect(screen.getByText(formatDate("2026-09-30T12:00:00Z", "en", "short"))).toBeInTheDocument();
   });
 
+  it("names the send-email action instead of showing its code", async () => {
+    svc.getAll.mockResolvedValue([workflow({ actions: [{ type: "send_email", config: {} }] })]);
+    renderPage(await english());
+    await screen.findByText("Lead intake");
+
+    expect(screen.getByText("send email")).toBeInTheDocument();
+    expect(screen.queryByText("send_email")).not.toBeInTheDocument();
+  });
+
   it("explains an empty list and offers to create the first workflow", async () => {
     svc.getAll.mockResolvedValue([]);
     renderPage(await english());
